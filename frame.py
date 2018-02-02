@@ -246,18 +246,14 @@ def slideshow():
 		print('Next!')
 
 pprev = None
-term = 1
 
 def show_image(filename):
-	global pprev, term
-	term += 1
-	if term > 2:
-		term = 1
+	global pprev
 
 	args = [
 		'fbi',
 		'-T',
-		str(term),
+		'1',
 		'-a',
 		'--noverbose',
 		'-fitwidth',
@@ -271,6 +267,22 @@ def show_image(filename):
 		print('Dead')
 	pprev = p
 
+display_enabled = True
+
+def enable_display(enable):
+	global display_enabled
+
+	if enable == display_enabled:
+		return
+
+	if enable:
+		subprocess.call('vbetool dpms on')
+	else
+		subprocess.call('vbetool dpms off')
+	display_enabled = enable
+
+def is_display_enabled():
+	return display_enabled
 
 if __name__ == "__main__":
 	# This allows us to use a plain HTTP callback
