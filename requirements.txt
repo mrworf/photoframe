@@ -1,2 +1,2 @@
-pip install --upgrade google-auth
-
+requests-oauthlib
+flask

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-import gdata.photos.service
-import gdata.media
-import gdata.geo
+
+# fbi -a -noverbose --fitwidth <img>
+
 import json
 import sys
 import os
@@ -11,7 +11,9 @@ import datetime
 import threading
 import time
 import math
+import subprocess
 
+import requests
 from requests_oauthlib import OAuth2Session
 from flask import Flask, request, redirect, session, url_for
 from flask.json import jsonify
@@ -21,10 +23,11 @@ with open('oauth.json') as f:
 
 oauth = oauth['web']
 
+rid = None
+
 settings = {
 	'oauth_token' : None,
 	'oauth_state' : None,
-	'linked' : False,					# Indicates if we've ever linked with google
 
 	'user' : 'themrworf',			# User in picasa to view (usually yourself)
 	'interval' : 60,					# Delay in seconds between images (minimum)
@@ -46,6 +49,10 @@ settings = {
 	]
 }
 
+if os.path.exists('settings.json'):
+	with open('settings.json') as f:
+		settings = json.load(f)
+
 app = Flask(__name__)
 
 def pick_image(images):
@@ -57,6 +64,7 @@ def pick_image(images):
 		entry = images['feed']['entry'][random.randint(0,count-1)]
 		# Make sure we don't get a video, unsupported for now
 		if 'image' in entry['content']['type']:
+			print('Mime is: ', entry['content']['type'])
 			break
 		else:
 			tries -= 1
@@ -73,19 +81,70 @@ def pick_image(images):
 		title = ""
 	uri = entry['content']['src']
 	timestamp = datetime.datetime.fromtimestamp((float)(entry['gphoto$timestamp']['$t']) / 1000)
+	mime = entry['content']['type']
 
 	# Due to google's unwillingness to return what I own, we need to hack the URI
 	uri = uri.replace('/s1600/', '/s1920/', 1)
 
-	return (uri, title, timestamp)
+	return (uri, mime, title, timestamp)
 
+def get_extension(mime):
+	mapping = {
+		'image/jpeg' : 'jpg',
+		'image/png' : 'png',
+		'image/gif' : 'gif',
+	}
+	mime = mime.lower()
+	if mime in mapping:
+		return mapping[mime]
+	print 'Mime %s unsupported' % mime
+	return 'xxx'
+
+def saveSettings():
+	with open('settings.json', 'w') as f:
+		json.dump(settings, f)
+
+def getAuth(refresh=False):
+	if not refresh:
+		auth = OAuth2Session(token=settings['oauth_token'])
+	else:
+		print('Token have expired, try refresh')
+		def token_updater(token):
+			settings['oauth_token'] = token
+			print('I haz new token')
+			saveSettings()
+
+		auth = OAuth2Session(oauth['client_id'],
+	                         token=settings['oauth_token'],
+	                         auto_refresh_kwargs={'client_id':oauth['client_id'],'client_secret':oauth['client_secret']},
+	                         auto_refresh_url=oauth['token_uri'],
+	                         token_updater=token_updater)	
+		print('New token!')
+	return auth
+
+def performGet(uri, stream=False, params=None):
+	try:
+		auth = getAuth()
+		return auth.get(uri, stream=stream, params=params)
+	except:
+		auth = getAuth(True)
+		return auth.get(uri, stream=stream, params=params)
 
 @app.route("/")
 def oauth_step1():
 	""" Step 1: Get authorization
 	"""
-	auth = OAuth2Session(oauth['client_id'], scope=['https://picasaweb.google.com/data/'], redirect_uri='http://magi.sfo.sensenet.nu:7777/callback')
-	authorization_url, state = auth.authorization_url(oauth['auth_uri'])
+	global rid
+	r = requests.get('https://photoframe.sensenet.nu/?register')
+	rid = r.content
+	print('RID = ' + rid)
+	auth = OAuth2Session(oauth['client_id'], 
+						scope=['https://picasaweb.google.com/data/'], 
+						redirect_uri='https://photoframe.sensenet.nu', 
+						state='%s-10.0.3.189' % rid)
+	authorization_url, state = auth.authorization_url(oauth['auth_uri'],
+	 													access_type="offline", 
+														prompt="consent")
 
 	# State is used to prevent CSRF, keep this for later.
 	settings['oauth_state'] = state
@@ -97,33 +156,24 @@ def oauth_step1():
 def oauth_step3():
 	""" Step 3: Get the token
 	"""
-
-	auth = OAuth2Session(oauth['client_id'], scope=['https://picasaweb.google.com/data/'], redirect_uri='http://magi.sfo.sensenet.nu:7777/callback')
+	print 'Step 3: RID = ', rid
+	auth = OAuth2Session(oauth['client_id'], scope=['https://picasaweb.google.com/data/'], redirect_uri='https://photoframe.sensenet.nu', state='%s-10.0.3.189' % rid)
 	token = auth.fetch_token(oauth['token_uri'], client_secret=oauth['client_secret'], authorization_response=request.url)
 
 	settings['oauth_token'] = token
-	settings['linked'] = True
+	saveSettings()
 	return redirect(url_for('.complete'))
 
 @app.route("/complete", methods=['GET'])
 def complete():
 	if settings['oauth_token'] is None:
-		if not settings['linked']:
+		if not settings['oauth_token']:
 			return 'You need to login & authorize'
 		else:
 			return redirect('/')
 	return 'Done'
 
 def get_images():
-	if settings['oauth_token'] is None and settings['linked']:
-		# Do some magic on the backend
-		request.get('http://127.0.0.1:7777/')
-		if settings['oauth_token'] is None:
-			print('Unable to get token!')
-			return None
-
-	auth = OAuth2Session(token=settings['oauth_token'])
-
 	random.seed()
 	keyword = settings['keywords'][random.randint(0, len(settings['keywords'])-1)]
 
@@ -153,27 +203,74 @@ def get_images():
 		'fields' : 'entry(title,content,gphoto:timestamp)' # No unnecessary stuff
 		}
 		url = 'https://picasaweb.google.com/data/feed/api/user/%s' % (settings['user'])
-
-		data = auth.get(url, params=params)
+		print('Downloading image list for %s...' % keyword)
+		data = performGet(url, params=params)
 		with open(filename, 'w') as f:
 			f.write(data.content)
+		print('Done')
 	images = None
 	with open(filename) as f:
 		images = json.load(f)
 	return images
 
+def download_image(uri, dest):
+	print 'Downloadiing %s...' % uri
+	response = performGet(uri, stream=True)
+	with open(dest, 'wb') as handle:
+		for chunk in response.iter_content(chunk_size=512):
+			if chunk:  # filter out keep-alive new chunks
+				handle.write(chunk)
+	print 'Done'
+	return True
+
 def slideshow():
 	time.sleep(1) # Ugly, but works...
+
+	# Make sure we have OAuth2.0 ready
+	if settings['oauth_token'] is None:
+		print('You need to link your photoalbum first')
+		return
+
 	while True:
 		imgs = get_images()
 		if imgs:
-			uri, title, ts = pick_image(imgs)
-			print ts.strftime('%c %Z')
+			uri, mime, title, ts = pick_image(imgs)
+			filename = '/tmp/image.%s' % get_extension(mime)
+			if download_image(uri, filename):
+				show_image(filename)
 		else:
 			print('Need configuration')
 			break
 		print('Sleeping %d seconds...' % settings['interval'])
 		time.sleep(settings['interval'])
+		print('Next!')
+
+pprev = None
+term = 1
+
+def show_image(filename):
+	global pprev, term
+	term += 1
+	if term > 2:
+		term = 1
+
+	args = [
+		'fbi',
+		'-T',
+		str(term),
+		'-a',
+		'--noverbose',
+		'-fitwidth',
+		filename
+	]
+	p = subprocess.Popen(args, stdin=subprocess.PIPE)
+	if pprev is not None:
+		print('Killing old viewer')
+		p.stdin.write('q')
+		p.stdin.flush()
+		print('Dead')
+	pprev = p
+
 
 if __name__ == "__main__":
 	# This allows us to use a plain HTTP callback
