@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-# fbi -a -noverbose --fitwidth <img>
-
 import json
 import sys
 import os
@@ -284,27 +282,25 @@ def slideshow():
 		time.sleep(settings['cfg']['interval'])
 		print('Next!')
 
-pprev = None
-
 def show_image(filename):
-	global pprev
-
+	resolution = '1824x984' # Use FBset in the future
 	args = [
-		'fbi',
-		'-T',
-		'1',
-		'-a',
-		'--noverbose',
-		'-fitwidth',
-		filename
+		'convert',
+		filename,
+		'-resize',
+		resolution,
+		'-background',
+		'black',
+		'-gravity',
+		'center',
+		'-extent',
+		resolution,
+		'-depth',
+		'8',
+		'bgra:-'
 	]
-	p = subprocess.Popen(args, stdin=subprocess.PIPE)
-	if pprev is not None:
-		print('Killing old viewer')
-		p.stdin.write('q')
-		p.stdin.flush()
-		print('Dead')
-	pprev = p
+	with open('/dev/fb0', 'wb') as f:
+		ret = subprocess.call(args, stdout=f)
 
 display_enabled = True
 
@@ -315,9 +311,11 @@ def enable_display(enable):
 		return
 
 	if enable:
-		subprocess.call('vbetool dpms on')
+		subprocess.call(['/opt/vc/bin/tvservice', '-p'])
+		subprocess.call(['/bin/fbset', '-depth', '8'])
+		subprocess.call(['/bin/fbset', '-depth', '32'])
 	else:
-		subprocess.call('vbetool dpms off')
+		subprocess.call(['/opt/vc/bin/tvservice', '-o')
 	display_enabled = enable
 
 def is_display_enabled():
