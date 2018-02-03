@@ -219,6 +219,7 @@ def oauth_step3():
 
 @app.route("/complete", methods=['GET'])
 def complete():
+	slideshow(True)
 	return redirect('/')
 
 def get_images():
@@ -339,30 +340,45 @@ def enable_display(enable):
 def is_display_enabled():
 	return display_enabled
 
+slideshow_thread = None
 
-def slideshow():
-	time.sleep(1) # Ugly, but works...
+def slideshow(blank=False):
+	global slideshow_thread
 
-	# Make sure we have OAuth2.0 ready
-	if settings['oauth_token'] is None:
-		show_message('Please link photoalbum\n\nSurf to http://%s:7777/' % settings['local-ip'])
-		print('You need to link your photoalbum first')
-		return
+	if blank:
+		# lazy
+		with open('/dev/fb0', 'wb') as f:
+			subprocess.call(['cat' , '/dev/zero'], stdout=f)
 
-	while True:
-		imgs = get_images()
-		if imgs:
-			uri, mime, title, ts = pick_image(imgs)
-			filename = '/tmp/image.%s' % get_extension(mime)
-			if download_image(uri, filename):
-				show_image(filename)
+	def imageloop():
+		global slideshow_thread
+		time.sleep(1) # Ugly, but works... allows server to get going
+
+		# Make sure we have OAuth2.0 ready
+		if settings['oauth_token'] is None:
+			show_message('Please link photoalbum\n\nSurf to http://%s:7777/' % settings['local-ip'])
+			print('You need to link your photoalbum first')
 		else:
-			print('Need configuration')
-			break
-		print('Sleeping %d seconds...' % settings['cfg']['interval'])
-		time.sleep(settings['cfg']['interval'])
-		print('Next!')
+			while True:
+				imgs = get_images()
+				if imgs:
+					uri, mime, title, ts = pick_image(imgs)
+					filename = '/tmp/image.%s' % get_extension(mime)
+					if download_image(uri, filename):
+						show_image(filename)
+				else:
+					print('Need configuration')
+					break
+				print('Sleeping %d seconds...' % settings['cfg']['interval'])
+				time.sleep(settings['cfg']['interval'])
+				print('Next!')
+		slideshow_thread = None
 
+	if slideshow_thread is None:
+		slideshow_thread = threading.Thread(target=imageloop)
+		slideshow_thread.daemon = True
+		slideshow_thread.start()
+	
 
 settings['resolution'] = get_resolution()
 settings['local-ip'] = get_my_ip()
@@ -376,10 +392,7 @@ if __name__ == "__main__":
 	# This allows us to use a plain HTTP callback
 	os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 	app.secret_key = os.urandom(24)
-
-	t = threading.Thread(target=slideshow)
-	t.daemon = True
-	t.start()
+	slideshow()
 	app.run(debug=False, port=7777, host='0.0.0.0' )
 
 sys.exit(0)
