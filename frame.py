@@ -29,6 +29,7 @@ settings = {
 	'oauth_token' : None,
 	'oauth_state' : None,
 	'local-ip' : None,
+	'resolution' : None,
 
 	'cfg' : {
 		'width' : 1920,				# Width of screen attached to device
@@ -58,6 +59,16 @@ if os.path.exists('settings.json'):
 		settings = json.load(f)
 
 app = Flask(__name__)
+
+def get_resolution():
+	res = None
+	output = subprocess.check_output(['/bin/fbset'])
+	for line in output.split('\n'):
+		line = line.strip()
+		if line.startswith('mode "'):
+			res = line[6:-1]
+			break
+	return res
 
 def get_my_ip():
 	ip = None
@@ -283,18 +294,17 @@ def slideshow():
 		print('Next!')
 
 def show_image(filename):
-	resolution = '1824x984' # Use FBset in the future
 	args = [
 		'convert',
 		filename,
 		'-resize',
-		resolution,
+		settings['resolution'],
 		'-background',
 		'black',
 		'-gravity',
 		'center',
 		'-extent',
-		resolution,
+		settings['resolution'],
 		'-depth',
 		'8',
 		'bgra:-'
@@ -315,12 +325,13 @@ def enable_display(enable):
 		subprocess.call(['/bin/fbset', '-depth', '8'])
 		subprocess.call(['/bin/fbset', '-depth', '32'])
 	else:
-		subprocess.call(['/opt/vc/bin/tvservice', '-o')
+		subprocess.call(['/opt/vc/bin/tvservice', '-o'])
 	display_enabled = enable
 
 def is_display_enabled():
 	return display_enabled
 
+settings['resolution'] = get_resolution()
 settings['local-ip'] = get_my_ip()
 
 if settings['local-ip'] is None:
