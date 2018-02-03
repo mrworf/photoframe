@@ -123,7 +123,7 @@ def saveSettings():
 
 def getAuth(refresh=False):
 	if not refresh:
-		auth = OAuth2Session(token=settings['oauth_token'])
+		auth = OAuth2Session(oauth['client_id'], token=settings['oauth_token'])
 	else:
 		print('Token have expired, try refresh')
 		def token_updater(token):
@@ -144,6 +144,7 @@ def performGet(uri, stream=False, params=None):
 		auth = getAuth()
 		return auth.get(uri, stream=stream, params=params)
 	except:
+		logging.exception('Ran into issues')
 		auth = getAuth(True)
 		return auth.get(uri, stream=stream, params=params)
 
