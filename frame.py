@@ -271,27 +271,35 @@ def download_image(uri, dest):
 	print 'Done'
 	return True
 
-def slideshow():
-	time.sleep(1) # Ugly, but works...
+def show_message(message):
+	"""convert -size 2400x1200 xc:White ^
+	  -gravity Center ^
+	  -weight 700 -pointsize 200 ^
+	  -annotate 0 "OIL\nFOUND\nIN CENTRAL PARK" ^
+	  oil.png
+	"""
+	args = [
+		'convert',
+		'-size',
+		settings['resolution'],
+		'-background',
+		'black',
+		'-fill',
+		'white',
+		'-gravity',
+		'center',
+		'-weight',
+		'700',
+		'-pointsize',
+		'64',
+		'label:%s' % message,
+		'-depth',
+		'8',
+		'bgra:-'
+	]
+	with open('/dev/fb0', 'wb') as f:
+		ret = subprocess.call(args, stdout=f)
 
-	# Make sure we have OAuth2.0 ready
-	if settings['oauth_token'] is None:
-		print('You need to link your photoalbum first')
-		return
-
-	while True:
-		imgs = get_images()
-		if imgs:
-			uri, mime, title, ts = pick_image(imgs)
-			filename = '/tmp/image.%s' % get_extension(mime)
-			if download_image(uri, filename):
-				show_image(filename)
-		else:
-			print('Need configuration')
-			break
-		print('Sleeping %d seconds...' % settings['cfg']['interval'])
-		time.sleep(settings['cfg']['interval'])
-		print('Next!')
 
 def show_image(filename):
 	args = [
@@ -331,14 +339,38 @@ def enable_display(enable):
 def is_display_enabled():
 	return display_enabled
 
+
+def slideshow():
+	time.sleep(1) # Ugly, but works...
+
+	# Make sure we have OAuth2.0 ready
+	if settings['oauth_token'] is None:
+		show_message('Please link photoalbum\n\nSurf to http://%s:7777/' % settings['local-ip'])
+		print('You need to link your photoalbum first')
+		return
+
+	while True:
+		imgs = get_images()
+		if imgs:
+			uri, mime, title, ts = pick_image(imgs)
+			filename = '/tmp/image.%s' % get_extension(mime)
+			if download_image(uri, filename):
+				show_image(filename)
+		else:
+			print('Need configuration')
+			break
+		print('Sleeping %d seconds...' % settings['cfg']['interval'])
+		time.sleep(settings['cfg']['interval'])
+		print('Next!')
+
+
 settings['resolution'] = get_resolution()
 settings['local-ip'] = get_my_ip()
 
 if settings['local-ip'] is None:
 	print('ERROR: You must have functional internet connection to use this app')
+	show_message('No internet')
 	sys.exit(255)
-else:
-	print('DEBUG: My IP is %s' % settings['local-ip'])
 
 if __name__ == "__main__":
 	# This allows us to use a plain HTTP callback
