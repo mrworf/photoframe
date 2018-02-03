@@ -12,10 +12,12 @@ import threading
 import time
 import math
 import subprocess
+import logging
+import socket
 
 import requests
 from requests_oauthlib import OAuth2Session
-from flask import Flask, request, redirect, session, url_for
+from flask import Flask, request, redirect, session, url_for, abort
 from flask.json import jsonify
 
 with open('oauth.json') as f:
@@ -28,25 +30,29 @@ rid = None
 settings = {
 	'oauth_token' : None,
 	'oauth_state' : None,
+	'local-ip' : None,
 
-	'user' : 'themrworf',			# User in picasa to view (usually yourself)
-	'interval' : 60,					# Delay in seconds between images (minimum)
-	'display-off' : 22,				# What hour (24h) to disable display and sleep
-	'display-on' : 4,					# What hour (24h) to enable display and continue
-	'refresh-content' : 24,		# After how many hours we should force reload of image lists from server
-	'keywords' : [						# Keywords for search (blank = latest 1000 images)
-		'"jessica huckabay"',
-		'"henric huckabay"',
-		'+"henric huckabay" +"jessica huckabay"',
-		'cats',
-		'thanksgiving',
-		'christmas',
-		'sweden',
-		'people',
-		'nature',
-		'"redwood city"',
-		''
-	]
+	'cfg' : {
+		'width' : 1920,				# Width of screen attached to device
+		'user' : 'themrworf',			# User in picasa to view (usually yourself)
+		'interval' : 60,					# Delay in seconds between images (minimum)
+		'display-off' : 22,				# What hour (24h) to disable display and sleep
+		'display-on' : 4,					# What hour (24h) to enable display and continue
+		'refresh-content' : 24,		# After how many hours we should force reload of image lists from server
+		'keywords' : [						# Keywords for search (blank = latest 1000 images)
+			'"jessica huckabay"',
+			'"henric huckabay"',
+			'+"henric huckabay" +"jessica huckabay"',
+			'cats',
+			'thanksgiving',
+			'christmas',
+			'sweden',
+			'people',
+			'nature',
+			'"redwood city"',
+			''
+		]
+	}
 }
 
 if os.path.exists('settings.json'):
@@ -54,6 +60,17 @@ if os.path.exists('settings.json'):
 		settings = json.load(f)
 
 app = Flask(__name__)
+
+def get_my_ip():
+	ip = None
+	try:
+		s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		s.connect(("photoframe.sensenet.nu", 80))
+		ip = s.getsockname()[0]
+		s.close()
+	except:
+		pass
+	return ip
 
 def pick_image(images):
 	ext = ['jpg','png','dng','jpeg','gif','bmp']
@@ -84,7 +101,7 @@ def pick_image(images):
 	mime = entry['content']['type']
 
 	# Due to google's unwillingness to return what I own, we need to hack the URI
-	uri = uri.replace('/s1600/', '/s1920/', 1)
+	uri = uri.replace('/s1600/', '/s%s/' % settings['cfg']['width'], 1)
 
 	return (uri, mime, title, timestamp)
 
@@ -118,7 +135,7 @@ def getAuth(refresh=False):
 	                         token=settings['oauth_token'],
 	                         auto_refresh_kwargs={'client_id':oauth['client_id'],'client_secret':oauth['client_secret']},
 	                         auto_refresh_url=oauth['token_uri'],
-	                         token_updater=token_updater)	
+	                         token_updater=token_updater)
 		print('New token!')
 	return auth
 
@@ -130,20 +147,47 @@ def performGet(uri, stream=False, params=None):
 		auth = getAuth(True)
 		return auth.get(uri, stream=stream, params=params)
 
-@app.route("/")
+@app.route('/setting', methods=['GET'], defaults={'key':None,'value':None})
+@app.route('/setting/<key>', methods=['GET'], defaults={'value':None})
+@app.route('/setting/<key>/<value>', methods=['PUT'])
+def access_settings(key, value):
+	# Depending on PUT/GET we will either change or read
+	# values. If key is unknown, then this call fails with 404
+	if key is not None:
+		if key not in settings['cfg']:
+			abort(404)
+			return
+
+	if request.method == 'PUT':
+		if key == "keywords":
+			# Keywords has its own API
+			abort(404)
+			return
+		settings['cfg'][key] = value
+	elif request.method == 'GET':
+		if key is None:
+			return jsonify(settings['cfg'])
+		else:
+			return jsonify({key : settings['cfg'][key]})
+	return
+
+@app.route('/')
+def web_main():
+	return "No menu yet, use /link to do the oauth dance for now"
+
+@app.route("/link")
 def oauth_step1():
 	""" Step 1: Get authorization
 	"""
 	global rid
 	r = requests.get('https://photoframe.sensenet.nu/?register')
 	rid = r.content
-	print('RID = ' + rid)
-	auth = OAuth2Session(oauth['client_id'], 
-						scope=['https://picasaweb.google.com/data/'], 
-						redirect_uri='https://photoframe.sensenet.nu', 
-						state='%s-10.0.3.189' % rid)
+	auth = OAuth2Session(oauth['client_id'],
+						scope=['https://picasaweb.google.com/data/'],
+						redirect_uri='https://photoframe.sensenet.nu',
+						state='%s-%s' % (rid, settings['local-ip']))
 	authorization_url, state = auth.authorization_url(oauth['auth_uri'],
-	 													access_type="offline", 
+	 													access_type="offline",
 														prompt="consent")
 
 	# State is used to prevent CSRF, keep this for later.
@@ -156,8 +200,7 @@ def oauth_step1():
 def oauth_step3():
 	""" Step 3: Get the token
 	"""
-	print 'Step 3: RID = ', rid
-	auth = OAuth2Session(oauth['client_id'], scope=['https://picasaweb.google.com/data/'], redirect_uri='https://photoframe.sensenet.nu', state='%s-10.0.3.189' % rid)
+	auth = OAuth2Session(oauth['client_id'], scope=['https://picasaweb.google.com/data/'], redirect_uri='https://photoframe.sensenet.nu', state='%s-%s' % (rid, settings['local-ip']))
 	token = auth.fetch_token(oauth['token_uri'], client_secret=oauth['client_secret'], authorization_response=request.url)
 
 	settings['oauth_token'] = token
@@ -166,16 +209,11 @@ def oauth_step3():
 
 @app.route("/complete", methods=['GET'])
 def complete():
-	if settings['oauth_token'] is None:
-		if not settings['oauth_token']:
-			return 'You need to login & authorize'
-		else:
-			return redirect('/')
-	return 'Done'
+	return redirect('/')
 
 def get_images():
 	random.seed()
-	keyword = settings['keywords'][random.randint(0, len(settings['keywords'])-1)]
+	keyword = settings['cfg']['keywords'][random.randint(0, len(settings['cfg']['keywords'])-1)]
 
 	# Create filename from keyword
 	filename = hashlib.new('md5')
@@ -184,8 +222,8 @@ def get_images():
 
 	if os.path.exists(filename): # Check age!
 		age = math.floor( (time.time() - os.path.getctime(filename)) / 3600)
-		if age >= settings['refresh-content']:
-			print('File too old, %dh > %dh' % (age, settings['refresh-content']))
+		if age >= settings['cfg']['refresh-content']:
+			print('File too old, %dh > %dh' % (age, settings['cfg']['refresh-content']))
 			os.remove(filename)
 
 	if not os.path.exists(filename):
@@ -202,7 +240,7 @@ def get_images():
 		'q' : keyword,
 		'fields' : 'entry(title,content,gphoto:timestamp)' # No unnecessary stuff
 		}
-		url = 'https://picasaweb.google.com/data/feed/api/user/%s' % (settings['user'])
+		url = 'https://picasaweb.google.com/data/feed/api/user/%s' % (settings['cfg']['user'])
 		print('Downloading image list for %s...' % keyword)
 		data = performGet(url, params=params)
 		with open(filename, 'w') as f:
@@ -241,8 +279,8 @@ def slideshow():
 		else:
 			print('Need configuration')
 			break
-		print('Sleeping %d seconds...' % settings['interval'])
-		time.sleep(settings['interval'])
+		print('Sleeping %d seconds...' % settings['cfg']['interval'])
+		time.sleep(settings['cfg']['interval'])
 		print('Next!')
 
 pprev = None
@@ -277,12 +315,20 @@ def enable_display(enable):
 
 	if enable:
 		subprocess.call('vbetool dpms on')
-	else
+	else:
 		subprocess.call('vbetool dpms off')
 	display_enabled = enable
 
 def is_display_enabled():
 	return display_enabled
+
+settings['local-ip'] = get_my_ip()
+
+if settings['local-ip'] is None:
+	print('ERROR: You must have functional internet connection to use this app')
+	sys.exit(255)
+else:
+	print('DEBUG: My IP is %s' % settings['local-ip'])
 
 if __name__ == "__main__":
 	# This allows us to use a plain HTTP callback
