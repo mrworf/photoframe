@@ -31,11 +31,8 @@ settings = {
 	'oauth_token' : None,
 	'oauth_state' : None,
 	'local-ip' : None,
-	'resolution' : None,
-	'width' : None,
 	'cfg' : None
 }
-
 
 def set_defaults():
 	settings['cfg'] = {
@@ -91,7 +88,7 @@ def pick_image(images):
 
 	while tries > 0:
 		entry = images['feed']['entry'][random.randint(0,count-1)]
-		# Make sure we don't get a video, unsupported for now
+		# Make sure we don't get a video, unsupported for now (gif is usually bad too)
 		if 'image' in entry['content']['type'] and not 'gif' in entry['content']['type']:
 			print('Mime is: ', entry['content']['type'])
 			break
@@ -121,7 +118,6 @@ def get_extension(mime):
 	mapping = {
 		'image/jpeg' : 'jpg',
 		'image/png' : 'png',
-		'image/gif' : 'gif',
 	}
 	mime = mime.lower()
 	if mime in mapping:
@@ -137,10 +133,8 @@ def getAuth(refresh=False):
 	if not refresh:
 		auth = OAuth2Session(oauth['client_id'], token=settings['oauth_token'])
 	else:
-		print('Token have expired, try refresh')
 		def token_updater(token):
 			settings['oauth_token'] = token
-			print('I haz new token')
 			saveSettings()
 
 		auth = OAuth2Session(oauth['client_id'],
@@ -148,7 +142,6 @@ def getAuth(refresh=False):
 	                         auto_refresh_kwargs={'client_id':oauth['client_id'],'client_secret':oauth['client_secret']},
 	                         auto_refresh_url=oauth['token_uri'],
 	                         token_updater=token_updater)
-		print('New token!')
 	return auth
 
 def performGet(uri, stream=False, params=None):
@@ -156,7 +149,6 @@ def performGet(uri, stream=False, params=None):
 		auth = getAuth()
 		return auth.get(uri, stream=stream, params=params)
 	except:
-		logging.exception('Ran into issues')
 		auth = getAuth(True)
 		return auth.get(uri, stream=stream, params=params)
 
@@ -178,6 +170,8 @@ def cfg_keyvalue(key, value):
 			return
 		settings['cfg'][key] = value
 		saveSettings()
+		if key in ['width', 'height', 'depth', 'tvservice']:
+			enable_display(True, True)
 	elif request.method == 'GET':
 		if key is None:
 			return jsonify(settings['cfg'])
@@ -190,15 +184,16 @@ def cfg_keyvalue(key, value):
 @app.route('/keywords/delete', methods=['POST'])
 def cfg_keywords():
 	if request.method == 'GET':
+		print('Hello?')
 		return jsonify(settings['cfg']['keywords'])
 	elif request.method == 'POST' and request.json is not None:
-		if id == -1: # It's a new keyword
+		if 'id' not in request.json:
 			keywords = request.json['keywords'].strip()
 			if keywords not in settings['cfg']['keywords']:
 				settings['cfg']['keywords'].append(keywords)
 				saveSettings()
 		else:
-			id = request.json('id')
+			id = request.json['id']
 			if id > -1 and id < len(settings['cfg']['keywords']):
 				settings['cfg']['keywords'].pop(id)
 				saveSettings()

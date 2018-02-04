@@ -60,6 +60,15 @@ $(document).ready(function(){
 		$('#fields').append('Photo keywords:<br>');
 		$('#fields').append('<input type="text" id="keyword"><input type="button" id="add" value="Add keywords"><br>');
 
+		$.ajax({
+			url:"/keywords",
+			type:"GET",
+			contentType: "application/json; charset=utf-8",
+			dataType: "json"
+		}).done(function(data){
+			$('#keyword').prepend('Hello world<br>');
+		});
+
 		$('#add').click(function(){
 			$.ajax({
 				url:"/keywords/add",
