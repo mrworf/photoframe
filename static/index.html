@@ -13,18 +13,31 @@ PhotoFrame rudimentary configuration
 function validate24(input) {
 	i = parseInt(input);
 	if (i > 23)
-		return "23";
-	if (i < 1)
-		return "0";
+		i = 23;
+	if (i < 1 || isNaN(i))
+		i = 0;
+	return i.toString();
+}
+
+function validateDelay(input) {
+	i = parseInt(input);
+	if (i < 30 || isNaN(i))
+		i = 30;
+	return i.toString();
+}
+
+function validateRefresh(input) {
+	i = parseInt(input);
+	if (i < 1 || isNaN(i))
+		i = 1;
 	return i.toString();
 }
 
 var fieldmap = {
 	'display-off' : {'caption' : 'Turn off display at (24 hour)', 'validate' : validate24},
 	'display-on'  : {'caption' : 'Turn on display at (24 hour)', 'validate' : validate24},
-	'interval'    : {'caption' : 'Seconds to show each image'},
-	'refresh-content' : {'caption' : 'Hours before reloading server image list'},
-	'user' : {'caption' : 'Google Photo user'},
+	'interval'    : {'caption' : 'Seconds to show each image', 'validate' : validateDelay},
+	'refresh-content' : {'caption' : 'Hours before reloading server image list', 'validate' : validateRefresh},
 };
 
 $(document).ready(function(){
@@ -44,14 +57,24 @@ $(document).ready(function(){
 			}
 			$('#fields').append(name + '<br><input ' + (validate?'data-validate="true"':'') + ' type="text" name="' + key + '" value="' + value + '"><br>');
 		}
+		$('#fields').append('Photo keywords:<br>');
+		$('#fields').append('<input type="text" id="keyword"><input type="button" id="add" value="Add keywords"><br>');
+
+		$('#add').click(function(){
+			$.ajax({
+				url:"/keywords/add",
+				type:"POST",
+				data: JSON.stringify({ keywords: $('#keyword').val() }),
+				contentType: "application/json; charset=utf-8",
+				dataType: "json"
+			}).done(function(data){
+				console.log(data);
+			});
+		});
+
 		$.ajax({
 			url:"/islinked"
 		}).done(function(data){
-			if (data["linked"])
-				 $('#fields').append('Frame is linked to Google Photos, <a href="/link">reconnect</a>');
-			else
-				 $('#fields').append('<a href="/link">Connect frame to Google Photos</a>');
-
 			$("input[type='text']").change(function() {
 				console.log("Change detected: " + $(this).val());
 				if ($(this).data('validate')) {
@@ -59,11 +82,25 @@ $(document).ready(function(){
 					$(this).val(fieldmap[this.name]['validate']($(this).val()));
 				}
 			});
+
+			if (data["linked"])
+				 $('#fields').append('Frame is linked to Google Photos, <a href="/link">reconnect</a>');
+			else
+				 $('#fields').append('<a href="/link">Connect frame to Google Photos</a>');
+			$("#reset").click(function() {
+				if (confirm("Are you sure? Link to photos will also be reset")) {
+					$.ajax({
+						url:"/reset"
+					}).done(function(){
+						location.reload();
+					});
+				}
+			});
 		});
 	});
 });
 </script>
 <p id="fields"></p>
-<input type="button" id="apply" value="Apply changes">
+<input type="button" id="reset" value="Reset all">
 </body>
 </html>

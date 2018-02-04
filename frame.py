@@ -18,6 +18,8 @@ from requests_oauthlib import OAuth2Session
 from flask import Flask, request, redirect, session, url_for, abort
 from flask.json import jsonify
 
+app = Flask(__name__, static_url_path='')
+
 with open('oauth.json') as f:
 	oauth = json.load(f)
 
@@ -31,34 +33,31 @@ settings = {
 	'local-ip' : None,
 	'resolution' : None,
 	'width' : None,
+	'cfg' : None
+}
 
-	'cfg' : {
-		'user' : 'themrworf',			# User in picasa to view (usually yourself)
+
+def set_defaults():
+	settings['cfg'] = {
 		'interval' : 60,					# Delay in seconds between images (minimum)
 		'display-off' : 22,				# What hour (24h) to disable display and sleep
 		'display-on' : 4,					# What hour (24h) to enable display and continue
 		'refresh-content' : 24,		# After how many hours we should force reload of image lists from server
 		'keywords' : [						# Keywords for search (blank = latest 1000 images)
-			'"jessica huckabay"',
-			'"henric huckabay"',
-			'+"henric huckabay" +"jessica huckabay"',
-			'cats',
-			'thanksgiving',
-			'christmas',
-			'sweden',
-			'people',
-			'nature',
-			'"redwood city"',
-			''
+			""
+#			'"jessica huckabay"',
+#			'"henric huckabay"',
+#			'+"henric huckabay" +"jessica huckabay"',
+#			'cats',
+#			'thanksgiving',
+#			'christmas',
+#			'sweden',
+#			'people',
+#			'nature',
+#			'"redwood city"',
+#			''
 		]
 	}
-}
-
-if os.path.exists('settings.json'):
-	with open('settings.json') as f:
-		settings = json.load(f)
-
-app = Flask(__name__, static_url_path='')
 
 def get_resolution():
 	res = None
@@ -160,7 +159,7 @@ def performGet(uri, stream=False, params=None):
 @app.route('/setting', methods=['GET'], defaults={'key':None,'value':None})
 @app.route('/setting/<key>', methods=['GET'], defaults={'value':None})
 @app.route('/setting/<key>/<value>', methods=['PUT'])
-def access_settings(key, value):
+def cfg_keyvalue(key, value):
 	# Depending on PUT/GET we will either change or read
 	# values. If key is unknown, then this call fails with 404
 	if key is not None:
@@ -174,6 +173,7 @@ def access_settings(key, value):
 			abort(404)
 			return
 		settings['cfg'][key] = value
+		saveSettings()
 	elif request.method == 'GET':
 		if key is None:
 			return jsonify(settings['cfg'])
@@ -181,15 +181,44 @@ def access_settings(key, value):
 			return jsonify({key : settings['cfg'][key]})
 	return
 
-@app.route('/')
-def web_main():
-	return app.send_static_file('index.html')
+@app.route('/keywords', methods=['GET'])
+@app.route('/keywords/add', methods=['POST'])
+@app.route('/keywords/delete', methods=['POST'])
+def cfg_keywords():
+	if request.method == 'GET':
+		return jsonify(settings['cfg']['keywords'])
+	elif request.method == 'POST' and request.json is not None:
+		if id == -1: # It's a new keyword
+			keywords = request.json['keywords'].strip()
+			if keywords not in settings['cfg']['keywords']:
+				settings['cfg']['keywords'].append(keywords)
+				saveSettings()
+		else:
+			id = request.json('id')
+			if id > -1 and id < len(settings['cfg']['keywords']):
+				settings['cfg']['keywords'].pop(id)
+				saveSettings()
+		return jsonify({'status':True})
+	abort(500)
 
 @app.route('/islinked')
-def oauth_done():
+def cfg_islinked():
 	if settings['oauth_token'] is None:
 		return jsonify({'linked' : False})
 	return jsonify({'linked' : True})
+
+@app.route('/reset')
+def cfg_reset():
+	set_defaults();
+	settings['oauth_token'] = None
+	settings['oauth_state'] = None
+	saveSettings()
+	return jsonify({'reset': True})
+
+
+@app.route('/')
+def web_main():
+	return app.send_static_file('index.html')
 
 @app.route("/link")
 def oauth_step1():
@@ -257,7 +286,7 @@ def get_images():
 		'q' : keyword,
 		'fields' : 'entry(title,content,gphoto:timestamp)' # No unnecessary stuff
 		}
-		url = 'https://picasaweb.google.com/data/feed/api/user/%s' % (settings['cfg']['user'])
+		url = 'https://picasaweb.google.com/data/feed/api/user/default'
 		print('Downloading image list for %s...' % keyword)
 		data = performGet(url, params=params)
 		with open(filename, 'w') as f:
@@ -361,23 +390,23 @@ def slideshow(blank=False):
 		time.sleep(1) # Ugly, but works... allows server to get going
 
 		# Make sure we have OAuth2.0 ready
-		if settings['oauth_token'] is None:
-			show_message('Please link photoalbum\n\nSurf to http://%s:7777/' % settings['local-ip'])
-			print('You need to link your photoalbum first')
-		else:
-			while True:
-				imgs = get_images()
-				if imgs:
-					uri, mime, title, ts = pick_image(imgs)
-					filename = '/tmp/image.%s' % get_extension(mime)
-					if download_image(uri, filename):
-						show_image(filename)
-				else:
-					print('Need configuration')
-					break
-				print('Sleeping %d seconds...' % settings['cfg']['interval'])
-				time.sleep(settings['cfg']['interval'])
-				print('Next!')
+		while True:
+			if settings['oauth_token'] is None:
+				show_message('Please link photoalbum\n\nSurf to http://%s:7777/' % settings['local-ip'])
+				print('You need to link your photoalbum first')
+				break
+			imgs = get_images()
+			if imgs:
+				uri, mime, title, ts = pick_image(imgs)
+				filename = '/tmp/image.%s' % get_extension(mime)
+				if download_image(uri, filename):
+					show_image(filename)
+			else:
+				print('Need configuration')
+				break
+			print('Sleeping %d seconds...' % settings['cfg']['interval'])
+			time.sleep(settings['cfg']['interval'])
+			print('Next!')
 		slideshow_thread = None
 
 	if slideshow_thread is None:
@@ -385,6 +414,12 @@ def slideshow(blank=False):
 		slideshow_thread.daemon = True
 		slideshow_thread.start()
 	
+
+set_defaults()
+
+if os.path.exists('settings.json'):
+	with open('settings.json') as f:
+		settings = json.load(f)
 
 settings['resolution'] = get_resolution()
 settings['local-ip'] = get_my_ip()
