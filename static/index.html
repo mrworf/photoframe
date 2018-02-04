@@ -1,0 +1,69 @@
+<html>
+<head>
+<title>PhotoFrame</title>
+<script
+	src="https://code.jquery.com/jquery-3.3.1.min.js"
+	integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+	crossorigin="anonymous"></script>
+</head>
+<body>
+PhotoFrame rudimentary configuration
+<hr/>
+<script type="text/javascript">
+function validate24(input) {
+	i = parseInt(input);
+	if (i > 23)
+		return "23";
+	if (i < 1)
+		return "0";
+	return i.toString();
+}
+
+var fieldmap = {
+	'display-off' : {'caption' : 'Turn off display at (24 hour)', 'validate' : validate24},
+	'display-on'  : {'caption' : 'Turn on display at (24 hour)', 'validate' : validate24},
+	'interval'    : {'caption' : 'Seconds to show each image'},
+	'refresh-content' : {'caption' : 'Hours before reloading server image list'},
+	'user' : {'caption' : 'Google Photo user'},
+};
+
+$(document).ready(function(){
+	$.ajax({
+		url:"/setting"
+	}).done(function(data){
+		for (key in data) {
+			if (key == 'keywords')
+				continue;
+			value = data[key];
+			validate = null;
+			name = key;
+			if (key in fieldmap) {
+				name = fieldmap[key]['caption'];
+				if ('validate' in fieldmap[key])
+					validate = fieldmap[key]['validate'];
+			}
+			$('#fields').append(name + '<br><input ' + (validate?'data-validate="true"':'') + ' type="text" name="' + key + '" value="' + value + '"><br>');
+		}
+		$.ajax({
+			url:"/islinked"
+		}).done(function(data){
+			if (data["linked"])
+				 $('#fields').append('Frame is linked to Google Photos, <a href="/link">reconnect</a>');
+			else
+				 $('#fields').append('<a href="/link">Connect frame to Google Photos</a>');
+
+			$("input[type='text']").change(function() {
+				console.log("Change detected: " + $(this).val());
+				if ($(this).data('validate')) {
+					console.log('Needs validating');
+					$(this).val(fieldmap[this.name]['validate']($(this).val()));
+				}
+			});
+		});
+	});
+});
+</script>
+<p id="fields"></p>
+<input type="button" id="apply" value="Apply changes">
+</body>
+</html>

@@ -30,9 +30,9 @@ settings = {
 	'oauth_state' : None,
 	'local-ip' : None,
 	'resolution' : None,
+	'width' : None,
 
 	'cfg' : {
-		'width' : 1920,				# Width of screen attached to device
 		'user' : 'themrworf',			# User in picasa to view (usually yourself)
 		'interval' : 60,					# Delay in seconds between images (minimum)
 		'display-off' : 22,				# What hour (24h) to disable display and sleep
@@ -58,7 +58,7 @@ if os.path.exists('settings.json'):
 	with open('settings.json') as f:
 		settings = json.load(f)
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='')
 
 def get_resolution():
 	res = None
@@ -110,7 +110,7 @@ def pick_image(images):
 	mime = entry['content']['type']
 
 	# Due to google's unwillingness to return what I own, we need to hack the URI
-	uri = uri.replace('/s1600/', '/s%s/' % settings['cfg']['width'], 1)
+	uri = uri.replace('/s1600/', '/s%s/' % settings['width'], 1)
 
 	return (uri, mime, title, timestamp)
 
@@ -183,7 +183,13 @@ def access_settings(key, value):
 
 @app.route('/')
 def web_main():
-	return "No menu yet, use /link to do the oauth dance for now"
+	return app.send_static_file('index.html')
+
+@app.route('/islinked')
+def oauth_done():
+	if settings['oauth_token'] is None:
+		return jsonify({'linked' : False})
+	return jsonify({'linked' : True})
 
 @app.route("/link")
 def oauth_step1():
@@ -382,6 +388,7 @@ def slideshow(blank=False):
 
 settings['resolution'] = get_resolution()
 settings['local-ip'] = get_my_ip()
+settings['width'] = int(settings['resolution'].split('x')[0])
 
 if settings['local-ip'] is None:
 	print('ERROR: You must have functional internet connection to use this app')
