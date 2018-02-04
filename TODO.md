@@ -1,19 +1,6 @@
 - Web interface:
-  - Authorizing Google Access
-  - Setup all keywords
-  - Provide username for photos (unless I can find elsewhere)
-  - Active hours
-  - Set refresh time for photo info
+  - Allow setup of keywords
 
 - Cache results from google
-- turn off display (using power management) for inactive hours
-
-
-
-- Long term
-  - Add support for color temp using external sensor
-
-Good links:
-http://www.nongnu.org/fbi-improved/
-http://www.instructables.com/id/Raspberry-Pi-Wall-Display-Without-X-Windows/
-
+- turn off display for inactive hours
+- Remember the last 100 images/query to avoid duplication

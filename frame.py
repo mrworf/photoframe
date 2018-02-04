@@ -39,6 +39,10 @@ settings = {
 
 def set_defaults():
 	settings['cfg'] = {
+		'width' : 1920,
+		'height' : 1080,
+		'depth' : 32,
+		'tvservice' : 'DMT 82 DVI',
 		'interval' : 60,					# Delay in seconds between images (minimum)
 		'display-off' : 22,				# What hour (24h) to disable display and sleep
 		'display-on' : 4,					# What hour (24h) to enable display and continue
@@ -88,7 +92,7 @@ def pick_image(images):
 	while tries > 0:
 		entry = images['feed']['entry'][random.randint(0,count-1)]
 		# Make sure we don't get a video, unsupported for now
-		if 'image' in entry['content']['type']:
+		if 'image' in entry['content']['type'] and not 'gif' in entry['content']['type']:
 			print('Mime is: ', entry['content']['type'])
 			break
 		else:
@@ -109,7 +113,7 @@ def pick_image(images):
 	mime = entry['content']['type']
 
 	# Due to google's unwillingness to return what I own, we need to hack the URI
-	uri = uri.replace('/s1600/', '/s%s/' % settings['width'], 1)
+	uri = uri.replace('/s1600/', '/s%s/' % settings['cfg']['width'], 1)
 
 	return (uri, mime, title, timestamp)
 
@@ -317,7 +321,7 @@ def show_message(message):
 	args = [
 		'convert',
 		'-size',
-		settings['resolution'],
+		'%dx%d' % (settings['cfg']['width'], settings['cfg']['height']),
 		'-background',
 		'black',
 		'-fill',
@@ -342,13 +346,13 @@ def show_image(filename):
 		'convert',
 		filename,
 		'-resize',
-		settings['resolution'],
+		'%dx%d' % (settings['cfg']['width'], settings['cfg']['height']),
 		'-background',
 		'black',
 		'-gravity',
 		'center',
 		'-extent',
-		settings['resolution'],
+		'%dx%d' % (settings['cfg']['width'], settings['cfg']['height']), 
 		'-depth',
 		'8',
 		'bgra:-'
@@ -358,16 +362,17 @@ def show_image(filename):
 
 display_enabled = True
 
-def enable_display(enable):
+def enable_display(enable, force=False):
 	global display_enabled
 
-	if enable == display_enabled:
+	if enable == display_enabled and not force:
 		return
 
 	if enable:
-		subprocess.call(['/opt/vc/bin/tvservice', '-p'])
+		subprocess.call(['/opt/vc/bin/tvservice', '-e', settings['cfg']['tvservice']])
+		time.sleep(1)
 		subprocess.call(['/bin/fbset', '-depth', '8'])
-		subprocess.call(['/bin/fbset', '-depth', '32'])
+		subprocess.call(['/bin/fbset', '-depth', str(settings['cfg']['depth']), '-xres', str(settings['cfg']['width']), '-yres', str(settings['cfg']['height'])])
 	else:
 		subprocess.call(['/opt/vc/bin/tvservice', '-o'])
 	display_enabled = enable
@@ -421,14 +426,15 @@ if os.path.exists('settings.json'):
 	with open('settings.json') as f:
 		settings = json.load(f)
 
-settings['resolution'] = get_resolution()
 settings['local-ip'] = get_my_ip()
-settings['width'] = int(settings['resolution'].split('x')[0])
 
 if settings['local-ip'] is None:
 	print('ERROR: You must have functional internet connection to use this app')
 	show_message('No internet')
 	sys.exit(255)
+
+# Force display to desired user setting
+enable_display(True, True)
 
 if __name__ == "__main__":
 	# This allows us to use a plain HTTP callback
