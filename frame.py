@@ -185,7 +185,7 @@ def cfg_keyvalue(key, value):
 def cfg_keywords():
 	if request.method == 'GET':
 		print('Hello?')
-		return jsonify(settings['cfg']['keywords'])
+		return jsonify({'keywords' : settings['cfg']['keywords']})
 	elif request.method == 'POST' and request.json is not None:
 		if 'id' not in request.json:
 			keywords = request.json['keywords'].strip()
@@ -196,6 +196,9 @@ def cfg_keywords():
 			id = request.json['id']
 			if id > -1 and id < len(settings['cfg']['keywords']):
 				settings['cfg']['keywords'].pop(id)
+				# Make sure we always have ONE entry
+				if len(settings['cfg']['keywords']) == 0:
+					settings['cfg']['keywords'].append('')
 				saveSettings()
 		return jsonify({'status':True})
 	abort(500)
