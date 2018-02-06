@@ -20,17 +20,14 @@ from flask.json import jsonify
 
 app = Flask(__name__, static_url_path='')
 
-with open('oauth.json') as f:
-	oauth = json.load(f)
-
-oauth = oauth['web']
-
+oauth = None
 rid = None
 
 settings = {
 	'oauth_token' : None,
 	'oauth_state' : None,
 	'local-ip' : None,
+	'tempfolder' : '/tmp/',
 	'cfg' : None
 }
 
@@ -46,17 +43,6 @@ def set_defaults():
 		'refresh-content' : 24,		# After how many hours we should force reload of image lists from server
 		'keywords' : [						# Keywords for search (blank = latest 1000 images)
 			""
-#			'"jessica huckabay"',
-#			'"henric huckabay"',
-#			'+"henric huckabay" +"jessica huckabay"',
-#			'cats',
-#			'thanksgiving',
-#			'christmas',
-#			'sweden',
-#			'people',
-#			'nature',
-#			'"redwood city"',
-#			''
 		]
 	}
 
@@ -87,7 +73,7 @@ def pick_image(images):
 	tries = 5
 
 	while tries > 0:
-		entry = images['feed']['entry'][random.randint(0,count-1)]
+		entry = images['feed']['entry'][random.SystemRandom().randint(0,count-1)]
 		# Make sure we don't get a video, unsupported for now (gif is usually bad too)
 		if 'image' in entry['content']['type'] and not 'gif' in entry['content']['type']:
 			print('Mime is: ', entry['content']['type'])
@@ -125,8 +111,15 @@ def get_extension(mime):
 	print 'Mime %s unsupported' % mime
 	return 'xxx'
 
+def loadSettings():
+	global settings
+
+	if os.path.exists('/root/settings.json'):
+		with open('/root/settings.json') as f:
+			settings = json.load(f)
+
 def saveSettings():
-	with open('settings.json', 'w') as f:
+	with open('/root/settings.json', 'w') as f:
 		json.dump(settings, f)
 
 def getAuth(refresh=False):
@@ -184,7 +177,6 @@ def cfg_keyvalue(key, value):
 @app.route('/keywords/delete', methods=['POST'])
 def cfg_keywords():
 	if request.method == 'GET':
-		print('Hello?')
 		return jsonify({'keywords' : settings['cfg']['keywords']})
 	elif request.method == 'POST' and request.json is not None:
 		if 'id' not in request.json:
@@ -203,11 +195,28 @@ def cfg_keywords():
 		return jsonify({'status':True})
 	abort(500)
 
-@app.route('/islinked')
-def cfg_islinked():
-	if settings['oauth_token'] is None:
-		return jsonify({'linked' : False})
-	return jsonify({'linked' : True})
+@app.route('/has/token')
+@app.route('/has/oauth')
+def cfg_hasthis():
+	result = False
+	if '/token' in request.path:
+		if settings['oauth_token'] is not None:
+			result = True
+	elif '/oauth' in request.path:
+		result = oauth != None
+
+	return jsonify({'result' : result})
+
+@app.route('/oauth', methods=['POST'])
+def cfg_oauth_info():
+	global oauth
+
+	if request.json is None or 'web' not in request.json:
+		abort(500)
+	oauth = request.json['web']
+	with open('/root/oauth.json', 'wb') as f:
+		json.dump(oauth, f);
+	return jsonify({'result' : True})
 
 @app.route('/reset')
 def cfg_reset():
@@ -217,6 +226,15 @@ def cfg_reset():
 	saveSettings()
 	return jsonify({'reset': True})
 
+@app.route('/reboot')
+def cfg_reboot():
+	subprocess.call(['/sbin/reboot']);
+	return jsonify({'reboot' : True})
+
+@app.route('/shutdown')
+def cfg_shutdown():
+	subprocess.call(['/sbin/poweroff']);
+	return jsonify({'shutdown': True})
 
 @app.route('/')
 def web_main():
@@ -260,13 +278,13 @@ def complete():
 	return redirect('/')
 
 def get_images():
-	random.seed()
-	keyword = settings['cfg']['keywords'][random.randint(0, len(settings['cfg']['keywords'])-1)]
+	keyword = settings['cfg']['keywords'][random.SystemRandom().randint(0, len(settings['cfg']['keywords'])-1)]
 
 	# Create filename from keyword
 	filename = hashlib.new('md5')
 	filename.update(keyword)
 	filename = filename.hexdigest() + ".json"
+	filename = os.path.join(settings['tempfolder'], filename)
 
 	if os.path.exists(filename): # Check age!
 		age = math.floor( (time.time() - os.path.getctime(filename)) / 3600)
@@ -278,16 +296,17 @@ def get_images():
 		# Request albums
 		# Picasa limits all results to the first 1000, so get them
 		params = {
-		'kind' : 'photo',
-		'start-index' : 1,
-		'max-results' : 1000,
-		'alt' : 'json',
-		'access' : 'all',
-		'imgmax' : '1600u', # We will replace this with width of framebuffer in pick_image
-		# This is where we get cute, we pick from a list of keywords
-		'q' : keyword,
-		'fields' : 'entry(title,content,gphoto:timestamp)' # No unnecessary stuff
+			'kind' : 'photo',
+			'start-index' : 1,
+			'max-results' : 1000,
+			'alt' : 'json',
+			'access' : 'all',
+			'imgmax' : '1600u', # We will replace this with width of framebuffer in pick_image
+			# This is where we get cute, we pick from a list of keywords
+			'fields' : 'entry(title,content,gphoto:timestamp)' # No unnecessary stuff
 		}
+		if keyword != "":
+			params['q'] = keyword
 		url = 'https://picasaweb.google.com/data/feed/api/user/default'
 		print('Downloading image list for %s...' % keyword)
 		data = performGet(url, params=params)
@@ -297,6 +316,7 @@ def get_images():
 	images = None
 	with open(filename) as f:
 		images = json.load(f)
+	print('Loaded %d images into list' % len(images['feed']['entry']))
 	return images
 
 def download_image(uri, dest):
@@ -367,12 +387,16 @@ def enable_display(enable, force=False):
 		return
 
 	if enable:
-		subprocess.call(['/opt/vc/bin/tvservice', '-e', settings['cfg']['tvservice']])
-		time.sleep(1)
-		subprocess.call(['/bin/fbset', '-depth', '8'])
-		subprocess.call(['/bin/fbset', '-depth', str(settings['cfg']['depth']), '-xres', str(settings['cfg']['width']), '-yres', str(settings['cfg']['height'])])
+		if force: # Make sure display is ON and set to our preference
+			subprocess.call(['/opt/vc/bin/tvservice', '-e', settings['cfg']['tvservice']])
+			time.sleep(1)
+			subprocess.call(['/bin/fbset', '-depth', '8'])
+			subprocess.call(['/bin/fbset', '-depth', str(settings['cfg']['depth']), '-xres', str(settings['cfg']['width']), '-yres', str(settings['cfg']['height'])])
+		else:
+			subprocess.call(['/usr/bin/vcgencmd', 'display', '1'])
 	else:
-		subprocess.call(['/opt/vc/bin/tvservice', '-o'])
+		subprocess.call(['/usr/bin/vcgencmd', 'display', '0'])
+		#subprocess.call(['/opt/vc/bin/tvservice', '-o'])
 	display_enabled = enable
 
 def is_display_enabled():
@@ -401,18 +425,18 @@ def slideshow(blank=False):
 			imgs = get_images()
 			if imgs:
 				uri, mime, title, ts = pick_image(imgs)
-				filename = '/tmp/image.%s' % get_extension(mime)
+				filename = os.path.join(settings['tempfolder'], 'image.%s' % get_extension(mime))
 				if download_image(uri, filename):
 					show_image(filename)
 			else:
-				print('Need configuration')
+				show_message("Unable to download ANY images\nCheck that you have photos\nand queries aren't too strict")
 				break
 			print('Sleeping %d seconds...' % settings['cfg']['interval'])
 			time.sleep(settings['cfg']['interval'])
 			print('Next!')
 		slideshow_thread = None
 
-	if slideshow_thread is None:
+	if slideshow_thread is None and oauth is not None:
 		slideshow_thread = threading.Thread(target=imageloop)
 		slideshow_thread.daemon = True
 		slideshow_thread.start()
@@ -420,19 +444,28 @@ def slideshow(blank=False):
 
 set_defaults()
 
-if os.path.exists('settings.json'):
-	with open('settings.json') as f:
-		settings = json.load(f)
-
 settings['local-ip'] = get_my_ip()
+
+loadSettings()
+
+# Force display to desired user setting
+enable_display(True, True)
 
 if settings['local-ip'] is None:
 	print('ERROR: You must have functional internet connection to use this app')
 	show_message('No internet')
 	sys.exit(255)
 
-# Force display to desired user setting
-enable_display(True, True)
+if os.path.exists('/root/oauth.json'):
+	with open('/root/oauth.json') as f:
+		oauth = json.load(f)
+	if 'web' in oauth: # if someone added it via command-line
+		oauth = oauth['web']
+else:
+	show_message('You need to provide OAuth details\nSee README.md')
+
+# Prep random
+random.seed(long(time.clock()))
 
 if __name__ == "__main__":
 	# This allows us to use a plain HTTP callback

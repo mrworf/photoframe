@@ -9,6 +9,7 @@
 <body>
 PhotoFrame rudimentary configuration
 <hr/>
+<span id="all">
 <script type="text/javascript">
 function validate24(input) {
 	i = parseInt(input);
@@ -129,23 +130,22 @@ $(document).ready(function(){
 				dataType: "json"
 			}).done(function(data){
 				if (data['status']) {
-					$('#keywords').append($('#keyword').val() + "<br>");
+					populateKeywords();
 					$('#keyword').val("");
 				}
 			});
 		});
 
 		$.ajax({
-			url:"/islinked"
+			url:"/has/token"
 		}).done(function(data){
 			$("input[type='text']").change(function() {
-				console.log("Change detected: " + $(this).val());
 				if ($(this).data('validate')) {
 					$(this).val(fieldmap[this.name]['validate']($(this).val()));
 				}
 			});
 
-			if (data["linked"])
+			if (data["result"])
 				 $('#fields').append('Frame is linked to Google Photos, <a href="/link">reconnect</a>');
 			else
 				 $('#fields').append('<a href="/link">Connect frame to Google Photos</a>');
@@ -158,11 +158,54 @@ $(document).ready(function(){
 					});
 				}
 			});
+
+			$("#reboot").click(function() {
+				if (confirm("Are you sure you want to REBOOT?")) {
+					$.ajax({
+						url:"/reboot"
+					}).done(function(){
+						var newDoc = document.open("text/html", "replace");
+						newDoc.write("<html><body><h1>Power off</h1></body></html>");
+						newDoc.close();
+					});
+				}
+			});
+
+			$("#shutdown").click(function() {
+				if (confirm("Are you sure you want to POWER OFF the frame?")) {
+					$.ajax({
+						url:"/shutdown"
+					}).done(function(){
+						var newDoc = document.open("text/html", "replace");
+						newDoc.write("<html><body><h1>Power off</h1></body></html>");
+						newDoc.close();
+					});
+				}
+			});
+			$.ajax({
+				url:"/has/oauth"
+			}).done(function(data){
+				if (!data['result']) {
+					$('#all').empty().append('You must provide OAuth2.0 details from Google, paste the JSON data into this box:<br><textarea style="width: 600px; height: 300px" id="oauth"></textarea><br><input type="button" id="authsubmit" value="Save"><hr>')
+					$('#authsubmit').click(function() {
+						$.ajax({
+							url:"/oauth",
+							type:"POST",
+							data: $('#oauth').val(),
+							contentType: "application/json; charset=utf-8",
+							dataType: "json"
+						}).done(function(data){
+							location.reload();
+						});
+					});
+				}
+			});
 		});
 	});
 });
 </script>
 <p id="fields"></p>
+</span>
 <input type="button" id="reset" value="Factory Reset">
 <input type="button" id="reboot" value="Reboot">
 <input type="button" id="shutdown" value="Power off">
