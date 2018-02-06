@@ -393,9 +393,11 @@ def enable_display(enable, force=False):
 			subprocess.call(['/bin/fbset', '-depth', '8'])
 			subprocess.call(['/bin/fbset', '-depth', str(settings['cfg']['depth']), '-xres', str(settings['cfg']['width']), '-yres', str(settings['cfg']['height'])])
 		else:
-			subprocess.call(['/usr/bin/vcgencmd', 'display', '1'])
+			subprocess.call(['/usr/bin/vcgencmd', 'display_power', '1'])
 	else:
-		subprocess.call(['/usr/bin/vcgencmd', 'display', '0'])
+		print('Debug')
+		subprocess.call(['/usr/bin/vcgencmd', 'display_power', '0'])
+		print('Debug')
 		#subprocess.call(['/opt/vc/bin/tvservice', '-o'])
 	display_enabled = enable
 
@@ -434,6 +436,9 @@ def slideshow(blank=False):
 			print('Sleeping %d seconds...' % settings['cfg']['interval'])
 			time.sleep(settings['cfg']['interval'])
 			print('Next!')
+			if int(time.strftime('%H')) >= settings['cfg']['display-off']:
+				print("It's after hours, exit quietly")
+				break
 		slideshow_thread = None
 
 	if slideshow_thread is None and oauth is not None:
@@ -443,9 +448,7 @@ def slideshow(blank=False):
 	
 
 set_defaults()
-
 settings['local-ip'] = get_my_ip()
-
 loadSettings()
 
 # Force display to desired user setting
@@ -466,6 +469,25 @@ else:
 
 # Prep random
 random.seed(long(time.clock()))
+
+# Start timer for keeping display on/off
+def isittime():
+	off = False
+	while True:
+		hour = int(time.strftime('%H'))
+		if off and hour >= settings['cfg']['display-off']:
+			off = False
+			enable_display(False)
+		elif not off and hour >= settings['cfg']['display-on']:
+			off = True
+			enable_display(True)
+			# Make sure slideshow starts again
+			slideshow()
+		time.sleep(60) # every minute
+
+timekeeper = threading.Thread(target=isittime)
+timekeeper.daemon = True
+timekeeper.start()
 
 if __name__ == "__main__":
 	# This allows us to use a plain HTTP callback
