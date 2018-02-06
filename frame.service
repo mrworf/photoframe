@@ -1,0 +1,13 @@
+[Unit]
+Description=Photo Frame
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/photoframe
+ExecStart=/root/photoframe/frame.py
+#Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target
