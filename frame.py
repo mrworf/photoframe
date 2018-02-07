@@ -474,16 +474,18 @@ random.seed(long(time.clock()))
 def isittime():
 	off = False
 	while True:
+		time.sleep(60) # every minute
+
 		hour = int(time.strftime('%H'))
-		if off and hour >= settings['cfg']['display-off']:
-			off = False
-			enable_display(False)
-		elif not off and hour >= settings['cfg']['display-on']:
+		print('Hour = %d' % hour)
+		if not off and hour >= settings['cfg']['display-off']:
 			off = True
+			enable_display(False)
+		elif off and hour >= settings['cfg']['display-on']:
+			off = False
 			enable_display(True)
 			# Make sure slideshow starts again
 			slideshow()
-		time.sleep(60) # every minute
 
 timekeeper = threading.Thread(target=isittime)
 timekeeper.daemon = True
