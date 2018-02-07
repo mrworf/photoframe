@@ -12,6 +12,7 @@ import math
 import subprocess
 import logging
 import socket
+import select
 
 import requests
 from requests_oauthlib import OAuth2Session
@@ -490,6 +491,30 @@ def isittime():
 timekeeper = threading.Thread(target=isittime)
 timekeeper.daemon = True
 timekeeper.start()
+
+def checkshutdown():
+	poller = select.poll()
+	try:
+		with open('/sys/class/gpio/export', 'wb') as f:
+			f.write('3')
+	except:
+		# Usually it means we ran this before
+		pass
+	with open('/sys/class/gpio/gpio3/direction', 'wb') as f:
+		f.write('in')
+	with open('/sys/class/gpio/gpio3/edge', 'wb') as f:
+		f.write('both')
+	with open('/sys/class/gpio/gpio3/value', 'rb') as f:
+		data = f.read()
+		poller.register(f, select.POLLPRI)
+		while True:
+			i = poller.poll(None)
+			#print(repr(i))
+			subprocess.call(['/sbin/poweroff']);
+
+shutdown = threading.Thread(target=checkshutdown)
+shutdown.daemon = True
+shutdown.start()
 
 if __name__ == "__main__":
 	# This allows us to use a plain HTTP callback
