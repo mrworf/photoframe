@@ -42,7 +42,8 @@ settings = {
 	'oauth_state' : None,
 	'local-ip' : None,
 	'tempfolder' : '/tmp/',
-	'whitebalance' : None,
+	'colortemp' : None,
+	'colortemp-script' : '/root/colortemp.sh',
 	'cfg' : None
 }
 
@@ -58,7 +59,7 @@ def _temperature_and_lux(data):
 	cct = 449.0 * n**3 + 3525.0 * n**2 + 6823.3 * n + 5520.33
 	return cct, y
 
-def poll_whitebalance():
+def poll_colortemp():
 	bus = smbus.SMBus(1)
 	# I2C address 0x29
 	# Register 0x12 has device ver. 
@@ -67,6 +68,11 @@ def poll_whitebalance():
 	ver = bus.read_byte(0x29)
 	# version # should be 0x44
 	if ver == 0x44:
+		# Make sure we have the needed script
+		if not os.path.exists(settings['colortemp-script']):
+			logging.info('No color temperature script, download it from http://www.fmwconcepts.com/imagemagick/colortemp/index.php and save as "%s"')
+			return
+
 		bus.write_byte(0x29, 0x80|0x00) # 0x00 = ENABLE register
 		bus.write_byte(0x29, 0x01|0x02) # 0x01 = Power on, 0x02 RGB sensors enabled
 		bus.write_byte(0x29, 0x80|0x14) # Reading results start register 14, LSB then MSB
@@ -78,7 +84,7 @@ def poll_whitebalance():
 			blue = data[7] << 8 | data[6]
 			if red >0 and green > 0 and blue > 0:
 				temp, lux = _temperature_and_lux((red, green, blue, clear))
-				settings['whitebalance'] = temp
+				settings['colortemp'] = temp
 			time.sleep(1)
 	else: 
 		logging.info('No TCS34725 color sensor detected, will not compensate for ambient color temperature')
@@ -340,7 +346,7 @@ def get_images():
 	if os.path.exists(filename): # Check age!
 		age = math.floor( (time.time() - os.path.getctime(filename)) / 3600)
 		if age >= settings['cfg']['refresh-content']:
-			logging.debug('File too old, %dh > %dh' % (age, settings['cfg']['refresh-content']))
+			logging.debug('File too old, %dh > %dh, refreshing' % (age, settings['cfg']['refresh-content']))
 			os.remove(filename)
 
 	if not os.path.exists(filename):
@@ -377,11 +383,11 @@ def download_image(uri, dest):
 		for chunk in response.iter_content(chunk_size=512):
 			if chunk:  # filter out keep-alive new chunks
 				handle.write(chunk)
-	if settings['whitebalance'] is not None:
-		logging.info('Fixing color to %dK' % settings['whitebalance'])
-		subprocess.check_output(['/root/photoframe/whitebalance.sh', '-t', "%d" % settings['whitebalance'], "%s-org%s" % (filename, ext), dest], stderr=DEVNULL)
+	if settings['colortemp'] is not None:
+		logging.info('Fixing color to %dK' % settings['colortemp'])
+		subprocess.check_output(['/root/photoframe/colortemp.sh', '-t', "%d" % settings['colortemp'], "%s-org%s" % (filename, ext), dest], stderr=DEVNULL)
 	else:
-		logging.info('No whitebalance info yet')
+		logging.info('No color temperature info yet')
 		os.rename("%s-org%s" % (filename, ext), dest)
 	return True
 
@@ -499,16 +505,21 @@ def slideshow(blank=False):
 	
 
 set_defaults()
-settings['local-ip'] = get_my_ip()
 loadSettings()
 
 # Force display to desired user setting
 enable_display(True, True)
 
-if settings['local-ip'] is None:
-	logging.error('You must have functional internet connection to use this app')
-	show_message('No internet')
-	sys.exit(255)
+# Spin until we have internet, check every 10s
+while True:
+	settings['local-ip'] = get_my_ip()
+
+	if settings['local-ip'] is None:
+		logging.error('You must have functional internet connection to use this app')
+		show_message('No internet')
+		time.sleep(10)
+	else:
+		break
 
 if os.path.exists('/root/oauth.json'):
 	with open('/root/oauth.json') as f:
@@ -565,7 +576,7 @@ shutdown = threading.Thread(target=checkshutdown)
 shutdown.daemon = True
 shutdown.start()
 
-colortemp = threading.Thread(target=poll_whitebalance)
+colortemp = threading.Thread(target=poll_colortemp)
 colortemp.daemon = True
 colortemp.start()
 
