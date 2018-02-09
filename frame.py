@@ -13,11 +13,24 @@ import subprocess
 import logging
 import socket
 import select
+import smbus
+
+# From https://stackoverflow.com/questions/11269575/how-to-hide-output-of-subprocess-in-python-2-7
+try:
+    from subprocess import DEVNULL
+except ImportError:
+    import os
+    DEVNULL = open(os.devnull, 'wb')
 
 import requests
 from requests_oauthlib import OAuth2Session
 from flask import Flask, request, redirect, session, url_for, abort
 from flask.json import jsonify
+
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
+logging.getLogger('oauthlib').setLevel(logging.ERROR)
+logging.getLogger('urllib3').setLevel(logging.ERROR)
 
 app = Flask(__name__, static_url_path='')
 
@@ -29,8 +42,46 @@ settings = {
 	'oauth_state' : None,
 	'local-ip' : None,
 	'tempfolder' : '/tmp/',
+	'whitebalance' : None,
 	'cfg' : None
 }
+
+def _temperature_and_lux(data):
+	"""Convert the 4-tuple of raw RGBC data to color temperature and lux values. Will return
+	   2-tuple of color temperature and lux."""
+	r, g, b, _ = data
+	x = -0.14282 * r + 1.54924 * g + -0.95641 * b
+	y = -0.32466 * r + 1.57837 * g + -0.73191 * b
+	z = -0.68202 * r + 0.77073 * g +  0.56332 * b
+	divisor = x + y + z
+	n = (x / divisor - 0.3320) / (0.1858 - y / divisor)
+	cct = 449.0 * n**3 + 3525.0 * n**2 + 6823.3 * n + 5520.33
+	return cct, y
+
+def poll_whitebalance():
+	bus = smbus.SMBus(1)
+	# I2C address 0x29
+	# Register 0x12 has device ver. 
+	# Register addresses must be OR'ed with 0x80
+	bus.write_byte(0x29,0x80|0x12)
+	ver = bus.read_byte(0x29)
+	# version # should be 0x44
+	if ver == 0x44:
+		bus.write_byte(0x29, 0x80|0x00) # 0x00 = ENABLE register
+		bus.write_byte(0x29, 0x01|0x02) # 0x01 = Power on, 0x02 RGB sensors enabled
+		bus.write_byte(0x29, 0x80|0x14) # Reading results start register 14, LSB then MSB
+		while True:
+			data = bus.read_i2c_block_data(0x29, 0)
+			clear = clear = data[1] << 8 | data[0]
+			red = data[3] << 8 | data[2]
+			green = data[5] << 8 | data[4]
+			blue = data[7] << 8 | data[6]
+			if red >0 and green > 0 and blue > 0:
+				temp, lux = _temperature_and_lux((red, green, blue, clear))
+				settings['whitebalance'] = temp
+			time.sleep(1)
+	else: 
+		logging.info('No TCS34725 color sensor detected, will not compensate for ambient color temperature')
 
 def set_defaults():
 	settings['cfg'] = {
@@ -49,7 +100,7 @@ def set_defaults():
 
 def get_resolution():
 	res = None
-	output = subprocess.check_output(['/bin/fbset'])
+	output = subprocess.check_output(['/bin/fbset'], stderr=DEVNULL)
 	for line in output.split('\n'):
 		line = line.strip()
 		if line.startswith('mode "'):
@@ -77,14 +128,13 @@ def pick_image(images):
 		entry = images['feed']['entry'][random.SystemRandom().randint(0,count-1)]
 		# Make sure we don't get a video, unsupported for now (gif is usually bad too)
 		if 'image' in entry['content']['type'] and not 'gif' in entry['content']['type']:
-			print('Mime is: ', entry['content']['type'])
 			break
 		else:
 			tries -= 1
-			print('Warning, unsupported media: %s' % entry['content']['type'])
+			logging.warning('Unsupported media: %s' % entry['content']['type'])
 
 	if tries == 0:
-		print('Failed to find any image, abort')
+		logging.error('Failed to find any image, abort')
 		return ('', '', 0)
 
 	title = entry['title']['$t']
@@ -109,7 +159,7 @@ def get_extension(mime):
 	mime = mime.lower()
 	if mime in mapping:
 		return mapping[mime]
-	print 'Mime %s unsupported' % mime
+	logging.warning('Mime %s unsupported' % mime)
 	return 'xxx'
 
 def loadSettings():
@@ -229,12 +279,12 @@ def cfg_reset():
 
 @app.route('/reboot')
 def cfg_reboot():
-	subprocess.call(['/sbin/reboot']);
+	subprocess.call(['/sbin/reboot'], stderr=DEVNULL);
 	return jsonify({'reboot' : True})
 
 @app.route('/shutdown')
 def cfg_shutdown():
-	subprocess.call(['/sbin/poweroff']);
+	subprocess.call(['/sbin/poweroff'], stderr=DEVNULL);
 	return jsonify({'shutdown': True})
 
 @app.route('/')
@@ -290,7 +340,7 @@ def get_images():
 	if os.path.exists(filename): # Check age!
 		age = math.floor( (time.time() - os.path.getctime(filename)) / 3600)
 		if age >= settings['cfg']['refresh-content']:
-			print('File too old, %dh > %dh' % (age, settings['cfg']['refresh-content']))
+			logging.debug('File too old, %dh > %dh' % (age, settings['cfg']['refresh-content']))
 			os.remove(filename)
 
 	if not os.path.exists(filename):
@@ -309,25 +359,30 @@ def get_images():
 		if keyword != "":
 			params['q'] = keyword
 		url = 'https://picasaweb.google.com/data/feed/api/user/default'
-		print('Downloading image list for %s...' % keyword)
+		logging.debug('Downloading image list for %s...' % keyword)
 		data = performGet(url, params=params)
 		with open(filename, 'w') as f:
 			f.write(data.content)
-		print('Done')
 	images = None
 	with open(filename) as f:
 		images = json.load(f)
-	print('Loaded %d images into list' % len(images['feed']['entry']))
+	logging.debug('Loaded %d images into list' % len(images['feed']['entry']))
 	return images
 
 def download_image(uri, dest):
-	print 'Downloadiing %s...' % uri
+	logging.debug('Downloading %s...' % uri)
+	filename, ext = os.path.splitext(dest)
 	response = performGet(uri, stream=True)
-	with open(dest, 'wb') as handle:
+	with open("%s-org%s" % (filename, ext), 'wb') as handle:
 		for chunk in response.iter_content(chunk_size=512):
 			if chunk:  # filter out keep-alive new chunks
 				handle.write(chunk)
-	print 'Done'
+	if settings['whitebalance'] is not None:
+		logging.info('Fixing color to %dK' % settings['whitebalance'])
+		subprocess.check_output(['/root/photoframe/whitebalance.sh', '-t', "%d" % settings['whitebalance'], "%s-org%s" % (filename, ext), dest], stderr=DEVNULL)
+	else:
+		logging.info('No whitebalance info yet')
+		os.rename("%s-org%s" % (filename, ext), dest)
 	return True
 
 def show_message(message):
@@ -357,7 +412,7 @@ def show_message(message):
 		'bgra:-'
 	]
 	with open('/dev/fb0', 'wb') as f:
-		ret = subprocess.call(args, stdout=f)
+		ret = subprocess.call(args, stdout=f, stderr=DEVNULL)
 
 
 def show_image(filename):
@@ -377,7 +432,7 @@ def show_image(filename):
 		'bgra:-'
 	]
 	with open('/dev/fb0', 'wb') as f:
-		ret = subprocess.call(args, stdout=f)
+		ret = subprocess.call(args, stdout=f, stderr=DEVNULL)
 
 display_enabled = True
 
@@ -389,17 +444,14 @@ def enable_display(enable, force=False):
 
 	if enable:
 		if force: # Make sure display is ON and set to our preference
-			subprocess.call(['/opt/vc/bin/tvservice', '-e', settings['cfg']['tvservice']])
+			subprocess.call(['/opt/vc/bin/tvservice', '-e', settings['cfg']['tvservice']], stderr=DEVNULL, stdout=DEVNULL)
 			time.sleep(1)
-			subprocess.call(['/bin/fbset', '-depth', '8'])
-			subprocess.call(['/bin/fbset', '-depth', str(settings['cfg']['depth']), '-xres', str(settings['cfg']['width']), '-yres', str(settings['cfg']['height'])])
+			subprocess.call(['/bin/fbset', '-depth', '8'], stderr=DEVNULL)
+			subprocess.call(['/bin/fbset', '-depth', str(settings['cfg']['depth']), '-xres', str(settings['cfg']['width']), '-yres', str(settings['cfg']['height'])], stderr=DEVNULL)
 		else:
-			subprocess.call(['/usr/bin/vcgencmd', 'display_power', '1'])
+			subprocess.call(['/usr/bin/vcgencmd', 'display_power', '1'], stderr=DEVNULL)
 	else:
-		print('Debug')
-		subprocess.call(['/usr/bin/vcgencmd', 'display_power', '0'])
-		print('Debug')
-		#subprocess.call(['/opt/vc/bin/tvservice', '-o'])
+		subprocess.call(['/usr/bin/vcgencmd', 'display_power', '0'], stderr=DEVNULL)
 	display_enabled = enable
 
 def is_display_enabled():
@@ -413,7 +465,7 @@ def slideshow(blank=False):
 	if blank:
 		# lazy
 		with open('/dev/fb0', 'wb') as f:
-			subprocess.call(['cat' , '/dev/zero'], stdout=f)
+			subprocess.call(['cat' , '/dev/zero'], stdout=f, stderr=DEVNULL)
 
 	def imageloop():
 		global slideshow_thread
@@ -423,7 +475,7 @@ def slideshow(blank=False):
 		while True:
 			if settings['oauth_token'] is None:
 				show_message('Please link photoalbum\n\nSurf to http://%s:7777/' % settings['local-ip'])
-				print('You need to link your photoalbum first')
+				logging.info('You need to link your photoalbum first')
 				break
 			imgs = get_images()
 			if imgs:
@@ -434,11 +486,9 @@ def slideshow(blank=False):
 			else:
 				show_message("Unable to download ANY images\nCheck that you have photos\nand queries aren't too strict")
 				break
-			print('Sleeping %d seconds...' % settings['cfg']['interval'])
 			time.sleep(settings['cfg']['interval'])
-			print('Next!')
 			if int(time.strftime('%H')) >= settings['cfg']['display-off']:
-				print("It's after hours, exit quietly")
+				logging.debug("It's after hours, exit quietly")
 				break
 		slideshow_thread = None
 
@@ -456,7 +506,7 @@ loadSettings()
 enable_display(True, True)
 
 if settings['local-ip'] is None:
-	print('ERROR: You must have functional internet connection to use this app')
+	logging.error('You must have functional internet connection to use this app')
 	show_message('No internet')
 	sys.exit(255)
 
@@ -478,7 +528,6 @@ def isittime():
 		time.sleep(60) # every minute
 
 		hour = int(time.strftime('%H'))
-		print('Hour = %d' % hour)
 		if not off and hour >= settings['cfg']['display-off']:
 			off = True
 			enable_display(False)
@@ -493,28 +542,32 @@ timekeeper.daemon = True
 timekeeper.start()
 
 def checkshutdown():
+	# Shutdown can be initated from GPIO26
 	poller = select.poll()
 	try:
 		with open('/sys/class/gpio/export', 'wb') as f:
-			f.write('3')
+			f.write('26')
 	except:
 		# Usually it means we ran this before
 		pass
-	with open('/sys/class/gpio/gpio3/direction', 'wb') as f:
+	with open('/sys/class/gpio/gpio26/direction', 'wb') as f:
 		f.write('in')
-	with open('/sys/class/gpio/gpio3/edge', 'wb') as f:
+	with open('/sys/class/gpio/gpio26/edge', 'wb') as f:
 		f.write('both')
-	with open('/sys/class/gpio/gpio3/value', 'rb') as f:
+	with open('/sys/class/gpio/gpio26/value', 'rb') as f:
 		data = f.read()
 		poller.register(f, select.POLLPRI)
 		while True:
 			i = poller.poll(None)
-			#print(repr(i))
-			subprocess.call(['/sbin/poweroff']);
+			subprocess.call(['/sbin/poweroff'], stderr=DEVNULL);
 
 shutdown = threading.Thread(target=checkshutdown)
 shutdown.daemon = True
 shutdown.start()
+
+colortemp = threading.Thread(target=poll_whitebalance)
+colortemp.daemon = True
+colortemp.start()
 
 if __name__ == "__main__":
 	# This allows us to use a plain HTTP callback
