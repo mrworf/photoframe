@@ -174,7 +174,7 @@ def pick_image(images, memory):
 
 	if tries == 0:
 		logging.error('Failed to find any image, abort')
-		return ('', '', 0)
+		return ('', '', '', 0)
 
 	title = entry['title']['$t']
 	parts = title.lower().split('.')
@@ -519,25 +519,34 @@ def slideshow(blank=False):
 				break
 
 			imgs = cache = memory = None
-			tries = 5
+			tries = 50
 			while tries > 0:
 				imgs, cache = get_images()
+				if not imgs:
+					tries -= 1
+					continue
+
 				memory = remember(cache, len(imgs['feed']['entry']))
-				if not memory.seenAll():
-					break
-				else:
+				if memory.seenAll():
 					logging.debug('Seen all images, try again')
 					tries -= 1
+					continue
 
-			if imgs:
 				# Now, lets make sure we didn't see this before
 				uri, mime, title, ts = pick_image(imgs, memory)
+				if uri == '':
+					tries -= 1
+					continue
+
 				filename = os.path.join(settings['tempfolder'], 'image.%s' % get_extension(mime))
 				if download_image(uri, filename):
 					show_image(filename)
-			else:
+					break
+				else:
+					tries -= 1
+
+			if tries == 0:
 				show_message("Unable to download ANY images\nCheck that you have photos\nand queries aren't too strict")
-				break
 			time.sleep(settings['cfg']['interval'])
 			if int(time.strftime('%H')) >= settings['cfg']['display-off']:
 				logging.debug("It's after hours, exit quietly")
