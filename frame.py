@@ -420,8 +420,12 @@ def download_image(uri, dest):
 			if chunk:  # filter out keep-alive new chunks
 				handle.write(chunk)
 	if settings['colortemp'] is not None:
-		logging.debug('Adjusting color temperature to %dK' % settings['colortemp'])
-		subprocess.check_output([settings['colortemp-script'], '-t', "%d" % settings['colortemp'], "%s-org%s" % (filename, ext), dest], stderr=DEVNULL)
+		temp = settings['colortemp']
+		if temp < 3500:
+			logging.debug('Actual color temp measured is %d, but we cap to 3500K', temp)
+			temp = 3500
+		logging.debug('Adjusting color temperature to %dK' % temp)
+		subprocess.check_output([settings['colortemp-script'], '-t', "%d" % temp, "%s-org%s" % (filename, ext), dest], stderr=DEVNULL)
 	else:
 		logging.info('No color temperature info yet')
 		os.rename("%s-org%s" % (filename, ext), dest)
