@@ -21,6 +21,7 @@ try:
 except ImportError:
     import os
     DEVNULL = open(os.devnull, 'wb')
+###
 
 import requests
 from requests_oauthlib import OAuth2Session
@@ -46,6 +47,33 @@ settings = {
 	'colortemp-script' : '/root/colortemp.sh',
 	'cfg' : None
 }
+
+class remember:
+	def __init__(self, filename, count):
+		self.filename = os.path.splitext(filename)[0] + '_memory.json'
+		self.count = count
+		if os.path.exists(self.filename):
+			with open(self.filename, 'rb') as f:
+				self.memory = json.load(f)
+		else:
+			self.memory = {'seen':[]}
+
+	def forget(self):
+		self.memory = {'seen':[]}
+		if os.path.exists(self.filename):
+			os.unlink(self.filename)		
+
+	def saw(self, index):
+		if index not in self.memory['seen']:
+			self.memory['seen'].append(index)
+			with open(self.filename, 'wb') as f:
+				json.dump(self.memory, f)
+
+	def seenAll(self):
+		return len(self.memory['seen']) == self.count
+
+	def seen(self, index):
+		return index in self.memory['seen']
 
 def _temperature_and_lux(data):
 	"""Convert the 4-tuple of raw RGBC data to color temperature and lux values. Will return
@@ -125,19 +153,24 @@ def get_my_ip():
 		pass
 	return ip
 
-def pick_image(images):
+def pick_image(images, memory):
 	ext = ['jpg','png','dng','jpeg','gif','bmp']
 	count = len(images['feed']['entry'])
 	tries = 5
 
 	while tries > 0:
-		entry = images['feed']['entry'][random.SystemRandom().randint(0,count-1)]
-		# Make sure we don't get a video, unsupported for now (gif is usually bad too)
-		if 'image' in entry['content']['type'] and not 'gif' in entry['content']['type']:
-			break
+		i = random.SystemRandom().randint(0,count-1)
+		if not memory.seen(i):
+			memory.saw(i)
+			entry = images['feed']['entry'][i]
+			# Make sure we don't get a video, unsupported for now (gif is usually bad too)
+			if 'image' in entry['content']['type'] and not 'gif' in entry['content']['type']:
+				break
+			else:
+				logging.warning('Unsupported media: %s' % entry['content']['type'])
 		else:
-			tries -= 1
-			logging.warning('Unsupported media: %s' % entry['content']['type'])
+			logging.debug('Already seen index %d' % i)
+		tries -= 1
 
 	if tries == 0:
 		logging.error('Failed to find any image, abort')
@@ -348,6 +381,9 @@ def get_images():
 		if age >= settings['cfg']['refresh-content']:
 			logging.debug('File too old, %dh > %dh, refreshing' % (age, settings['cfg']['refresh-content']))
 			os.remove(filename)
+			# Make sure we don't remember since we're refreshing
+			memory = remember(filename, 0)
+			memory.forget()
 
 	if not os.path.exists(filename):
 		# Request albums
@@ -373,7 +409,7 @@ def get_images():
 	with open(filename) as f:
 		images = json.load(f)
 	logging.debug('Loaded %d images into list' % len(images['feed']['entry']))
-	return images
+	return images, filename
 
 def download_image(uri, dest):
 	logging.debug('Downloading %s...' % uri)
@@ -384,20 +420,14 @@ def download_image(uri, dest):
 			if chunk:  # filter out keep-alive new chunks
 				handle.write(chunk)
 	if settings['colortemp'] is not None:
-		logging.info('Fixing color to %dK' % settings['colortemp'])
-		subprocess.check_output(['/root/photoframe/colortemp.sh', '-t', "%d" % settings['colortemp'], "%s-org%s" % (filename, ext), dest], stderr=DEVNULL)
+		logging.debug('Adjusting color temperature to %dK' % settings['colortemp'])
+		subprocess.check_output([settings['colortemp-script'], '-t', "%d" % settings['colortemp'], "%s-org%s" % (filename, ext), dest], stderr=DEVNULL)
 	else:
 		logging.info('No color temperature info yet')
 		os.rename("%s-org%s" % (filename, ext), dest)
 	return True
 
 def show_message(message):
-	"""convert -size 2400x1200 xc:White ^
-	  -gravity Center ^
-	  -weight 700 -pointsize 200 ^
-	  -annotate 0 "OIL\nFOUND\nIN CENTRAL PARK" ^
-	  oil.png
-	"""
 	args = [
 		'convert',
 		'-size',
@@ -420,8 +450,8 @@ def show_message(message):
 	with open('/dev/fb0', 'wb') as f:
 		ret = subprocess.call(args, stdout=f, stderr=DEVNULL)
 
-
 def show_image(filename):
+	logging.debug('Showing image to user')
 	args = [
 		'convert',
 		filename,
@@ -483,9 +513,21 @@ def slideshow(blank=False):
 				show_message('Please link photoalbum\n\nSurf to http://%s:7777/' % settings['local-ip'])
 				logging.info('You need to link your photoalbum first')
 				break
-			imgs = get_images()
+
+			imgs = cache = memory = None
+			tries = 5
+			while tries > 0:
+				imgs, cache = get_images()
+				memory = remember(cache, len(imgs['feed']['entry']))
+				if not memory.seenAll():
+					break
+				else:
+					logging.debug('Seen all images, try again')
+					tries -= 1
+
 			if imgs:
-				uri, mime, title, ts = pick_image(imgs)
+				# Now, lets make sure we didn't see this before
+				uri, mime, title, ts = pick_image(imgs, memory)
 				filename = os.path.join(settings['tempfolder'], 'image.%s' % get_extension(mime))
 				if download_image(uri, filename):
 					show_image(filename)
@@ -513,6 +555,7 @@ enable_display(True, True)
 # Spin until we have internet, check every 10s
 while True:
 	settings['local-ip'] = get_my_ip()
+	settings['colortemp'] = None
 
 	if settings['local-ip'] is None:
 		logging.error('You must have functional internet connection to use this app')
