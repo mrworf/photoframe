@@ -92,6 +92,37 @@ reboot
 
 Done! Once the device has rebooted, it will tell you how to connect to it and then using your webbrowser you can link it to Google Photos.
 
+## It keeps asking for OAuth2.0 data?
+
+You have to tell photoframe about OAuth2.0 secrets. 
+
+First step, login to your google API console (you have this by default if you have a google photos account). You'll find the console
+at https://console.developers.google.com/apis/dashboard
+
+Next, you're going to create a new project, you can call it whatever you want, for this example, I'm using `Photo Frame`.
+
+Once created, we're going to click on `Credentials` in the menu on the left. After it loads, click `Create credentials` and select
+`OAuth client id`. This leads to a new screen where it will ask you to create a consent screen, so click the button to get that started.
+
+Next, you're going to fill out the form. All but two fields are optional, so it's an easy thing to do. 
+
+Email Address: `<Your email>` (usually prefilled with your google email)
+
+Product name shown to users: `Photo Frame`
+
+Hit `save` and it will take you to a screen where you choose what kind of application you're making. It's important you choose `Web Application`.
+Doing so opens up a couple of extra fields. First, change the name from `Web Client 1` to something better (for example `Photo Frame`). You also need
+to fill out `Authorized redirect URIs`. 
+
+Please add `https://photoframe.sensenet.nu` to this list and then press `Create`
+
+This action will open a box with client ID and secret. Don't worry about it, just click `OK`. On the new screen, you'll find your newly created client id.
+On the line with the name of your app, there will be a download button at the right-most side. 
+
+Click it, and it downloads a JSON file. It is the contents of this file which needs to be copy-n-paste:ed into the box you see in photoframe.
+
+Once you've copy-n-paste:ed this and submit it to photoframe, it will unlock the main settings and allow you to perform the google photos link, configure parameters, etc.
+
 # wifi setup
 
 This requires a couple of extra steps, first we need more software
@@ -170,12 +201,60 @@ Since Google doesn't approve of OAuth with dynamic redirect addresses,
 this project makes use of a lightweight service which allows registration
 of desired redirect (as long as it's a LAN address) and then when 
 Google redirects, this service will make another redirect back to your
-raspberry.
+raspberry. The registered addresses are only kept for 10min and is only
+stored in RAM, so nothing is kept.
 
-Add diagram (TBD)
+```
+User                 RPi3                    Google            Sensenet
+ |--[Start linking]--->|                         |                 |
+ |                     |                         |                 |
+ |                     |-------[Register LAN address]------------->|
+ |                     |                         |                 |
+ |                     |<---------[Unique ID to use]---------------|
+ |                     |                         |                 |
+ |<--[OAuth2.0 begin]--|                         |                 |
+ |                     |                         |                 |
+ |<-[OAuth2.0 exchange, state holds unique ID]-->|                 |
+ |                     |                         |                 |
+ |<---[Redirect to photoframe.sensenet.nu]-------|                 |
+ |                     |                         |                 |
+ |----[Load photoframe.sensenet.nu with unique ID]---------------->|
+ |                     |                         |                 |
+ |<---[New redirect to registered LAN address from earlier]--------|
+ |                     |                         |                 |
+ |--[Load local web]-->|                         |                 |
+ |                     |                         |                 |
+ ```
 
-The code for this service is available under `extras` and requires
+It's somewhat simplified, but shows the extra step taken to register your LAN address so redirection works.
+
+If you want to see how it works and/or run your own, you'll find the code for this service under `extras` and requires
 php with memcached. Ideally you use a SSL endpoint as well.
+
+# faq
+
+## My screen is black or won't show anything?
+
+The default for photoframe is 1920x1080 at 60Hz, this may or may not be the correct settings for your screen. The web interface is located on port 7777 on your RPi3, by going there you can change these defaults. It also allows you to configure tvservice. By SSH:ing into your RPi3, you can list all available modes exposed by your monitor by issuing `/opt/vc/bin/tvservice -m <CEA or DMT>`. From here you should be able to find the correct mode to use for your screen.
+
+The syntax for `Arguments for Raspberry Pi 3 tv service` in the web interface is:
+
+`<DMT or CEA> <mode id> <DVI or HDMI>`
+
+If it still doesn't work, I'd recommend googling it a bit, you may need to add parameters to the `/boot/config.txt` file to make it all work.
+
+## Can I avoid photoframe.sensenet.nu ?
+
+You could run the same service yourself (see `extras/`). It requires a DNS name which doesn't change and HTTPS support. You'll also need to change the relevant parts of this guide and the `frame.py` file so all references are correct. You might also be able to use server tokens instead, but that would require you to do more invasive changes. I don't have any support for this at this time.
+
+## I made a mistake and my RPi3 is unreachable
+
+### Option 1 - Hard but fast
+Install vmware player, run ubuntu on your computer and then attach the memory card to your computer. It should be recognized and allow you to
+edit the `/etc/network/interfaces` file located on the SD card. This method retains all work you've done. 
+
+### Option 2 - Easy but slow
+Start over from step 1 and install your distribution of choice on the memory card
 
 # todo
 
