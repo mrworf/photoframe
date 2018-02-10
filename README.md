@@ -27,14 +27,14 @@ the images to meld better with the room where it's running.
 # requires
 
 - Raspberry Pi 3
-- *bian distro (recommend minibian, [https://minibianpi.wordpress.com/])
+- *bian distro (recommend minibian, https://minibianpi.wordpress.com/ )
 - Display of some sort
 - Google Photos account
 - Internet
 
 # installation
 
-First, install your favorite debian distro (recommend minibian, [https://minibianpi.wordpress.com/]) and
+First, install your favorite debian distro (recommend minibian, https://minibianpi.wordpress.com/ ) and
 make sure it's up-to-date by issuing
 
 `apt update && apt upgrade`
@@ -141,7 +141,7 @@ Save and reboot, now your RPi3 will boot directly to WiFi and WiFi only. If you 
 # color temperature?
 
 Yes, photoframe can actually adjust the temperature of the image to suit the light in the room. For this to work, you need to install a TCS34725,
-see [https://www.adafruit.com/product/1334]. This should be hooked up to the I2C bus, using this:
+see https://www.adafruit.com/product/1334 . This should be hooked up to the I2C bus, using this:
 
 ```
 3.3V -> Pin 1 (3.3V)
@@ -153,7 +153,7 @@ GND -> Pin 9 (GND)
 You also need to tell your RPi3 to enable the I2C bus, start the `raspi-config` and go to submenu 5 (interfaces) and select I2C and enable it.
 
 Once all this is done, you have one more thing left to do before rebooting, you need to download the imagemagick script that will adjust the image,
-please visit [http://www.fmwconcepts.com/imagemagick/colortemp/index.php} and download and store it as `colortemp.sh` inside `/root/`.
+please visit http://www.fmwconcepts.com/imagemagick/colortemp/index.php and download and store it as `colortemp.sh` inside `/root/`.
 
 You're done! Reboot your RPi3 (So I2C gets enabled) and from now on, all images will get adjusted to match the ambient color temperature.
 
