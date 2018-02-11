@@ -1,3 +1,8 @@
+import os
+import json
+import logging
+import random
+
 class settings:
 	def __init__(self):
 		self.settings = {
@@ -9,9 +14,9 @@ class settings:
 			'colortemp-script' : '/root/colortemp.sh',
 			'cfg' : None
 		}
-		self.user_defaults()
+		self.userDefaults()
 
-	def user_defaults(self):
+	def userDefaults(self):
 		self.settings['cfg'] = {
 			'width' : 1920,
 			'height' : 1080,
@@ -38,11 +43,40 @@ class settings:
 	def setUser(self, key, value):
 		self.settings['cfg'][key] = value
 
-	def getUser(self, key):
+	def getUser(self, key=None):
+		if key is None:
+			return self.settings['cfg']
+
 		if key in self.settings['cfg']:
 			return self.settings['cfg'][key]
 		logging.warning('Trying to access non-existent user config key "%s"' % key)
 		return None
+
+	def addKeyword(self, keyword):
+		if keyword is None:
+			return False
+		keyword = keyword.strip()
+		if keyword not in self.settings['cfg']['keywords']:
+			self.settings['cfg']['keywords'].append(keyword.strip())
+			return True
+		return False
+
+	def removeKeyword(self, id):
+		if id < 0 or id >= len(self.settings['cfg']['keywords']):
+			return False
+		self.settings['cfg']['keywords'].pop(id)
+		if len(self.settings['cfg']['keywords']) == 0:
+			self.addKeyword('')
+		return True
+
+	def getKeyword(self, id=None):
+		if id is None:
+			rnd = random.SystemRandom().randint(0, len(self.settings['cfg']['keywords'])-1)
+			return self.settings['cfg']['keywords'][rnd]
+		elif id >= 0 and id < len(self.settings['cfg']['keywords']):
+			return self.settings['cfg']['keywords'][id]
+		else:
+			return None
 
 	def set(self, key, value):
 		self.settings[key] = value

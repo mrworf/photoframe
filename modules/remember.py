@@ -1,4 +1,5 @@
-
+import os
+import json
 
 class remember:
 	def __init__(self, filename, count):
