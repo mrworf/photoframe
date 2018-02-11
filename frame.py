@@ -20,6 +20,7 @@ from modules.colormatch import colormatch
 from modules.settings import settings
 from modules.helper import helper
 from modules.display import display
+from modules.oauth import oauth
 
 # From https://stackoverflow.com/questions/11269575/how-to-hide-output-of-subprocess-in-python-2-7
 try:
@@ -40,9 +41,6 @@ logging.getLogger('oauthlib').setLevel(logging.ERROR)
 logging.getLogger('urllib3').setLevel(logging.ERROR)
 
 app = Flask(__name__, static_url_path='')
-
-oauth = None
-rid = None
 
 def pick_image(images, memory):
 	ext = ['jpg','png','dng','jpeg','gif','bmp']
@@ -80,29 +78,6 @@ def pick_image(images, memory):
 	uri = uri.replace('/s1600/', '/s%s/' % settings.getUser('width'), 1)
 
 	return (uri, mime, title, timestamp)
-
-def getAuth(refresh=False):
-	if not refresh:
-		auth = OAuth2Session(oauth['client_id'], token=settings.get('oauth_token'))
-	else:
-		def token_updater(token):
-			settings.set('oauth_token', token)
-			saveSettings()
-
-		auth = OAuth2Session(oauth['client_id'],
-	                         token=settings.get('oauth_token'),
-	                         auto_refresh_kwargs={'client_id':oauth['client_id'],'client_secret':oauth['client_secret']},
-	                         auto_refresh_url=oauth['token_uri'],
-	                         token_updater=token_updater)
-	return auth
-
-def performGet(uri, stream=False, params=None):
-	try:
-		auth = getAuth()
-		return auth.get(uri, stream=stream, params=params)
-	except:
-		auth = getAuth(True)
-		return auth.get(uri, stream=stream, params=params)
 
 @app.route('/setting', methods=['GET'], defaults={'key':None,'value':None})
 @app.route('/setting/<key>', methods=['GET'], defaults={'value':None})
@@ -158,26 +133,24 @@ def cfg_hasthis():
 		if settings.get('oauth_token') is not None:
 			result = True
 	elif '/oauth' in request.path:
-		result = oauth != None
+		result = oauth.hasOAuth()
 
 	return jsonify({'result' : result})
 
 @app.route('/oauth', methods=['POST'])
 def cfg_oauth_info():
-	global oauth
-
 	if request.json is None or 'web' not in request.json:
 		abort(500)
-	oauth = request.json['web']
+	data = request.json['web']
+	oauth.setOAuth(data)
 	with open('/root/oauth.json', 'wb') as f:
-		json.dump(oauth, f);
+		json.dump(data, f);
 	return jsonify({'result' : True})
 
 @app.route('/reset')
 def cfg_reset():
 	settings.userDefaults();
 	settings.set('oauth_token', None)
-	settings.set('oauth_state', None)
 	saveSettings()
 	return jsonify({'reset': True})
 
@@ -199,20 +172,7 @@ def web_main():
 def oauth_step1():
 	""" Step 1: Get authorization
 	"""
-	global rid
-	r = requests.get('https://photoframe.sensenet.nu/?register')
-	rid = r.content
-	auth = OAuth2Session(oauth['client_id'],
-						scope=['https://picasaweb.google.com/data/'],
-						redirect_uri='https://photoframe.sensenet.nu',
-						state='%s-%s' % (rid, settings.get('local-ip')))
-	authorization_url, state = auth.authorization_url(oauth['auth_uri'],
-	 													access_type="offline",
-														prompt="consent")
-
-	# State is used to prevent CSRF, keep this for later.
-	settings.set('oauth_state', state)
-	return redirect(authorization_url)
+	return redirect(oauth.initate())
 
 # Step 2: Google stuff, essentially user consents to allowing us access
 
@@ -220,11 +180,7 @@ def oauth_step1():
 def oauth_step3():
 	""" Step 3: Get the token
 	"""
-	auth = OAuth2Session(oauth['client_id'], scope=['https://picasaweb.google.com/data/'], redirect_uri='https://photoframe.sensenet.nu', state='%s-%s' % (rid, settings.get('local-ip')))
-	token = auth.fetch_token(oauth['token_uri'], client_secret=oauth['client_secret'], authorization_response=request.url)
-
-	settings.set('oauth_token', token)
-	settings.save()
+	oauth.complete(request.url)
 	return redirect(url_for('.complete'))
 
 @app.route("/complete", methods=['GET'])
@@ -363,7 +319,6 @@ display.enable(True, True)
 # Spin until we have internet, check every 10s
 while True:
 	settings.set('local-ip', helper.getIP())
-	settings.set('colortemp', None)
 
 	if settings.get('local-ip') is None:
 		logging.error('You must have functional internet connection to use this app')
@@ -372,11 +327,21 @@ while True:
 	else:
 		break
 
+def oauthGetToken():
+	return settings.get('oauth_token')
+
+def oauthSetToken(token):
+	settings.set('oauth_token', token)
+	settings.save()
+
+oauth = oauth(settings.get('local-ip'), oauthGetToken, oauthSetToken)
+
 if os.path.exists('/root/oauth.json'):
 	with open('/root/oauth.json') as f:
-		oauth = json.load(f)
-	if 'web' in oauth: # if someone added it via command-line
-		oauth = oauth['web']
+		data = json.load(f)
+	if 'web' in data: # if someone added it via command-line
+		data = data['web']
+		oauth.setOAuth(data)
 else:
 	display.message('You need to provide OAuth details\nSee README.md')
 
