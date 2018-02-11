@@ -80,7 +80,7 @@ class slideshow:
 				memory.saw(i)
 				entry = images['feed']['entry'][i]
 				# Make sure we don't get a video, unsupported for now (gif is usually bad too)
-				if 'image' in entry['content']['type'] and not 'gif' in entry['content']['type']:
+				if 'image' in entry['content']['type'] and 'gphoto$videostatus' not in entry:
 					break
 				else:
 					logging.warning('Unsupported media: %s' % entry['content']['type'])
@@ -135,7 +135,7 @@ class slideshow:
 				'access' : 'all',
 				'imgmax' : '1600u', # We will replace this with width of framebuffer in pick_image
 				# This is where we get cute, we pick from a list of keywords
-				'fields' : 'entry(title,content,gphoto:timestamp)' # No unnecessary stuff
+				'fields' : 'entry(title,content,gphoto:timestamp,gphoto:videostatus)' # No unnecessary stuff
 			}
 			if keyword != "":
 				params['q'] = keyword
