@@ -88,7 +88,7 @@ class GooglePhotos:
 
 		entry = images['feed']['entry'][i]
 		# Make sure we don't get a video, unsupported for now (gif is usually bad too)
-		if 'image' in entry['content']['type'] and not 'gif' in entry['content']['type']:
+		if 'image' in entry['content']['type'] and 'gphoto$videostatus' not in entry:
 			return None
 		else:
 			logging.warning('Unsupported media: %s' % entry['content']['type'])
