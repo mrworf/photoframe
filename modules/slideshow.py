@@ -7,6 +7,8 @@ import hashlib
 import time
 import json
 import math
+import re
+import subprocess
 
 from modules.remember import remember
 from modules.helper import helper
@@ -19,6 +21,12 @@ class slideshow:
 		self.settings = settings
 		self.oauth = oauth
 		self.colormatch = colormatch(self.settings.get('colortemp-script'), 3500)
+		self.imageCurrent = None
+		self.imageMime = None
+		self.void = open(os.devnull, 'wb')
+
+	def getCurrentImage(self):
+		return self.imageCurrent, self.imageMime
 
 	def start(self, blank=False):
 		if blank:
@@ -33,6 +41,7 @@ class slideshow:
 			self.thread.start()
 
 	def presentation(self):
+		logging.debug('Starting presentation')
 		while True:
 			imgs = cache = memory = None
 			tries = 50
@@ -57,6 +66,8 @@ class slideshow:
 				filename = os.path.join(self.settings.get('tempfolder'), 'image.%s' % helper.getExtension(mime))
 				if self.downloadImage(uri, filename):
 					self.display.image(filename)
+					self.imageCurrent = filename
+					self.imageMime = mime
 					break
 				else:
 					tries -= 1
@@ -145,16 +156,97 @@ class slideshow:
 			with open(filename, 'w') as f:
 				f.write(data.content)
 		images = None
-		with open(filename) as f:
-			images = json.load(f)
-		logging.debug('Loaded %d images into list' % len(images['feed']['entry']))
-		return images, filename
+		try:
+			with open(filename) as f:
+				images = json.load(f)
+			logging.debug('Loaded %d images into list' % len(images['feed']['entry']))
+			return images, filename
+		except:
+			logging.exception('Failed to load images')
+			os.remove(filename)
+			return None, None
+
+	def makeFullframe(self, filename):
+		name, ext = os.path.splitext(filename)
+		filename_temp = "%s-frame%s" % (name, ext)
+
+		output = subprocess.check_output(['/usr/bin/identify', filename], stderr=self.void)
+		m = re.search('([1-9][0-9])*x([1-9][0-9]*)', output)
+		if m is None:
+			logging.error('Unable to resolve regular expression for image size')
+			return False
+		width = int(m.group(1))
+		height = int(m.group(2))
+
+		# Since we know we're looking to get an image which is 1920x??? we can make assumptions
+		width_border = 15
+		width_spacing = 3
+		border = None
+		borderSmall = None
+		if height < self.settings.getUser('height'):
+			border = '0x%d' % width_border
+			spacing = '0x%d' % width_spacing
+			logging.debug('Landscape image, reframing')
+		elif height > self.settings.getUser('height'):
+			border = '%dx0' % width_border
+			spacing = '%dx0' % width_spacing
+			logging.debug('Portrait image, reframing')
+		else:
+			logging.debug('Image is fullscreen, no reframing needed')
+			return False
+
+		# Time to process
+		cmd = [
+			'convert',
+			filename,
+			'-resize',
+			'%sx%s^' % (self.settings.getUser('width'), self.settings.getUser('height')),
+			'-gravity',
+			'center',
+			'-crop',
+			'%sx%s+0+0' % (self.settings.getUser('width'), self.settings.getUser('height')),
+			'+repage',
+			'-blur',
+			'0x8',
+			'-brightness-contrast',
+			'-20x0',
+			'(',
+			filename,
+			'-bordercolor',
+			'white',
+			'-border',
+			border,
+			'-bordercolor',
+			'black',
+			'-border',
+			spacing,
+			'-resize',
+			'%sx%s' % (self.settings.getUser('width'), self.settings.getUser('height')),
+			'-background',
+			'transparent',
+			'-gravity', 
+			'center',
+			'-extent',
+			'%sx%s' % (self.settings.getUser('width'), self.settings.getUser('height')),
+			')',
+			'-composite',
+			filename_temp
+		]
+		try:
+			subprocess.check_output(cmd, stderr=subprocess.STDOUT) #stderr=self.void)
+		except subprocess.CalledProcessError as e:
+			logging.exception('Unable to reframe the image')
+			logging.error('Output: %s' % repr(e.output))
+			return False
+		os.rename(filename_temp, filename)
+		return True
 
 	def downloadImage(self, uri, dest):
 		logging.debug('Downloading %s...' % uri)
 		filename, ext = os.path.splitext(dest)
 		temp = "%s-org%s" % (filename, ext)
 		if self.oauth.request(uri, destination=temp):
+			self.makeFullframe(temp)
 			if self.colormatch.hasSensor():
 				if not self.colormatch.adjust(temp, dest):
 					logging.warning('Unable to adjust image to colormatch, using original')
