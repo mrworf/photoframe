@@ -57,6 +57,9 @@ def cfg_keyvalue(key, value):
 		if key in ['width', 'height', 'depth', 'tvservice']:
 			display.setConfiguration(settings.getUser('width'), settings.getUser('height'), settings.getUser('depth'), settings.getUser('tvservice'))
 			display.enable(True, True)
+		if key in ['display-on', 'display-off']:
+			timekeeper.setConfiguration(settings.getUser('display-on'), settings.getUser('display-off'))
+			
 	elif request.method == 'GET':
 		if key is None:
 			return jsonify(settings.getUser())
@@ -180,7 +183,8 @@ else:
 # Prep random
 random.seed(long(time.clock()))
 slideshow = slideshow(display, settings, oauth)
-timekeeper = timekeeper(settings.getUser('display-on'), settings.getUser('display-off'), display.enable, slideshow.start)
+timekeeper = timekeeper(display.enable, slideshow.start)
+timekeeper.setConfiguration(settings.getUser('display-on'), settings.getUser('display-off'))
 powermanagement = shutdown()
 
 if __name__ == "__main__":
