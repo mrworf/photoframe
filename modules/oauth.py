@@ -4,6 +4,7 @@ from requests_oauthlib import OAuth2Session
 class OAuth:
 	def __init__(self, ip, setToken, getToken):
 		self.ip = ip
+		self.oauth = None
 		self.cbGetToken = getToken
 		self.cbSetToken = setToken
 		self.ridURI = 'https://photoframe.sensenet.nu'
@@ -11,6 +12,9 @@ class OAuth:
 
 	def setOAuth(self, oauth):
 		self.oauth = oauth
+
+	def hasOAuth(self):
+		return self.oauth != None
 
 	def getSession(self, refresh=False):
 		if not refresh:
@@ -23,19 +27,33 @@ class OAuth:
 		                         token_updater=self.cbSetToken)
 		return auth
 
-	def requestURI(self, uri, stream=False, params=None):
+	def request(self, uri, destination=None, params=None):
+		result = None
+		stream = destination != None
 		try:
 			auth = self.getSession()
-			return auth.get(uri, stream=stream, params=params)
+			result = auth.get(uri, stream=stream, params=params)
 		except:
 			auth = self.getSession(True)
-			return auth.get(uri, stream=stream, params=params)
+			result = auth.get(uri, stream=stream, params=params)
+		if result is not None and destination is not None:
+			try:
+				with open(destination, 'wb') as handle:
+					for chunk in result.iter_content(chunk_size=512):
+						if chunk:  # filter out keep-alive new chunks
+							handle.write(chunk)
+				return True
+			except:
+				logging.exception('Failed to download %s' % uri)
+				return False
+		else:
+			return result
 
 	def getRedirectId(self):
 		r = requests.get('%s/?register' % self.ridURI)
 		return r.content
 
-	def intiate(self):
+	def initiate(self):
 		self.rid = self.getRedirectId()
 
 		auth = OAuth2Session(self.oauth['client_id'],

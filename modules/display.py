@@ -5,12 +5,15 @@ import time
 
 class display:
 	def __init__(self, width, height, depth, tvservice_params):
+		self.setConfiguration(width, height, depth, tvservice_params)
+		self.void = open(os.devnull, 'wb')
+
+	def setConfiguration(self, width, height, depth, tvservice_params):
 		self.width = width
 		self.height = height
 		self.enabled = True
 		self.depth = depth
 		self.params = tvservice_params
-		self.void = open(os.devnull, 'wb')
 
 	def message(self, message):
 		args = [

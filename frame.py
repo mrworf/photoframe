@@ -20,7 +20,7 @@ from modules.colormatch import colormatch
 from modules.settings import settings
 from modules.helper import helper
 from modules.display import display
-from modules.oauth import oauth
+from modules.oauth import OAuth
 
 # From https://stackoverflow.com/questions/11269575/how-to-hide-output-of-subprocess-in-python-2-7
 try:
@@ -98,7 +98,8 @@ def cfg_keyvalue(key, value):
 		settings.setUser(key, value)
 		settings.save()
 		if key in ['width', 'height', 'depth', 'tvservice']:
-			enable_display(True, True)
+			display.setConfiguration(settings.getUser('width'), settings.getUser('height'), settings.getUser('depth'), settings.getUser('tvservice'))
+			display.enable(True, True)
 	elif request.method == 'GET':
 		if key is None:
 			return jsonify(settings.getUser())
@@ -172,7 +173,7 @@ def web_main():
 def oauth_step1():
 	""" Step 1: Get authorization
 	"""
-	return redirect(oauth.initate())
+	return redirect(oauth.initiate())
 
 # Step 2: Google stuff, essentially user consents to allowing us access
 
@@ -223,7 +224,7 @@ def get_images():
 			params['q'] = keyword
 		url = 'https://picasaweb.google.com/data/feed/api/user/default'
 		logging.debug('Downloading image list for %s...' % keyword)
-		data = performGet(url, params=params)
+		data = oauth.request(url, params=params)
 		with open(filename, 'w') as f:
 			f.write(data.content)
 	images = None
@@ -235,19 +236,18 @@ def get_images():
 def download_image(uri, dest):
 	logging.debug('Downloading %s...' % uri)
 	filename, ext = os.path.splitext(dest)
-	response = performGet(uri, stream=True)
-	with open("%s-org%s" % (filename, ext), 'wb') as handle:
-		for chunk in response.iter_content(chunk_size=512):
-			if chunk:  # filter out keep-alive new chunks
-				handle.write(chunk)
-	if colormatch.hasSensor():
-		if not colormatch.adjust("%s-org%s" % (filename, ext), dest):
-			logging.warning('Unable to adjust image to colormatch, using original')
-			os.rename("%s-org%s" % (filename, ext), dest)
+	temp = "%s-org%s" % (filename, ext)
+	if oauth.request(uri, destination=temp):
+		if colormatch.hasSensor():
+			if not colormatch.adjust(temp, dest):
+				logging.warning('Unable to adjust image to colormatch, using original')
+				os.rename(temp, dest)
+		else:
+			logging.info('No color temperature info yet')
+			os.rename(temp, dest)
+		return True
 	else:
-		logging.info('No color temperature info yet')
-		os.rename("%s-org%s" % (filename, ext), dest)
-	return True
+		return False
 
 slideshow_thread = None
 
@@ -264,7 +264,7 @@ def slideshow(blank=False):
 		# Make sure we have OAuth2.0 ready
 		while True:
 			if settings.get('oauth_token') is None:
-				show_message('Please link photoalbum\n\nSurf to http://%s:7777/' % settings.get('local-ip'))
+				display.message('Please link photoalbum\n\nSurf to http://%s:7777/' % settings.get('local-ip'))
 				logging.info('You need to link your photoalbum first')
 				break
 
@@ -296,7 +296,7 @@ def slideshow(blank=False):
 					tries -= 1
 
 			if tries == 0:
-				show_message("Unable to download ANY images\nCheck that you have photos\nand queries aren't too strict")
+				display.message("Unable to download ANY images\nCheck that you have photos\nand queries aren't too strict")
 			time.sleep(settings.getUser('interval'))
 			if int(time.strftime('%H')) >= settings.getUser('display-off'):
 				logging.debug("It's after hours, exit quietly")
@@ -334,14 +334,14 @@ def oauthSetToken(token):
 	settings.set('oauth_token', token)
 	settings.save()
 
-oauth = oauth(settings.get('local-ip'), oauthGetToken, oauthSetToken)
+oauth = OAuth(settings.get('local-ip'), oauthSetToken, oauthGetToken)
 
 if os.path.exists('/root/oauth.json'):
 	with open('/root/oauth.json') as f:
 		data = json.load(f)
 	if 'web' in data: # if someone added it via command-line
 		data = data['web']
-		oauth.setOAuth(data)
+	oauth.setOAuth(data)
 else:
 	display.message('You need to provide OAuth details\nSee README.md')
 
