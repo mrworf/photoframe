@@ -284,13 +284,10 @@ def download_image(uri, dest):
 		for chunk in response.iter_content(chunk_size=512):
 			if chunk:  # filter out keep-alive new chunks
 				handle.write(chunk)
-	if settings.get('colortemp') is not None:
-		temp = settings.get('colortemp')
-		if temp < 3500:
-			logging.debug('Actual color temp measured is %d, but we cap to 3500K', temp)
-			temp = 3500
-		logging.debug('Adjusting color temperature to %dK' % temp)
-		subprocess.check_output([settings.get('colortemp-script'), '-t', "%d" % temp, "%s-org%s" % (filename, ext), dest], stderr=DEVNULL)
+	if colormatch.hasSensor():
+		if not colormatch.adjust("%s-org%s" % (filename, ext), dest):
+			logging.warning('Unable to adjust image to colormatch, using original')
+			os.rename("%s-org%s" % (filename, ext), dest)
 	else:
 		logging.info('No color temperature info yet')
 		os.rename("%s-org%s" % (filename, ext), dest)
@@ -386,9 +383,9 @@ else:
 # Prep random
 random.seed(long(time.clock()))
 
-color_thread = colormatch(settings.get('colortemp-script'))
-time_thread = timekeeper(settings.getUser('display-on'), settings.getUser('display-off'), display.enable, slideshow)
-power_thread = shutdown()
+colormatch = colormatch(settings.get('colortemp-script'), 3500)
+timekeeper = timekeeper(settings.getUser('display-on'), settings.getUser('display-off'), display.enable, slideshow)
+powermanagement = shutdown()
 
 if __name__ == "__main__":
 	# This allows us to use a plain HTTP callback
