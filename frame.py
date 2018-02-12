@@ -140,7 +140,7 @@ def oauth_step3():
 
 @app.route("/complete", methods=['GET'])
 def complete():
-	slideshow(True)
+	slideshow.start(True)
 	return redirect('/')
 
 settings = settings()
