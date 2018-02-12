@@ -34,14 +34,18 @@ the images to meld better with the room where it's running.
 
 # installation
 
-First, install your favorite debian distro (recommend minibian, https://minibianpi.wordpress.com/ ) and
-make sure it's up-to-date by issuing
+First, install your favorite debian distro (recommend minibian, https://minibianpi.wordpress.com/ )
+
+NOTE!
+Photoframe requires about 1GB of storage due to all dependencies. If you're using minibian, please see https://minibianpi.wordpress.com/how-to/resize-sd/ for instructions on how to resize the root filesystem.
+
+Make your distro of choice is up-to-date by issuing
 
 `apt update && apt upgrade`
 
 Once done, we need to install all dependencies
 
-`apt install raspi-config git fbset python python-requests python-requests-oauthlib python-flask imagemagick python-smbus`
+`apt install apt-utils raspi-config git fbset python python-requests python-requests-oauthlib python-flask imagemagick python-smbus`
 
 Next, let's tweak the boot so we don't get a bunch of output
 
@@ -167,7 +171,11 @@ Open `/etc/network/interfaces` and add a hash `#` in front of the two lines with
 #iface eth0 inet dhcp
 ```
 
-Save and reboot, now your RPi3 will boot directly to WiFi and WiFi only. If you don't do it this way, the RPi3 will wait forever for a wired connection.
+Save it and then start `raspi-config`.
+
+Here you need to go to option 3, boot options and choose option 2, wait for network. It should be set to no.
+
+Exit the config tool and then reboot, now your RPi3 will boot directly to WiFi and WiFi only. If you don't do it this way, the RPi3 will wait forever for a wired connection.
 
 # color temperature?
 
