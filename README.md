@@ -45,7 +45,7 @@ Make your distro of choice is up-to-date by issuing
 
 Once done, we need to install all dependencies
 
-`apt install apt-utils raspi-config git fbset python python-requests python-requests-oauthlib python-flask imagemagick python-smbus`
+`apt install apt-utils raspi-config git fbset python python-requests python-requests-oauthlib python-flask imagemagick python-smbus bc`
 
 Next, let's tweak the boot so we don't get a bunch of output
 
