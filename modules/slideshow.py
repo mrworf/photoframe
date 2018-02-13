@@ -61,6 +61,7 @@ class slideshow:
 					logging.info('All images we have keywords for have been seen, restart')
 					for saw in seen:
 						remember(saw, 0).forget()
+					seen = []
 
 				keyword = self.settings.getKeyword(index)
 				imgs, cache = self.getImages(keyword)
