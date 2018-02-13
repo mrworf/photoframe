@@ -20,7 +20,7 @@ class slideshow:
 		self.display = display
 		self.settings = settings
 		self.oauth = oauth
-		self.colormatch = colormatch(self.settings.get('colortemp-script'), 3500)
+		self.colormatch = colormatch(self.settings.get('colortemp-script'), 2700) # 2700K = Soft white, lowest we'll go
 		self.imageCurrent = None
 		self.imageMime = None
 		self.void = open(os.devnull, 'wb')
