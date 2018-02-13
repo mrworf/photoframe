@@ -43,10 +43,17 @@ class slideshow:
 	def presentation(self):
 		logging.debug('Starting presentation')
 		seen = []
+		delay = 0
 		while True:
+			# Avoid showing images if we're past bedtime
+			if int(time.strftime('%H')) >= self.settings.getUser('display-off'):
+				logging.debug("It's after hours, exit quietly")
+				break
+
 			imgs = cache = memory = None
 			index = self.settings.getKeyword()
 			tries = 1000
+			time_process = time.time()
 			while tries > 0:
 				tries -= 1
 				if len(seen) == self.settings.countKeywords():
@@ -77,18 +84,23 @@ class slideshow:
 
 				filename = os.path.join(self.settings.get('tempfolder'), 'image.%s' % helper.getExtension(mime))
 				if self.downloadImage(uri, filename):
-					self.display.image(filename)
 					self.imageCurrent = filename
 					self.imageMime = mime
 					break
 
+			time_process = time.time() - time_process
+
 			if tries == 0:
 				display.message('Ran into issues showing images.\n\nIs network down?')
 
-			time.sleep(self.settings.getUser('interval'))
-			if int(time.strftime('%H')) >= self.settings.getUser('display-off'):
-				logging.debug("It's after hours, exit quietly")
-				break
+			# Delay before we show the image (but take processing into account)
+			# This should keep us fairly consistent
+			if time_process < delay:
+				logging.debug('Took %fs to process the image, interval is %d, sleeping %fs', time_process, delay, delay - time_process)
+				time.sleep(delay - time_process)
+			self.display.image(self.imageCurrent)
+
+			delay = self.settings.getUser('interval')
 		self.thread = None
 
 	def pickImage(self, images, memory):
