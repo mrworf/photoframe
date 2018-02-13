@@ -266,9 +266,11 @@ Start over from step 1 and install your distribution of choice on the memory car
 
 # todo
 
-- Make photo sources modular (allow multiple Google Photos)
-- Enhance web interface
-- Create installer to simplify setup
-- Timezone control from web UI
-- More services: Instagram, Amazon, ...
+Tracks ideas and improvements planned. No specific timeframe is mentioned, but the order of things should be fairly true
 
+- Create RPi3 image with photoframe
+- Make photoframe self-updating using git
+- Enhance web interface
+- Timezone control from web UI
+- Make photo sources modular (allow multiple Google Photos)
+- More services: Instagram, Amazon, ...
