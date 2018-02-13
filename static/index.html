@@ -10,6 +10,7 @@
 PhotoFrame rudimentary configuration
 <hr/>
 <span id="all">
+<img src="/details/current" style="width:25%;height:25%;float:right" id="screen">
 <script type="text/javascript">
 function validate24(input) {
 	i = parseInt(input);
@@ -77,13 +78,16 @@ $(document).ready(function(){
 		}).done(function(data){
 			$("#keywords").empty();
 			for (entry in data['keywords']) {
-				$('#keywords').append('<input class="delete" type="button" data-id="' + entry + '" value="Delete"> ');
+				$('#keywords').append('<input class="delete" type="button" data-id="' + entry + '" value="Delete"><input class="search" data-key="' + encodeURIComponent(data["keywords"][entry]) + '" type="button" value="Open"> ');
 				if (data["keywords"][entry] == "")
 					$('#keywords').append("&lt;empty - picks one of the last photos added&gt;");
 				else
 					$('#keywords').append(data["keywords"][entry]);
 				$('#keywords').append('<br>');
 			}
+			$("input[class='search']").click(function(){
+				window.open("https://photos.google.com/search/" + $(this).data('key'), "_blank");
+			});
 			$("input[class='delete']").click(function(){
 				if (confirm("Are you sure?")) {
 					$.ajax({
@@ -117,9 +121,17 @@ $(document).ready(function(){
 			$('#fields').append(name + '<br><input ' + (validate?'data-validate="true"':'') + ' type="text" name="' + key + '" value="' + value + '"><br>');
 		}
 		$('#fields').append('Photo keywords:<br><p id="keywords"></p>');
-		$('#fields').append('<input type="text" id="keyword"><input type="button" id="add" value="Add keywords"><br>');
+		$('#fields').append('<input type="text" id="keyword"><input type="button" id="add" value="Add keywords"><input type="button" id="test" value="Test keywords"><br>');
 
 		populateKeywords();
+
+		$('#test').click(function(){
+			var key = $('#keyword').val().trim()
+			if (key != "")
+				window.open("https://photos.google.com/search/" + encodeURIComponent(key), "_blank");
+			else
+				window.open("https://photos.google.com/", "_blank");
+		});
 
 		$('#add').click(function(){
 			$.ajax({
@@ -202,6 +214,14 @@ $(document).ready(function(){
 			});
 		});
 	});
+
+	// Refresh image every 30s
+	function reloadScreen() {
+		$('#screen').attr('src', "/details/current?" + new Date().getTime())
+		setTimeout(reloadScreen, 30000);
+	}
+
+	setTimeout(reloadScreen, 30000);
 });
 </script>
 <p id="fields"></p>

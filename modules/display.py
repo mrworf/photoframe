@@ -15,6 +15,19 @@ class display:
 		self.depth = depth
 		self.params = tvservice_params
 
+	def get(self):
+		args = [
+		        'convert', 
+		        '-depth', 
+		        '8',
+		        '-size',
+		        '%dx%d' % (self.width, self.height),
+		        'bgra:/dev/fb0[0]',
+		        'jpg:-'
+		]
+		result = subprocess.check_output(args, stderr=self.void)
+		return (result, 'image/jpeg')
+
 	def message(self, message):
 		args = [
 			'convert',

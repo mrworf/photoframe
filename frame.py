@@ -125,6 +125,21 @@ def cfg_shutdown():
 	subprocess.call(['/sbin/poweroff'], stderr=void);
 	return jsonify({'shutdown': True})
 
+@app.route('/details/<about>')
+def cfg_details(about):
+	if about == 'tvservice':
+		result = {}
+		result['cea'] = subprocess.check_output(['/opt/vc/bin/tvservice', '-m', 'cea'])
+		result['dmt'] = subprocess.check_output(['/opt/vc/bin/tvservice', '-m', 'dmt'])
+		result['status'] = subprocess.check_output(['/opt/vc/bin/tvservice', '-status'])
+		return jsonify(result)
+	elif about == 'current':
+		image, mime = display.get()
+		response = app.make_response(image)
+		response.headers.set('Content-Type', mime)
+		return response
+	abort(404)
+
 @app.route('/')
 def web_main():
 	return app.send_static_file('index.html')
