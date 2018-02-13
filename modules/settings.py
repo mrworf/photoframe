@@ -72,11 +72,14 @@ class settings:
 	def getKeyword(self, id=None):
 		if id is None:
 			rnd = random.SystemRandom().randint(0, len(self.settings['cfg']['keywords'])-1)
-			return self.settings['cfg']['keywords'][rnd]
+			return rnd # self.settings['cfg']['keywords'][rnd]
 		elif id >= 0 and id < len(self.settings['cfg']['keywords']):
 			return self.settings['cfg']['keywords'][id]
 		else:
 			return None
+
+	def countKeywords(self):
+		return len(self.settings['cfg']['keywords'])
 
 	def set(self, key, value):
 		self.settings[key] = value

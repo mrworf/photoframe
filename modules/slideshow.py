@@ -42,26 +42,38 @@ class slideshow:
 
 	def presentation(self):
 		logging.debug('Starting presentation')
+		seen = []
 		while True:
 			imgs = cache = memory = None
-			tries = 50
+			index = self.settings.getKeyword()
+			tries = 1000
 			while tries > 0:
-				imgs, cache = self.getImages()
-				if not imgs:
-					tries -= 1
-					continue
+				tries -= 1
+				if len(seen) == self.settings.countKeywords():
+					# We've viewed all images, reset
+					logging.info('All images we have keywords for have been seen, restart')
+					for saw in seen:
+						remember(saw, 0).forget()
 
+				keyword = self.settings.getKeyword(index)
+				imgs, cache = self.getImages(keyword)
 				memory = remember(cache, len(imgs['feed']['entry']))
-				if memory.seenAll():
-					logging.debug('Seen all images, try again')
-					tries -= 1
+
+				if not imgs or memory.seenAll():
+					if not imgs:
+						logging.error('Failed to load image list for keyword %s' % keyword)
+					elif memory.seenAll():
+						seen.append(cache)
+						logging.debug('All images for keyword %s has been shown' % keyword)
+					index += 1
+					if index == self.settings.countKeywords():
+						index = 0
 					continue
 
 				# Now, lets make sure we didn't see this before
 				uri, mime, title, ts = self.pickImage(imgs, memory)
 				if uri == '':
-					tries -= 1
-					continue
+					continue # Do another one (well, it means we exhausted available images for this keyword)
 
 				filename = os.path.join(self.settings.get('tempfolder'), 'image.%s' % helper.getExtension(mime))
 				if self.downloadImage(uri, filename):
@@ -69,11 +81,10 @@ class slideshow:
 					self.imageCurrent = filename
 					self.imageMime = mime
 					break
-				else:
-					tries -= 1
 
 			if tries == 0:
-				self.display.message("Unable to download ANY images\nCheck that you have photos\nand queries aren't too strict")
+				display.message('Ran into issues showing images.\n\nIs network down?')
+
 			time.sleep(self.settings.getUser('interval'))
 			if int(time.strftime('%H')) >= self.settings.getUser('display-off'):
 				logging.debug("It's after hours, exit quietly")
@@ -83,10 +94,9 @@ class slideshow:
 	def pickImage(self, images, memory):
 		ext = ['jpg','png','dng','jpeg','gif','bmp']
 		count = len(images['feed']['entry'])
-		tries = 5
 
-		while tries > 0:
-			i = random.SystemRandom().randint(0,count-1)
+		i = random.SystemRandom().randint(0,count-1)
+		while not memory.seenAll():
 			if not memory.seen(i):
 				memory.saw(i)
 				entry = images['feed']['entry'][i]
@@ -96,10 +106,11 @@ class slideshow:
 				else:
 					logging.warning('Unsupported media: %s' % entry['content']['type'])
 			else:
-				logging.debug('Already seen index %d' % i)
-			tries -= 1
+				i += 1
+				if i == count:
+					i = 0
 
-		if tries == 0:
+		if memory.seenAll():
 			logging.error('Failed to find any image, abort')
 			return ('', '', '', 0)
 
@@ -117,9 +128,7 @@ class slideshow:
 
 		return (uri, mime, title, timestamp)
 
-	def getImages(self):
-		keyword = self.settings.getKeyword()
-
+	def getImages(self, keyword):
 		# Create filename from keyword
 		filename = hashlib.new('md5')
 		filename.update(keyword)
@@ -164,7 +173,7 @@ class slideshow:
 		except:
 			logging.exception('Failed to load images')
 			os.remove(filename)
-			return None, None
+			return None, filename
 
 	def makeFullframe(self, filename):
 		name, ext = os.path.splitext(filename)
@@ -213,7 +222,7 @@ class slideshow:
 			'(',
 			filename,
 			'-bordercolor',
-			'white',
+			'black',
 			'-border',
 			border,
 			'-bordercolor',
