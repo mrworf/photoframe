@@ -1,5 +1,6 @@
 import os
 import json
+import hashlib
 
 class remember:
 	def __init__(self, filename, count):
@@ -16,7 +17,11 @@ class remember:
 		if os.path.exists(self.filename):
 			os.unlink(self.filename)		
 
-	def saw(self, index):
+	def _hash(self, text):
+		return hashlib.sha1(text).hexdigest()
+
+	def saw(self, url):
+		index = self._hash(url)
 		if index not in self.memory['seen']:
 			self.memory['seen'].append(index)
 			with open(self.filename, 'wb') as f:
@@ -25,5 +30,6 @@ class remember:
 	def seenAll(self):
 		return len(self.memory['seen']) == self.count
 
-	def seen(self, index):
+	def seen(self, id):
+		index = self._hash(id)
 		return index in self.memory['seen']

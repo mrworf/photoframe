@@ -61,6 +61,7 @@ class slideshow:
 					logging.info('All images we have keywords for have been seen, restart')
 					for saw in seen:
 						remember(saw, 0).forget()
+					remember('/tmp/overallmemory.json', 0).forget()
 					seen = []
 
 				keyword = self.settings.getKeyword(index)
@@ -82,6 +83,13 @@ class slideshow:
 				uri, mime, title, ts = self.pickImage(imgs, memory)
 				if uri == '':
 					continue # Do another one (well, it means we exhausted available images for this keyword)
+
+				# Avoid having duplicated because of overlap from keywords
+				memory = remember('/tmp/overallmemory.json', 0)
+				if memory.seen(uri):
+					continue
+				else:
+					memory.saw(uri)
 
 				filename = os.path.join(self.settings.get('tempfolder'), 'image.%s' % helper.getExtension(mime))
 				if self.downloadImage(uri, filename):
@@ -110,8 +118,9 @@ class slideshow:
 
 		i = random.SystemRandom().randint(0,count-1)
 		while not memory.seenAll():
-			if not memory.seen(i):
-				memory.saw(i)
+			proposed = images['feed']['entry'][i]['content']['src']
+			if not memory.seen(proposed):
+				memory.saw(proposed)
 				entry = images['feed']['entry'][i]
 				# Make sure we don't get a video, unsupported for now (gif is usually bad too)
 				if 'image' in entry['content']['type'] and 'gphoto$videostatus' not in entry:
