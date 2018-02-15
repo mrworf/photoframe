@@ -6,41 +6,15 @@
 		<script type="text/javascript" src="index.js"></script>
 	</head>
 	<body>
-		PhotoFrame rudimentary configuration
-		<hr/>
-		<img src="/details/current" style="max-width:25%;height:auto;float:right" id="screen">
-		<span id="all">
-			<script type="text/javascript">
-			$(document).ready(function(){
-				// Refresh image every 30s
-				function reloadScreen() {
-					$('#screen').attr('src', "/details/current?" + new Date().getTime())
-					setTimeout(reloadScreen, 30000);
-				}
-				setTimeout(reloadScreen, 30000);
-
-				// First, load, compile and register all templates we need
-				/*
-				templates = new TemplateEngine();
-				templates.load(['main.template'], function(){ 
-					$('body').append(templates.get('main.template')());
-				});
-				*/
-
-
-				checkOAuth(function(){
-					checkLink(function(){
-						loadSettings();
-						populateKeywords();
-						systemControls();
-					})
-				});
+		<script type="text/javascript">
+		$(document).ready(function(){
+			// First, load, compile and register all templates we need
+			templates = new TemplateEngine();
+			templates.load(['main.template'], function(){ 
+				// Initiate the webpage
+				$('body').append(templates.get('main.template')());
 			});
-			</script>
-			<p id="fields"></p>
-		</span>
-		<input type="button" id="reset" value="Factory Reset">
-		<input type="button" id="reboot" value="Reboot">
-		<input type="button" id="shutdown" value="Power off">
+		});
+		</script>
 	</body>
 </html>

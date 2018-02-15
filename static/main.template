@@ -1,2 +1,24 @@
-Template A
-{{testing}}
+		PhotoFrame rudimentary configuration
+		<hr/>
+		<img src="/details/current" style="max-width:25%;height:auto;float:right" id="screen">
+		<span id="all">
+			<p id="fields"></p>
+		</span>
+		<input type="button" id="reset" value="Factory Reset">
+		<input type="button" id="reboot" value="Reboot">
+		<input type="button" id="shutdown" value="Power off">
+		<script type="text/javascript">
+			// Refresh image every 30s
+			function reloadScreen() {
+				$('#screen').attr('src', "/details/current?" + new Date().getTime())
+				setTimeout(reloadScreen, 30000);
+			}
+			setTimeout(reloadScreen, 30000);
+			checkOAuth(function(){
+				checkLink(function(){
+					loadSettings();
+					populateKeywords();
+					systemControls();
+				})
+			});
+		</script>
