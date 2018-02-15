@@ -28,6 +28,18 @@ import requests
 from requests_oauthlib import OAuth2Session
 from flask import Flask, request, redirect, session, url_for, abort
 from flask.json import jsonify
+from flask_httpauth import HTTPBasicAuth
+
+# used if we don't find authentication json
+class NoAuth:
+	def __init__(self):
+		pass
+
+	def login_required(self, fn):
+		def wrap(*args, **kwargs):
+			return fn(*args, **kwargs)
+		wrap.func_name = fn.func_name
+		return wrap
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
@@ -35,10 +47,40 @@ logging.getLogger('oauthlib').setLevel(logging.ERROR)
 logging.getLogger('urllib3').setLevel(logging.ERROR)
 
 app = Flask(__name__, static_url_path='')
+user = None
+userfiles = ['/boot/http-auth.json', '/root/http-auth.json']
+
+for userfile in userfiles:
+	if os.path.exists(userfile):
+		logging.debug('Found "%s", loading the data' % userfile)
+		try:
+			with open(userfile, 'rb') as f:
+				user = json.load(f)
+				if 'user' not in user or 'password' not in user:
+					logging.warning("\"%s\" doesn't contain a user and password key" % userfile)
+					user = None
+				else:
+					break
+		except:
+			logging.exception('Unable to load JSON from "%s"' % userfile)
+			user = None
+
+if user is None:
+	logging.info('No http-auth.json found, disabling http authentication')
+
+auth = NoAuth()
+if user is not None:
+	auth = HTTPBasicAuth()
+	@auth.get_password
+	def check_password(username):
+		if user['user'] == username:
+			return user['password']
+		return None
 
 @app.route('/setting', methods=['GET'], defaults={'key':None,'value':None})
 @app.route('/setting/<key>', methods=['GET'], defaults={'value':None})
 @app.route('/setting/<key>/<value>', methods=['PUT'])
+@auth.login_required
 def cfg_keyvalue(key, value):
 	# Depending on PUT/GET we will either change or read
 	# values. If key is unknown, then this call fails with 404
@@ -70,6 +112,7 @@ def cfg_keyvalue(key, value):
 @app.route('/keywords', methods=['GET'])
 @app.route('/keywords/add', methods=['POST'])
 @app.route('/keywords/delete', methods=['POST'])
+@auth.login_required
 def cfg_keywords():
 	if request.method == 'GET':
 		return jsonify({'keywords' : settings.getUser('keywords')})
@@ -88,6 +131,7 @@ def cfg_keywords():
 
 @app.route('/has/token')
 @app.route('/has/oauth')
+@auth.login_required
 def cfg_hasthis():
 	result = False
 	if '/token' in request.path:
@@ -99,6 +143,7 @@ def cfg_hasthis():
 	return jsonify({'result' : result})
 
 @app.route('/oauth', methods=['POST'])
+@auth.login_required
 def cfg_oauth_info():
 	if request.json is None or 'web' not in request.json:
 		abort(500)
@@ -109,6 +154,7 @@ def cfg_oauth_info():
 	return jsonify({'result' : True})
 
 @app.route('/reset')
+@auth.login_required
 def cfg_reset():
 	settings.userDefaults();
 	settings.set('oauth_token', None)
@@ -116,16 +162,19 @@ def cfg_reset():
 	return jsonify({'reset': True})
 
 @app.route('/reboot')
+@auth.login_required
 def cfg_reboot():
 	subprocess.call(['/sbin/reboot'], stderr=void);
 	return jsonify({'reboot' : True})
 
 @app.route('/shutdown')
+@auth.login_required
 def cfg_shutdown():
 	subprocess.call(['/sbin/poweroff'], stderr=void);
 	return jsonify({'shutdown': True})
 
 @app.route('/details/<about>')
+@auth.login_required
 def cfg_details(about):
 	if about == 'tvservice':
 		result = {}
@@ -138,25 +187,38 @@ def cfg_details(about):
 		response = app.make_response(image)
 		response.headers.set('Content-Type', mime)
 		return response
+	elif about == 'version':
+		output = subprocess.check_output(['git', 'log', '-n1'], stderr=void)
+		lines = output.split('\n')
+		return jsonify({'date':lines[2][5:].strip(),'commit':lines[0][7:].strip()})
+
 	abort(404)
 
-@app.route('/')
-def web_main():
-	return app.send_static_file('index.html')
-
 @app.route("/link")
+@auth.login_required
 def oauth_step1():
 	return redirect(oauth.initiate())
 
 @app.route("/callback", methods=["GET"])
+@auth.login_required
 def oauth_step3():
 	oauth.complete(request.url)
 	return redirect(url_for('.complete'))
 
 @app.route("/complete", methods=['GET'])
+@auth.login_required
 def complete():
 	slideshow.start(True)
 	return redirect('/')
+
+@app.route('/', defaults={'file':None})
+@app.route('/<file>')
+@auth.login_required
+def web_main(file):
+	if file is None:
+		return app.send_static_file('index.html')
+	else:
+		return app.send_static_file(file)
 
 settings = settings()
 settings.load()	
