@@ -1,233 +1,46 @@
 <html>
-<head>
-<title>PhotoFrame</title>
-<script
-	src="https://code.jquery.com/jquery-3.3.1.min.js"
-	integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
-	crossorigin="anonymous"></script>
-</head>
-<body>
-PhotoFrame rudimentary configuration
-<hr/>
-<span id="all">
-<img src="/details/current" style="width:25%;height:25%;float:right" id="screen">
-<script type="text/javascript">
-function validate24(input) {
-	i = parseInt(input);
-	if (i > 23)
-		i = 23;
-	if (i < 1 || isNaN(i))
-		i = 0;
-	return i.toString();
-}
+	<head>
+		<title>PhotoFrame</title>
+		<script type="text/javascript" src="jquery-3.3.1.min.js"></script>
+		<script type="text/javascript" src="handlebars-v4.0.11.js"></script>
+		<script type="text/javascript" src="index.js"></script>
+	</head>
+	<body>
+		PhotoFrame rudimentary configuration
+		<hr/>
+		<img src="/details/current" style="max-width:25%;height:auto;float:right" id="screen">
+		<span id="all">
+			<script type="text/javascript">
+			$(document).ready(function(){
+				// Refresh image every 30s
+				function reloadScreen() {
+					$('#screen').attr('src', "/details/current?" + new Date().getTime())
+					setTimeout(reloadScreen, 30000);
+				}
+				setTimeout(reloadScreen, 30000);
 
-function validateDelay(input) {
-	i = parseInt(input);
-	if (i < 30 || isNaN(i))
-		i = 30;
-	return i.toString();
-}
-
-function validateRefresh(input) {
-	i = parseInt(input);
-	if (i < 1 || isNaN(i))
-		i = 1;
-	return i.toString();
-}
+				// First, load, compile and register all templates we need
+				/*
+				templates = new TemplateEngine();
+				templates.load(['main.template'], function(){ 
+					$('body').append(templates.get('main.template')());
+				});
+				*/
 
 
-function validateDepth(input) {
-	i = parseInt(input);
-	if (isNaN(i) || !(i in [8, 16, 24, 32]))
-		i = 8;
-	return i.toString();
-}
-
-function validateWidth(input) {
-	i = parseInt(input);
-	if (i < 640 || isNaN(i))
-		i = 640;
-	return i.toString();
-}
-
-function validateHeight(input) {
-	i = parseInt(input);
-	if (i < 480 || isNaN(i))
-		i = 480;
-	return i.toString();
-}
-
-var fieldmap = {
-	'display-off' : {'caption' : 'Turn off display at (24 hour)', 'validate' : validate24},
-	'display-on'  : {'caption' : 'Turn on display at (24 hour)', 'validate' : validate24},
-	'interval'    : {'caption' : 'Seconds to show each image', 'validate' : validateDelay},
-	'refresh-content' : {'caption' : 'Hours before reloading server image list', 'validate' : validateRefresh},
-	'depth' : {'caption':'Color depth in bits (8, 16, 24 or 32)', 'validate' : validateDepth},
-	'height' : { 'caption' : 'Height of display', 'validate' : validateHeight},
-	'width' : { 'caption' : 'Width of display', 'validate' : validateWidth},
-	'tvservice' : { 'caption' : 'Arguments for Raspberry Pi 3 tv service' }
-};
-
-$(document).ready(function(){
-	function populateKeywords() {
-		$.ajax({
-			url:"/keywords",
-			type:"GET",
-			contentType: "application/json; charset=utf-8",
-			dataType: "json"
-		}).done(function(data){
-			$("#keywords").empty();
-			for (entry in data['keywords']) {
-				$('#keywords').append('<input class="delete" type="button" data-id="' + entry + '" value="Delete"><input class="search" data-key="' + encodeURIComponent(data["keywords"][entry]) + '" type="button" value="Open"> ');
-				if (data["keywords"][entry] == "")
-					$('#keywords').append("&lt;empty - picks one of the last photos added&gt;");
-				else
-					$('#keywords').append(data["keywords"][entry]);
-				$('#keywords').append('<br>');
-			}
-			$("input[class='search']").click(function(){
-				window.open("https://photos.google.com/search/" + $(this).data('key'), "_blank");
-			});
-			$("input[class='delete']").click(function(){
-				if (confirm("Are you sure?")) {
-					$.ajax({
-						url:"/keywords/delete",
-						type:"POST",
-						data: JSON.stringify({ id: $(this).data('id') }),
-						contentType: "application/json; charset=utf-8",
-						dataType: "json"
-					}).done(function(data){
+				checkOAuth(function(){
+					checkLink(function(){
+						loadSettings();
 						populateKeywords();
-					});
-				}
+						systemControls();
+					})
+				});
 			});
-		});
-	}
-
-	$.ajax({
-		url:"/setting"
-	}).done(function(data){
-		for (key in data) {
-			if (key == 'keywords')
-				continue;
-			value = data[key];
-			validate = null;
-			name = key;
-			if (key in fieldmap) {
-				name = fieldmap[key]['caption'];
-				if ('validate' in fieldmap[key])
-					validate = fieldmap[key]['validate'];
-			}
-			$('#fields').append(name + '<br><input ' + (validate?'data-validate="true"':'') + ' type="text" name="' + key + '" value="' + value + '"><br>');
-		}
-		$('#fields').append('Photo keywords:<br><p id="keywords"></p>');
-		$('#fields').append('<input type="text" id="keyword"><input type="button" id="add" value="Add keywords"><input type="button" id="test" value="Test keywords"><br>');
-
-		populateKeywords();
-
-		$('#test').click(function(){
-			var key = $('#keyword').val().trim()
-			if (key != "")
-				window.open("https://photos.google.com/search/" + encodeURIComponent(key), "_blank");
-			else
-				window.open("https://photos.google.com/", "_blank");
-		});
-
-		$('#add').click(function(){
-			$.ajax({
-				url:"/keywords/add",
-				type:"POST",
-				data: JSON.stringify({ keywords: $('#keyword').val() }),
-				contentType: "application/json; charset=utf-8",
-				dataType: "json"
-			}).done(function(data){
-				if (data['status']) {
-					populateKeywords();
-					$('#keyword').val("");
-				}
-			});
-		});
-
-		$.ajax({
-			url:"/has/token"
-		}).done(function(data){
-			$("input[type='text']").change(function() {
-				if ($(this).data('validate')) {
-					$(this).val(fieldmap[this.name]['validate']($(this).val()));
-				}
-			});
-
-			if (data["result"])
-				 $('#fields').append('Frame is linked to Google Photos, <a href="/link">reconnect</a>');
-			else
-				 $('#fields').append('<a href="/link">Connect frame to Google Photos</a>');
-			$("#reset").click(function() {
-				if (confirm("Are you sure? Link to photos will also be reset")) {
-					$.ajax({
-						url:"/reset"
-					}).done(function(){
-						location.reload();
-					});
-				}
-			});
-
-			$("#reboot").click(function() {
-				if (confirm("Are you sure you want to REBOOT?")) {
-					$.ajax({
-						url:"/reboot"
-					}).done(function(){
-						var newDoc = document.open("text/html", "replace");
-						newDoc.write("<html><body><h1>Power off</h1></body></html>");
-						newDoc.close();
-					});
-				}
-			});
-
-			$("#shutdown").click(function() {
-				if (confirm("Are you sure you want to POWER OFF the frame?")) {
-					$.ajax({
-						url:"/shutdown"
-					}).done(function(){
-						var newDoc = document.open("text/html", "replace");
-						newDoc.write("<html><body><h1>Power off</h1></body></html>");
-						newDoc.close();
-					});
-				}
-			});
-			$.ajax({
-				url:"/has/oauth"
-			}).done(function(data){
-				if (!data['result']) {
-					$('#all').empty().append('You must provide OAuth2.0 details from Google, paste the JSON data into this box:<br><textarea style="width: 600px; height: 300px" id="oauth"></textarea><br><input type="button" id="authsubmit" value="Save"><hr>')
-					$('#authsubmit').click(function() {
-						$.ajax({
-							url:"/oauth",
-							type:"POST",
-							data: $('#oauth').val(),
-							contentType: "application/json; charset=utf-8",
-							dataType: "json"
-						}).done(function(data){
-							location.reload();
-						});
-					});
-				}
-			});
-		});
-	});
-
-	// Refresh image every 30s
-	function reloadScreen() {
-		$('#screen').attr('src', "/details/current?" + new Date().getTime())
-		setTimeout(reloadScreen, 30000);
-	}
-
-	setTimeout(reloadScreen, 30000);
-});
-</script>
-<p id="fields"></p>
-</span>
-<input type="button" id="reset" value="Factory Reset">
-<input type="button" id="reboot" value="Reboot">
-<input type="button" id="shutdown" value="Power off">
-</body>
+			</script>
+			<p id="fields"></p>
+		</span>
+		<input type="button" id="reset" value="Factory Reset">
+		<input type="button" id="reboot" value="Reboot">
+		<input type="button" id="shutdown" value="Power off">
+	</body>
 </html>
