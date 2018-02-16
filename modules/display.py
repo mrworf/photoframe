@@ -2,6 +2,7 @@ import os
 import subprocess
 import logging
 import time
+import re
 
 class display:
 	def __init__(self, width, height, depth, tvservice_params):
@@ -93,3 +94,18 @@ class display:
 	def clear(self):
 		with open('/dev/fb0', 'wb') as f:
 			subprocess.call(['cat' , '/dev/zero'], stdout=f, stderr=self.void)
+
+	@staticmethod
+	def current():
+		output = subprocess.check_output(['/opt/vc/bin/tvservice', '-s'], stderr=subprocess.STDOUT)
+		print('"%s"' % (output))
+		m = re.search('state 0x[0-9]* \[([A-Z]*) ([A-Z]*) \(([0-9]*)\) [^,]*, ([0-9]*)x([0-9]*)', output)
+		result = {
+		'group' : m.group(2),
+		'mode' : m.group(1),
+		'drive' : m.group(3),
+		'width' : m.group(4),
+		'height' : m.group(5)
+		}
+		return result
+

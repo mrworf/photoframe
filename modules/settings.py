@@ -35,6 +35,9 @@ class settings:
 		if os.path.exists('/root/settings.json'):
 			with open('/root/settings.json') as f:
 				self.settings = json.load(f)
+			return True
+		else:
+			return False
 
 	def save(self):
 		with open('/root/settings.json', 'w') as f:

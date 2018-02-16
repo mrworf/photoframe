@@ -221,7 +221,14 @@ def web_main(file):
 		return app.send_static_file(file)
 
 settings = settings()
-settings.load()	
+if not settings.load():
+	# First run, grab display settings from current mode
+	current = display.current()
+	logging.info('No display settings, using: %s' % repr(current))
+	settings.setUser('tvservice', '%s %s %s' % (current['group'], current['mode'], current['drive']))
+	settings.setUser('width', int(current['width']))
+	settings.setUser('height', int(current['height']))
+	settings.save()
 
 display = display(settings.getUser('width'), settings.getUser('height'), settings.getUser('depth'), settings.getUser('tvservice'))
 
@@ -244,7 +251,6 @@ def oauthGetToken():
 
 def oauthSetToken(token):
 	settings.set('oauth_token', token)
-	settings.save()
 
 oauth = OAuth(settings.get('local-ip'), oauthSetToken, oauthGetToken)
 
