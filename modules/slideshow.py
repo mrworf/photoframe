@@ -203,7 +203,7 @@ class slideshow:
 
 		output = subprocess.check_output(['/usr/bin/identify', filename], stderr=self.void)
 		m = re.search('([1-9][0-9])*x([1-9][0-9]*)', output)
-		if m is None:
+		if m is None or m.groups() is None or len(m.groups()) != 2:
 			logging.error('Unable to resolve regular expression for image size')
 			return False
 		width = int(m.group(1))
