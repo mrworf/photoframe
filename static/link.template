@@ -1,0 +1,10 @@
+PhotoFrame rudimentary configuration
+<hr/>
+You need to link the photoframe to a Google Photos account<hr>
+<input type="button" value="Link to Google Photos" id="link">
+
+<script type="text/javascript">
+$('#link').click(function() {
+	location.href = "/link"
+});
+</script>

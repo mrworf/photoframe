@@ -4,15 +4,37 @@
 		<script type="text/javascript" src="jquery-3.3.1.min.js"></script>
 		<script type="text/javascript" src="handlebars-v4.0.11.js"></script>
 		<script type="text/javascript" src="index.js"></script>
+		<link rel="stylesheet" type="text/css" href="index.css">
 	</head>
 	<body>
 		<script type="text/javascript">
 		$(document).ready(function(){
-			// First, load, compile and register all templates we need
-			templates = new TemplateEngine();
-			templates.load(['main.template'], function(){ 
+			var state = {};
+			// Load, compile and register all templates we need
+			var templates = new TemplateEngine();
+			templates.load([
+				'main.template',
+				'link.template',
+				'oauth.template'
+			], function(){ 
 				// Initiate the webpage
-				$('body').append(templates.get('main.template')());
+				checkOAuth(
+					function(){
+						checkLink(
+							function(){
+								loadSettings(function(data){
+									console.log(data);
+									$('body').append(templates.get('main.template')(data));
+								});
+							}, function() {
+								$('body').append(templates.get('link.template')());
+							}
+						)
+					},
+					function(){
+						$('body').append(templates.get('oauth.template')());
+					}
+				);
 			});
 		});
 		</script>

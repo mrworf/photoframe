@@ -105,120 +105,42 @@ function populateKeywords() {
 	});
 }
 
-function loadSettings()
+function loadSettings(funcOk)
 {
-	validator = new Validator();
-
-	var fieldmap = {
-		'display-off' : {'caption' : 'Turn off display at (24 hour)', 'validate' : validator.time},
-		'display-on'  : {'caption' : 'Turn on display at (24 hour)', 'validate' : validator.time},
-		'interval'    : {'caption' : 'Seconds to show each image', 'validate' : validator.delay},
-		'refresh-content' : {'caption' : 'Hours before reloading server image list', 'validate' : validator.refresh},
-		'depth' : {'caption':'Color depth in bits (8, 16, 24 or 32)', 'validate' : validator.depth},
-		'height' : { 'caption' : 'Height of display', 'validate' : validator.height},
-		'width' : { 'caption' : 'Width of display', 'validate' : validator.width},
-		'tvservice' : { 'caption' : 'Arguments for Raspberry Pi 3 tv service (<a href="/details/tvservice" target="_blank">show available modes</a>)' }
-	};
-
 	$.ajax({
 		url:"/setting"
 	}).done(function(data){
+		result = {}
 		for (key in data) {
 			if (key == 'keywords')
 				continue;
 			value = data[key];
-			validate = null;
-			name = key;
-			if (key in fieldmap) {
-				name = fieldmap[key]['caption'];
-				if ('validate' in fieldmap[key])
-					validate = fieldmap[key]['validate'];
-			}
-			$('#fields').append(name + '<br><input ' + (validate?'data-validate="true"':'') + ' type="text" name="' + key + '" value="' + value + '"><br>');
+			result[key] = value;
 		}
-		$('#fields').append('Photo keywords:<br><p id="keywords"></p>');
-		$('#fields').append('<input type="text" id="keyword"><input type="button" id="add" value="Add keywords"><input type="button" id="test" value="Test keywords"><br>');
+		funcOk(result);
 	});
-
-	$("input[type='text']").change(function() {
-		if ($(this).data('validate')) {
-			$(this).val(fieldmap[this.name]['validate']($(this).val()));
-		}
-	});
-
 }
 
-function systemControls() {
-	$("#reset").click(function() {
-		if (confirm("Are you sure? Link to photos will also be reset")) {
-			$.ajax({
-				url:"/reset"
-			}).done(function(){
-				location.reload();
-			});
-		}
-	});
-
-	$("#reboot").click(function() {
-		if (confirm("Are you sure you want to REBOOT?")) {
-			$.ajax({
-				url:"/reboot"
-			}).done(function(){
-				var newDoc = document.open("text/html", "replace");
-				newDoc.write("<html><body><h1>Power off</h1></body></html>");
-				newDoc.close();
-			});
-		}
-	});
-
-	$("#shutdown").click(function() {
-		if (confirm("Are you sure you want to POWER OFF the frame?")) {
-			$.ajax({
-				url:"/shutdown"
-			}).done(function(){
-				var newDoc = document.open("text/html", "replace");
-				newDoc.write("<html><body><h1>Power off</h1></body></html>");
-				newDoc.close();
-			});
-		}
-	});
-
-}
-
-function checkOAuth(funcContinue) {
+function checkOAuth(funcOk, funcErr) {
 	$.ajax({
 		url:"/has/oauth"
 	}).done(function(data){
-		if (!data['result']) {
-			$('#all').empty().append('You must provide OAuth2.0 details from Google, paste the JSON data into this box:<br><textarea style="width: 600px; height: 300px" id="oauth"></textarea><br><input type="button" id="authsubmit" value="Save"><hr>')
-			$('#authsubmit').click(function() {
-				$.ajax({
-					url:"/oauth",
-					type:"POST",
-					data: $('#oauth').val(),
-					contentType: "application/json; charset=utf-8",
-					dataType: "json"
-				}).done(function(data){
-					location.reload();
-				});
-			});
+		if (data['result']) {
+			funcOk();
 		} else {
-			funcContinue();
+			funcErr();
 		}
 	});
 }
 
-function checkLink(funcContinue) {
+function checkLink(funcOk, funcErr) {
 	$.ajax({
 		url:"/has/token"
 	}).done(function(data){
 		if (data["result"]) {
-			funcContinue();
+			funcOk();
 		} else
-			$('#all').empty().append('You need to link the photoframe to a Google Photos account<hr><input type="button" value="Link to Google Photos" id="link">')
-			$('link').click(function(){
-				location.href = "/link"
-			});
+			funcErr();
 	});
 }
 

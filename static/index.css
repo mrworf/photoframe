@@ -1,0 +1,28 @@
+body {
+	font-family: Helvetica, Verdana;
+	font-size: 12pt;
+}
+
+input {
+	text-align: center;
+}
+
+.aleft {
+	text-align: left;
+}
+
+.aright {
+	text-align: right;
+}
+
+input.small {
+	width: 20pt;
+}
+
+input.medium {
+	width: 40pt;
+}
+
+input.large {
+	width: 80pt;
+}
