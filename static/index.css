@@ -3,6 +3,16 @@ body {
 	font-size: 12pt;
 }
 
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+a:hover {
+  text-decoration: underline;
+  color: blue;
+}
+
 input {
 	text-align: center;
 }
@@ -25,4 +35,40 @@ input.medium {
 
 input.large {
 	width: 80pt;
+}
+
+div {
+  padding: 2pt;
+}
+
+h1 {
+
+}
+
+body > div {
+  display: flex;
+  margin-top: auto;
+  margin-bottom: auto;
+  border: 2px ridge;
+}
+
+div div:first-child {
+  width: 100pt;
+  background-color: #eeeeee;
+  font-weight: bold;
+  font-style: italic;
+}
+
+div div:nth-child(2) {
+  flex-grow: 1;
+  line-height: 150%;
+}
+
+img {
+  max-width:25%;
+  height:auto;
+  float:right;
+  margin: 5pt;
+  border: 5px inset;
+
 }

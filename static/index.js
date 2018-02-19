@@ -163,7 +163,7 @@ TemplateEngine = function() {
 		thiz = this;
 
 		$.ajax({
-			url:url
+			url:'template/' + url
 		}).done(function(data){
 			thiz.regTemplate[url] = Handlebars.compile(data);
 			if (i == templates.length)
@@ -172,7 +172,7 @@ TemplateEngine = function() {
 				thiz.loadTemplate(templates, i, funcDone);
 		})
 	}
-	
+
 	this.load = function(templates, funcDone) {
 		this.loadTemplate(templates, 0, funcDone);
 	}

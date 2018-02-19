@@ -13,26 +13,25 @@
 			// Load, compile and register all templates we need
 			var templates = new TemplateEngine();
 			templates.load([
-				'main.template',
-				'link.template',
-				'oauth.template'
-			], function(){ 
+				'main.html',
+				'link.html',
+				'oauth.html'
+			], function(){
 				// Initiate the webpage
 				checkOAuth(
 					function(){
 						checkLink(
 							function(){
 								loadSettings(function(data){
-									console.log(data);
-									$('body').append(templates.get('main.template')(data));
+									$('body').append(templates.get('main.html')(data));
 								});
 							}, function() {
-								$('body').append(templates.get('link.template')());
+								$('body').append(templates.get('link.html')());
 							}
 						)
 					},
 					function(){
-						$('body').append(templates.get('oauth.template')());
+						$('body').append(templates.get('oauth.html')());
 					}
 				);
 			});

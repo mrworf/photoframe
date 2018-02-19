@@ -101,7 +101,7 @@ def cfg_keyvalue(key, value):
 			display.enable(True, True)
 		if key in ['display-on', 'display-off']:
 			timekeeper.setConfiguration(settings.getUser('display-on'), settings.getUser('display-off'))
-			
+
 	elif request.method == 'GET':
 		if key is None:
 			return jsonify(settings.getUser())
@@ -219,6 +219,11 @@ def web_main(file):
 		return app.send_static_file('index.html')
 	else:
 		return app.send_static_file(file)
+
+@app.route('/template/<file>')
+@auth.login_required
+def web_template(file):
+	return app.send_static_file('template/' + file)
 
 settings = settings()
 if not settings.load():

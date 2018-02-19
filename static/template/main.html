@@ -1,0 +1,101 @@
+<img src="/details/current" id="screen">
+<h1><a href="https://github.com/mrworf/photoframe">PhotoFrame Configuration</a></h1>
+<div>
+	<div>
+		Screen
+	</div>
+	<div>
+		Resolution <input value="{{width}}" type="text" class="medium" name="width" data-validate="width">
+		x
+		<input value="{{height}}" type="text" class="medium" name="height" data-validate="height">
+		bitdepth <input value="{{depth}}" type="text" class="small" name="depth" data-validate="depth">
+		<br>
+		TV service options
+		<input value="{{tvservice}}" type="text" class="large aleft" name="tvservice">
+		<br>
+		Turn on at <input value="{{display-on}}" type="text" class="small aright" name="display-on" data-validate="time">h
+		and off at <input value="{{display-off}}" type="text" class="small aright" name="display-on" data-validate="time">h
+	</div>
+</div>
+<br>
+<div>
+	<div>
+		Slideshow
+	</div>
+	<div>
+		Change every <input value="{{interval}}" type="text" class="small" name="interval" data-validate="interval"> seconds<br>
+		Refresh content every <input value="{{refresh-content}}" type="text" class="small" name="refresh-content" data-validate="refresh"> hours
+	</div>
+</div>
+<br>
+<div>
+	<div>
+		System
+	</div>
+	<div>
+		<input type="button" id="reset" value="Factory Reset">
+		<input type="button" id="reboot" value="Reboot">
+		<input type="button" id="shutdown" value="Power off">
+	</div>
+</div>
+<hr>
+Google Photos
+<hr>
+<p id="fields"></p>
+Photo keywords:<br><p id="keywords"></p>
+<input type="text" id="keyword">
+<input type="button" id="add" value="Add keywords">
+<input type="button" id="test" value="Test keywords">
+<br>
+
+<script type="text/javascript">
+	// Refresh image every 30s
+	function reloadScreen() {
+		$('#screen').attr('src', "/details/current?" + new Date().getTime())
+		setTimeout(reloadScreen, 30000);
+	}
+	setTimeout(reloadScreen, 30000);
+	valid = new Validator();
+
+	$("input[type='text']").change(function() {
+		validate = $(this).data('validate');
+		if (validate) {
+			$(this).val(eval('valid.' + validate + '($(this).val());'));
+		}
+	});
+
+	$("#reset").click(function() {
+		if (confirm("Are you sure? Link to photos will also be reset")) {
+			$.ajax({
+				url:"/reset"
+			}).done(function(){
+				location.reload();
+			});
+		}
+	});
+
+	$("#reboot").click(function() {
+		if (confirm("Are you sure you want to REBOOT?")) {
+			$.ajax({
+				url:"/reboot"
+			}).done(function(){
+				var newDoc = document.open("text/html", "replace");
+				newDoc.write("<html><body><h1>Power off</h1></body></html>");
+				newDoc.close();
+			});
+		}
+	});
+
+	$("#shutdown").click(function() {
+		if (confirm("Are you sure you want to POWER OFF the frame?")) {
+			$.ajax({
+				url:"/shutdown"
+			}).done(function(){
+				var newDoc = document.open("text/html", "replace");
+				newDoc.write("<html><body><h1>Power off</h1></body></html>");
+				newDoc.close();
+			});
+		}
+	});
+	populateKeywords();
+</script>
