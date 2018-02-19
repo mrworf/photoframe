@@ -98,7 +98,7 @@ Done! Once the device has rebooted, it will tell you how to connect to it and th
 
 ## It keeps asking for OAuth2.0 data?
 
-You have to tell photoframe about OAuth2.0 secrets. 
+You have to tell photoframe about OAuth2.0 secrets.
 
 First step, login to your google API console (you have this by default if you have a google photos account). You'll find the console
 at https://console.developers.google.com/apis/dashboard
@@ -108,7 +108,7 @@ Next, you're going to create a new project, you can call it whatever you want, f
 Once created, we're going to click on `Credentials` in the menu on the left. After it loads, click `Create credentials` and select
 `OAuth client id`. This leads to a new screen where it will ask you to create a consent screen, so click the button to get that started.
 
-Next, you're going to fill out the form. All but two fields are optional, so it's an easy thing to do. 
+Next, you're going to fill out the form. All but two fields are optional, so it's an easy thing to do.
 
 Email Address: `<Your email>` (usually prefilled with your google email)
 
@@ -116,12 +116,12 @@ Product name shown to users: `Photo Frame`
 
 Hit `save` and it will take you to a screen where you choose what kind of application you're making. It's important you choose `Web Application`.
 Doing so opens up a couple of extra fields. First, change the name from `Web Client 1` to something better (for example `Photo Frame`). You also need
-to fill out `Authorized redirect URIs`. 
+to fill out `Authorized redirect URIs`.
 
 Please add `https://photoframe.sensenet.nu` to this list and then press `Create`
 
 This action will open a box with client ID and secret. Don't worry about it, just click `OK`. On the new screen, you'll find your newly created client id.
-On the line with the name of your app, there will be a download button at the right-most side. 
+On the line with the name of your app, there will be a download button at the right-most side.
 
 Click it, and it downloads a JSON file. It is the contents of this file which needs to be copy-n-paste:ed into the box you see in photoframe.
 
@@ -132,7 +132,7 @@ Once you've copy-n-paste:ed this and submit it to photoframe, it will unlock the
 This requires a couple of extra steps, first we need more software
 
 ```
-apt install firmware-brcm80211 pi-bluetooth wpasupplicant iw crda wireless-regdb 
+apt install firmware-brcm80211 pi-bluetooth wpasupplicant iw crda wireless-regdb
 ```
 
 Next, we need to configure the wifi interface, open `/etc/network/interfaces` in your favorite editor and
@@ -207,7 +207,7 @@ to do a graceful shutdown as well as power on.
 
 Since Google doesn't approve of OAuth with dynamic redirect addresses,
 this project makes use of a lightweight service which allows registration
-of desired redirect (as long as it's a LAN address) and then when 
+of desired redirect (as long as it's a LAN address) and then when
 Google redirects, this service will make another redirect back to your
 raspberry. The registered addresses are only kept for 10min and is only
 stored in RAM, so nothing is kept.
@@ -259,18 +259,20 @@ You could run the same service yourself (see `extras/`). It requires a DNS name 
 
 ### Option 1 - Hard but fast
 Install vmware player, run ubuntu on your computer and then attach the memory card to your computer. It should be recognized and allow you to
-edit the `/etc/network/interfaces` file located on the SD card. This method retains all work you've done. 
+edit the `/etc/network/interfaces` file located on the SD card. This method retains all work you've done.
 
 ### Option 2 - Easy but slow
 Start over from step 1 and install your distribution of choice on the memory card
+
+## I want it to auto-update
+
+Easy, just schedule a cronjob to run `update.sh`. It will use git to update (if there are changes) as well as restart the service if it has updated. Ideally you run this once a week.
 
 # todo
 
 Tracks ideas and improvements planned. No specific timeframe is mentioned, but the order of things should be fairly true
 
 - Create RPi3 image with photoframe
-- Make photoframe self-updating using git
-- Enhance web interface
 - Timezone control from web UI
 - Make photo sources modular (allow multiple Google Photos)
 - More services: Instagram, Amazon, ...

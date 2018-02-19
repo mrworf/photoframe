@@ -1,3 +1,18 @@
+# This file is part of photoframe (https://github.com/mrworf/photoframe).
+#
+# photoframe is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# photoframe is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
+#
 import os
 import json
 import hashlib
@@ -15,7 +30,7 @@ class remember:
 	def forget(self):
 		self.memory = {'seen':[]}
 		if os.path.exists(self.filename):
-			os.unlink(self.filename)		
+			os.unlink(self.filename)
 
 	def _hash(self, text):
 		return hashlib.sha1(text).hexdigest()

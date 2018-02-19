@@ -1,3 +1,18 @@
+# This file is part of photoframe (https://github.com/mrworf/photoframe).
+#
+# photoframe is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# photoframe is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
+#
 import requests
 from requests_oauthlib import OAuth2Session
 
@@ -60,7 +75,7 @@ class OAuth:
 							scope=['https://picasaweb.google.com/data/'],
 							redirect_uri=self.ridURI,
 							state='%s-%s' % (self.rid, self.ip))
-		authorization_url, state = auth.authorization_url(self.oauth['auth_uri'], 
+		authorization_url, state = auth.authorization_url(self.oauth['auth_uri'],
 		                                                  access_type="offline",
 		                                                  prompt="consent")
 
@@ -68,13 +83,13 @@ class OAuth:
 		return authorization_url
 
 	def complete(self, url):
-		auth = OAuth2Session(self.oauth['client_id'], 
-		                     scope=['https://picasaweb.google.com/data/'], 
+		auth = OAuth2Session(self.oauth['client_id'],
+		                     scope=['https://picasaweb.google.com/data/'],
 		                     redirect_uri=self.ridURI,
 		                     state='%s-%s' % (self.rid, self.ip))
 
 		token = auth.fetch_token(self.oauth['token_uri'],
-		                         client_secret=self.oauth['client_secret'], 
+		                         client_secret=self.oauth['client_secret'],
 		                         authorization_response=url)
 
 		self.cbSetToken(token)

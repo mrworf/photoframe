@@ -1,3 +1,18 @@
+# This file is part of photoframe (https://github.com/mrworf/photoframe).
+#
+# photoframe is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# photoframe is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
+#
 from threading import Thread
 import smbus
 import time
@@ -61,7 +76,7 @@ class colormatch(Thread):
 	def run(self):
 		bus = smbus.SMBus(1)
 		# I2C address 0x29
-		# Register 0x12 has device ver. 
+		# Register 0x12 has device ver.
 		# Register addresses must be OR'ed with 0x80
 		bus.write_byte(0x29,0x80|0x12)
 		ver = bus.read_byte(0x29)
@@ -87,6 +102,6 @@ class colormatch(Thread):
 					temp, lux = self._temperature_and_lux((red, green, blue, clear))
 					self.temperature = temp
 				time.sleep(1)
-		else: 
+		else:
 			logging.info('No TCS34725 color sensor detected, will not compensate for ambient color temperature')
 			self.sensor = False
