@@ -33,7 +33,7 @@ class slideshow:
 			self.display.clear()
 
 		if self.settings.get('oauth_token') is None:
-			self.display.message('Please link photoalbum\n\nSurf to http://%s:7777/' % self.settings.get('local-ip'))
+			self.display.message('Photoalbum isn\'t ready yet\n\nPlease direct your webbrowser to\n\nhttp://%s:7777/' % self.settings.get('local-ip'))
 			logging.info('You need to link your photoalbum first')
 		elif self.thread is None:
 			self.thread = threading.Thread(target=self.presentation)
@@ -255,7 +255,7 @@ class slideshow:
 			'%sx%s' % (self.settings.getUser('width'), self.settings.getUser('height')),
 			'-background',
 			'transparent',
-			'-gravity', 
+			'-gravity',
 			'center',
 			'-extent',
 			'%sx%s' % (self.settings.getUser('width'), self.settings.getUser('height')),

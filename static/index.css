@@ -3,9 +3,29 @@ body {
 	font-size: 12pt;
 }
 
+span.normal {
+  font-size: 12pt;
+  font-style: normal;
+  font-weight: normal;
+}
+span.important {
+  font-weight: bold;
+  font-style: italic;
+}
+
+p {
+  background-color: #eeeeee;
+  border: 1px solid #cccccc;
+  padding: 2pt;
+}
+
+p.nospace {
+  margin: 2pt;
+}
+
 a {
   text-decoration: none;
-  color: inherit;
+  color: darkblue;
 }
 
 a:hover {

@@ -10,11 +10,11 @@
 		<input value="{{height}}" type="text" class="medium" name="height" data-validate="height">
 		bitdepth <input value="{{depth}}" type="text" class="small" name="depth" data-validate="depth">
 		<br>
-		TV service options
+		<a href="#" id="tv">TV service options</a>
 		<input value="{{tvservice}}" type="text" class="large aleft" name="tvservice">
 		<br>
-		Turn on at <input value="{{display-on}}" type="text" class="small aright" name="display-on" data-validate="time">h
-		and off at <input value="{{display-off}}" type="text" class="small aright" name="display-on" data-validate="time">h
+		Turn on display at hour <input value="{{display-on}}" type="text" class="small aright" name="display-on" data-validate="time">
+		and off at hour <input value="{{display-off}}" type="text" class="small aright" name="display-on" data-validate="time"> (24h time)
 	</div>
 </div>
 <br>
@@ -24,7 +24,7 @@
 	</div>
 	<div>
 		Change every <input value="{{interval}}" type="text" class="small" name="interval" data-validate="interval"> seconds<br>
-		Refresh content every <input value="{{refresh-content}}" type="text" class="small" name="refresh-content" data-validate="refresh"> hours
+		Refresh list of photos every <input value="{{refresh-content}}" type="text" class="small" name="refresh-content" data-validate="refresh"> hours
 	</div>
 </div>
 <br>
@@ -38,14 +38,21 @@
 		<input type="button" id="shutdown" value="Power off">
 	</div>
 </div>
-<hr>
-Google Photos
-<hr>
-<p id="fields"></p>
-Photo keywords:<br><p id="keywords"></p>
-<input type="text" id="keyword">
-<input type="button" id="add" value="Add keywords">
-<input type="button" id="test" value="Test keywords">
+<br>
+<div>
+	<div>
+		Google Photos<br>
+		<span style="font-size: 9pt" class="normal">(<a href="/link">reauthorize</a>)</span>
+	</div>
+	<div>
+		<p class="nospace" id="keywords"></p>
+		<p class="nospace" style="display: flex">
+			<input type="text" id="keyword" style="flex: 2; text-align: left">
+			<input type="button" id="add" value="Add keywords">
+			<input type="button" id="test" value="Test keywords">
+		</p>
+	</div>
+</div>
 <br>
 
 <script type="text/javascript">
@@ -96,6 +103,25 @@ Photo keywords:<br><p id="keywords"></p>
 				newDoc.close();
 			});
 		}
+	});
+
+	$('#tv').click(function() {
+		$.ajax({
+			url:"/details/tvservice"
+		}).done(function(data) {
+			txt = "";
+			if (data['cea'].indexOf(' 0 ') === -1) {
+				txt += data['cea'];
+			}
+			if (data['dmt'].indexOf(' 0 ') === -1) {
+				txt += data['dmt'];
+			}
+			if (txt == "")
+				txt = "No modes found for connected monitor";
+			else
+				txt += "\nOption format: <DMT/CEA> <MODE NBR> <HDMI/DVI>"
+			alert(txt);
+		});
 	});
 	populateKeywords();
 </script>
