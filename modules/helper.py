@@ -69,7 +69,7 @@ class helper:
 				logging.exception('Error trying to identify image')
 				return False
 
-		m = re.search('([1-9][0-9])*x([1-9][0-9]*)', output)
+		m = re.search('([1-9][0-9]*)x([1-9][0-9]*)', output)
 		if m is None or m.groups() is None or len(m.groups()) != 2:
 			logging.error('Unable to resolve regular expression for image size')
 			return False
