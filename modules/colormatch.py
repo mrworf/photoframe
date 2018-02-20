@@ -61,6 +61,32 @@ class colormatch(Thread):
 
 		return subprocess.call([self.script, '-t', "%d" % temperature, src, dst], stderr=self.void) == 0
 
+	# The following function (_temperature_and_lux) is lifted from the 
+	# https://github.com/adafruit/Adafruit_CircuitPython_TCS34725 project and
+	# is under MIT license, this license ONLY applies to said function and no
+	# other part of this project.
+	#
+	# The MIT License (MIT)
+	#
+	# Copyright (c) 2017 Tony DiCola for Adafruit Industries
+	#
+	# Permission is hereby granted, free of charge, to any person obtaining a copy
+	# of this software and associated documentation files (the "Software"), to deal
+	# in the Software without restriction, including without limitation the rights
+	# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	# copies of the Software, and to permit persons to whom the Software is
+	# furnished to do so, subject to the following conditions:
+	#
+	# The above copyright notice and this permission notice shall be included in
+	# all copies or substantial portions of the Software.
+	#
+	# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+	# THE SOFTWARE.
 	def _temperature_and_lux(self, data):
 		"""Convert the 4-tuple of raw RGBC data to color temperature and lux values. Will return
 		   2-tuple of color temperature and lux."""
@@ -73,6 +99,9 @@ class colormatch(Thread):
 		cct = 449.0 * n**3 + 3525.0 * n**2 + 6823.3 * n + 5520.33
 		return cct, y
 
+	# This function is mostly based of the example provided by Brad Berkland's blog:
+	# http://bradsrpi.blogspot.com/2013/05/tcs34725-rgb-color-sensor-raspberry-pi.html
+	#
 	def run(self):
 		bus = smbus.SMBus(1)
 		# I2C address 0x29
