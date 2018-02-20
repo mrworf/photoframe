@@ -126,6 +126,7 @@ class slideshow:
 			if time_process < delay:
 				time.sleep(delay - time_process)
 			self.display.image(self.imageCurrent)
+			os.remove(self.imageCurrent)
 
 			delay = self.settings.getUser('interval')
 		self.thread = None
@@ -225,6 +226,8 @@ class slideshow:
 				if not self.colormatch.adjust(temp, dest):
 					logging.warning('Unable to adjust image to colormatch, using original')
 					os.rename(temp, dest)
+				else:
+					os.remove(temp)
 			else:
 				os.rename(temp, dest)
 			return True
