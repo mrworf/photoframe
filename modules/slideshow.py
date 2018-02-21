@@ -77,7 +77,12 @@ class slideshow:
 					for saw in seen:
 						remember(saw, 0).forget()
 					remember('/tmp/overallmemory.json', 0).forget()
+					if self.settings.getUser('refresh-content') == 0:
+						logging.info('Make sure we refresh all images now')
+						for saw in seen:
+							os.remove(saw)
 					seen = []
+
 
 				keyword = self.settings.getKeyword(index)
 				imgs, cache = self.getImages(keyword)
@@ -176,7 +181,7 @@ class slideshow:
 		filename = filename.hexdigest() + ".json"
 		filename = os.path.join(self.settings.get('tempfolder'), filename)
 
-		if os.path.exists(filename): # Check age!
+		if os.path.exists(filename) and self.settings.getUser('refresh-content') > 0: # Check age!
 			age = math.floor( (time.time() - os.path.getctime(filename)) / 3600)
 			if age >= self.settings.getUser('refresh-content'):
 				logging.debug('File too old, %dh > %dh, refreshing' % (age, self.settings.getUser('refresh-content')))

@@ -33,7 +33,7 @@ Validator = function() {
 
 	this.refresh = function(input) {
 		i = parseInt(input);
-		if (i < 1 || isNaN(i))
+		if (i < 0 || isNaN(i))
 			i = 1;
 		return i.toString();
 	}
