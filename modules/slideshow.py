@@ -118,6 +118,8 @@ class slideshow:
 						self.imageCurrent = filename
 						self.imageMime = mime
 						break
+					else:
+						logging.warning('Failed to download image, trying another one')
 				else:
 					logging.warning('Mime type %s isn\'t supported' % mime)
 

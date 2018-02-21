@@ -14,6 +14,9 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 import requests
+import logging
+import time
+from oauthlib.oauth2 import TokenExpiredError
 from requests_oauthlib import OAuth2Session
 
 class OAuth:
@@ -45,12 +48,26 @@ class OAuth:
 	def request(self, uri, destination=None, params=None):
 		result = None
 		stream = destination != None
-		try:
-			auth = self.getSession()
-			result = auth.get(uri, stream=stream, params=params)
-		except:
-			auth = self.getSession(True)
-			result = auth.get(uri, stream=stream, params=params)
+		tries = 0
+		while tries < 5:
+			try:
+				try:
+					auth = self.getSession()
+					result = auth.get(uri, stream=stream, params=params)
+					break
+				except TokenExpiredError as e:
+					auth = self.getSession(True)
+					result = auth.get(uri, stream=stream, params=params)
+					break
+			except:
+				logging.exception('Issues downloading')
+			time.sleep(tries * 10) # Back off 10, 20, ... depending on tries
+			tries += 1
+
+		if tries == 5:
+			logging.error('Failed to download due to network issues')
+			return False
+
 		if result is not None and destination is not None:
 			try:
 				with open(destination, 'wb') as handle:
