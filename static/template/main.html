@@ -69,6 +69,11 @@
 		if (validate) {
 			$(this).val(eval('valid.' + validate + '($(this).val());'));
 		}
+		$.ajax({
+			url:"/setting/" + $(this).attr('name') + "/" + $(this).val(),
+			type:"PUT"
+		}).done(function(){
+		});
 	});
 
 	$("#reset").click(function() {

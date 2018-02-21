@@ -152,7 +152,7 @@ class slideshow:
 				if 'image' in entry['content']['type'] and 'gphoto$videostatus' not in entry:
 					break
 				else:
-					logging.warning('Unsupported media: %s' % entry['content']['type'])
+					logging.warning('Unsupported media: %s (video = %s)' % (entry['content']['type'], repr('gphoto$videostatus' not in entry)))
 			else:
 				i += 1
 				if i == count:

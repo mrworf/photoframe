@@ -27,6 +27,7 @@ import subprocess
 import logging
 import socket
 import threading
+import argparse
 
 from modules.remember import remember
 from modules.shutdown import shutdown
@@ -56,7 +57,17 @@ class NoAuth:
 		wrap.func_name = fn.func_name
 		return wrap
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+parser = argparse.ArgumentParser(description="PhotoFrame - A RPi3 based digital photoframe", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('--logfile', default=None, help="Log to file instead of stdout")
+parser.add_argument('--port', default=7777, type=int, help="Port to listen on")
+parser.add_argument('--listen', default="0.0.0.0", help="Address to listen on")
+parser.add_argument('--debug', action='store_true', default=False, help='Enable loads more logging')
+cmdline = parser.parse_args()
+
+if cmdline.debug:
+	logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+else:
+	logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 logging.getLogger('oauthlib').setLevel(logging.ERROR)
 logging.getLogger('urllib3').setLevel(logging.ERROR)
@@ -116,13 +127,14 @@ def cfg_keyvalue(key, value):
 			display.enable(True, True)
 		if key in ['display-on', 'display-off']:
 			timekeeper.setConfiguration(settings.getUser('display-on'), settings.getUser('display-off'))
+		return jsonify({'status':True})
 
 	elif request.method == 'GET':
 		if key is None:
 			return jsonify(settings.getUser())
 		else:
 			return jsonify({key : settings.getUser(key)})
-	return
+	abort(404)
 
 @app.route('/keywords', methods=['GET'])
 @app.route('/keywords/add', methods=['POST'])
@@ -295,6 +307,6 @@ if __name__ == "__main__":
 	os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 	app.secret_key = os.urandom(24)
 	slideshow.start()
-	app.run(debug=False, port=7777, host='0.0.0.0' )
+	app.run(debug=False, port=cmdline.port, host=cmdline.listen )
 
 sys.exit(0)
