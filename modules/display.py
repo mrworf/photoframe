@@ -114,7 +114,7 @@ class display:
 	def current():
 		output = subprocess.check_output(['/opt/vc/bin/tvservice', '-s'], stderr=subprocess.STDOUT)
 		print('"%s"' % (output))
-		m = re.search('state 0x[0-9]* \[([A-Z]*) ([A-Z]*) \(([0-9]*)\) [^,]*, ([0-9]*)x([0-9]*)', output)
+		m = re.search('state 0x[0-9a-f]* \[([A-Z]*) ([A-Z]*) \(([0-9]*)\) [^,]*, ([0-9]*)x([0-9]*)', output)
 		result = {
 		'group' : m.group(2),
 		'mode' : m.group(1),
