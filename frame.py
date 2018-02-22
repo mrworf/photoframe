@@ -292,8 +292,6 @@ if os.path.exists('/root/oauth.json'):
 	if 'web' in data: # if someone added it via command-line
 		data = data['web']
 	oauth.setOAuth(data)
-else:
-	display.message('You need to provide OAuth details\nSee README.md')
 
 # Prep random
 random.seed(long(time.clock()))
