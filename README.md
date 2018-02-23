@@ -32,7 +32,29 @@ the images to meld better with the room where it's running.
 - Google Photos account
 - Internet
 
-# installation
+# installation using ready-made image
+
+On the release page, you'll find prepared raspbian image(s) for RaspberryPi 3
+
+To use these (and I really recommend that to doing the manual steps), here's how:
+
+1. Download the image from the release page
+2. Use your favorite tool to load image onto a SD card, I recommend `https://etcher.io/` which works on Windows, OSX and Linux
+3. Open the new drive called `boot` and edit the file called `wifi-config.txt`
+   Change the two fields to point out your wifi and the password needed for it
+4. Save the file
+5. Place SDcard in your RPi3 which is connected to a monitor/TV
+6. Start the RPi3
+7. Wait (takes up to a minute depending on card and the fact that it's expanding to use the entire SDcard)
+8. Follow instructions shown on the display
+
+The default username/password for the web page is `photoframe` and `password`. This can be chanhged by editing the file called `http-auth.json` on the `boot` drive
+
+## tl;dr
+
+Flash image to SDcard, edit `wifi-config.txt` and boot the RPi3 with the SDcard and follow instructions. Username and password is above this paragraph.
+
+# installation the old fashion way
 
 First, install your favorite debian distro (recommend minibian, https://minibianpi.wordpress.com/ )
 
@@ -70,6 +92,14 @@ issuing
 ```
 systemctl disable getty@tty1.service
 ```
+
+If you're using a rasbian (or a varity of said distro) you may need to also do
+
+```
+systemctl mask plymouth-start.service
+```
+
+or you might still see the boot messages.
 
 Almost there, we also need to set the timezone for the device, or it will be confusing when the on/off hours doesn't meet expectations.
 
@@ -267,6 +297,12 @@ Start over from step 1 and install your distribution of choice on the memory car
 ## I want it to auto-update
 
 Easy, just schedule a cronjob to run `update.sh`. It will use git to update (if there are changes) as well as restart the service if it has updated. Ideally you run this once a week.
+
+If you're using the ready-made image, it will already update automatically
+
+## I want to build my own ready-made image of this
+
+Check out the `photoframe` branch on https://github.com/mrworf/pi-gen ... It contains all the changes and patches needed to create the image.
 
 # todo
 
