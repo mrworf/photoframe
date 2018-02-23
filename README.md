@@ -39,7 +39,7 @@ On the release page, you'll find prepared raspbian image(s) for RaspberryPi 3
 To use these (and I really recommend that to doing the manual steps), here's how:
 
 1. Download the image from the release page
-2. Use your favorite tool to load image onto a SD card, I recommend `https://etcher.io/` which works on Windows, OSX and Linux
+2. Use your favorite tool to load image onto a SD card, I recommend https://etcher.io/ which works on Windows, OSX and Linux
 3. Open the new drive called `boot` and edit the file called `wifi-config.txt`
    Change the two fields to point out your wifi and the password needed for it
 4. Save the file
@@ -48,7 +48,7 @@ To use these (and I really recommend that to doing the manual steps), here's how
 7. Wait (takes up to a minute depending on card and the fact that it's expanding to use the entire SDcard)
 8. Follow instructions shown on the display
 
-The default username/password for the web page is `photoframe` and `password`. This can be chanhged by editing the file called `http-auth.json` on the `boot` drive
+The default username/password for the web page is `photoframe` and `password`. This can be changed by editing the file called `http-auth.json` on the `boot` drive
 
 ## tl;dr
 
