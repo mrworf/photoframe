@@ -47,6 +47,7 @@ class colormatch(Thread):
 
 	def adjust(self, src, dst, temperature = None):
 		if self.temperature is None or self.sensor is None:
+			logging.debug('Temperature is %s and sensor is %s', repr(self.temperature), repr(self.sensor))
 			return False
 		if temperature is None:
 			temperature = self.temperature
@@ -121,15 +122,19 @@ class colormatch(Thread):
 			bus.write_byte(0x29, 0x01|0x02) # 0x01 = Power on, 0x02 RGB sensors enabled
 			bus.write_byte(0x29, 0x80|0x14) # Reading results start register 14, LSB then MSB
 			self.sensor = True
+			logging.debug('TCS34725 detected, starting polling loop')
 			while True:
 				data = bus.read_i2c_block_data(0x29, 0)
 				clear = clear = data[1] << 8 | data[0]
 				red = data[3] << 8 | data[2]
 				green = data[5] << 8 | data[4]
 				blue = data[7] << 8 | data[6]
-				if red >0 and green > 0 and blue > 0:
+				if red > 0 and green > 0 and blue > 0 and clear > 0:
 					temp, lux = self._temperature_and_lux((red, green, blue, clear))
 					self.temperature = temp
+				else:
+					# All zero Happens when no light is available, so set temp to zero
+					self.temperature = 0
 				time.sleep(1)
 		else:
 			logging.info('No TCS34725 color sensor detected, will not compensate for ambient color temperature')
