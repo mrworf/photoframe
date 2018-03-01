@@ -16,6 +16,7 @@
 import os
 import json
 import hashlib
+import logging
 
 class remember:
 	def __init__(self, filename, count):
@@ -24,8 +25,10 @@ class remember:
 		if os.path.exists(self.filename):
 			with open(self.filename, 'rb') as f:
 				self.memory = json.load(f)
+			if 'count' not in self.memory or self.memory['count'] == 0:
+				self.memory['count'] = count
 		else:
-			self.memory = {'seen':[]}
+			self.memory = {'seen':[], 'count':count}
 
 	def forget(self):
 		self.memory = {'seen':[]}
@@ -44,6 +47,9 @@ class remember:
 
 	def seenAll(self):
 		return len(self.memory['seen']) == self.count
+
+	def debug(self):
+		logging.info('[%s] Seen %d, expected to see %d', self.filename, len(self.memory['seen']), self.memory['count'])
 
 	def seen(self, id):
 		index = self._hash(id)
