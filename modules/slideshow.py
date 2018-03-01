@@ -74,9 +74,16 @@ class slideshow:
 				if len(seen) == self.settings.countKeywords():
 					# We've viewed all images, reset
 					logging.info('All images we have keywords for have been seen, restart')
+					logging.info('Seen holds: %s', repr(seen))
+					logging.info('Settings.countKeywords() = %d', self.settings.countKeywords())
+
 					for saw in seen:
-						remember(saw, 0).forget()
-					remember('/tmp/overallmemory.json', 0).forget()
+						r = remember(saw, 0)
+						r.debug()
+						r.forget()
+					r = remember('/tmp/overallmemory.json', 0)
+					r.debug()
+					r.forget()
 					if self.settings.getUser('refresh-content') == 0:
 						logging.info('Make sure we refresh all images now')
 						for saw in seen:
@@ -86,6 +93,14 @@ class slideshow:
 
 				keyword = self.settings.getKeyword(index)
 				imgs, cache = self.getImages(keyword)
+
+				# If we've seen all images for this keyword, skip to next
+				if cache in seen:
+					index += 1
+					if index == self.settings.countKeywords():
+						index = 0
+					continue
+
 				memory = remember(cache, len(imgs['feed']['entry']))
 
 				if not imgs or memory.seenAll():
@@ -94,9 +109,6 @@ class slideshow:
 					elif memory.seenAll():
 						seen.append(cache)
 						logging.debug('All images for keyword %s has been shown' % keyword)
-					index += 1
-					if index == self.settings.countKeywords():
-						index = 0
 					continue
 
 				# Now, lets make sure we didn't see this before
@@ -151,8 +163,10 @@ class slideshow:
 				# Make sure we don't get a video, unsupported for now (gif is usually bad too)
 				if 'image' in entry['content']['type'] and 'gphoto$videostatus' not in entry:
 					break
+				elif 'gphoto$videostatus' in entry:
+					logging.debug('Image is thumbnail for videofile')
 				else:
-					logging.warning('Unsupported media: %s (video = %s)' % (entry['content']['type'], repr('gphoto$videostatus' not in entry)))
+					logging.warning('Unsupported media: %s (video = %s)' % (entry['content']['type'], repr('gphoto$videostatus' in entry)))
 			else:
 				i += 1
 				if i == count:
@@ -178,7 +192,7 @@ class slideshow:
 
 	def getImages(self, keyword):
 		# Create filename from keyword
-		filename = hashlib.new('md5')
+		filename = hashlib.new('sha1')
 		filename.update(keyword)
 		filename = filename.hexdigest() + ".json"
 		filename = os.path.join(self.settings.get('tempfolder'), filename)
