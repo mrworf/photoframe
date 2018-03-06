@@ -26,6 +26,7 @@ class colormatch(Thread):
 		self.daemon = True
 		self.sensor = False
 		self.temperature = None
+		self.lux = None
 		self.script = script
 		self.void = open(os.devnull, 'wb')
 		self.min = min
@@ -42,8 +43,14 @@ class colormatch(Thread):
 	def hasTemperature(self):
 		return self.temperature != None
 
+	def hasLux(self):
+		return self.lux != None
+
 	def getTemperature(self):
 		return self.temperature
+
+	def getLux(self):
+		return self.lux
 
 	def adjust(self, src, dst, temperature = None):
 		if self.temperature is None or self.sensor is None:
@@ -132,9 +139,11 @@ class colormatch(Thread):
 				if red > 0 and green > 0 and blue > 0 and clear > 0:
 					temp, lux = self._temperature_and_lux((red, green, blue, clear))
 					self.temperature = temp
+					self.lux = lux
 				else:
 					# All zero Happens when no light is available, so set temp to zero
 					self.temperature = 0
+					self.lux = 0
 				time.sleep(1)
 		else:
 			logging.info('No TCS34725 color sensor detected, will not compensate for ambient color temperature')

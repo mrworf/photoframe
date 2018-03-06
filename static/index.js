@@ -59,6 +59,22 @@ Validator = function() {
 			i = 480;
 		return i.toString();
 	}
+
+	this.minutes = function(input) {
+		i = parseInt(input);
+		if (i == 0)
+			i = 0
+		else if (i < 10 || isNaN(i))
+			i = 10;
+		return i.toString();
+	}
+
+	this.lux = function(input) {
+		i = parseFloat(input);
+		if (i < 0.01 || isNaN(i))
+			i = 0.01;
+		return i.toFixed(2).toString();
+	}
 }
 
 function populateKeywords() {

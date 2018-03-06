@@ -43,6 +43,12 @@ class slideshow:
 	def getCurrentImage(self):
 		return self.imageCurrent, self.imageMime
 
+	def getColorInformation(self):
+		return {
+			'temperature':self.colormatch.getTemperature(),
+			'lux':self.colormatch.getLux()
+			}
+
 	def start(self, blank=False):
 		if blank:
 			self.display.clear()

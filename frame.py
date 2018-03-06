@@ -218,6 +218,8 @@ def cfg_details(about):
 		output = subprocess.check_output(['git', 'log', '-n1'], stderr=void)
 		lines = output.split('\n')
 		return jsonify({'date':lines[2][5:].strip(),'commit':lines[0][7:].strip()})
+	elif about == 'color':
+		return jsonify(slideshow.getColorInformation())
 
 	abort(404)
 

@@ -43,13 +43,21 @@ class settings:
 			'refresh-content' : 24,		# After how many hours we should force reload of image lists from server
 			'keywords' : [						# Keywords for search (blank = latest 1000 images)
 				""
-			]
+			],
+			'autooff-lux' : 0.01,
+			'autooff-time' : 0,
 		}
 
 	def load(self):
 		if os.path.exists('/root/settings.json'):
 			with open('/root/settings.json') as f:
+				# A bit messy, but it should allow new defaults to be added
+				# to old configurations.
+				tmp = self.settings['cfg']
 				self.settings = json.load(f)
+				tmp2 = self.settings['cfg']
+				self.settings['cfg'] = tmp
+				self.settings['cfg'].update(tmp2)
 			return True
 		else:
 			return False
