@@ -32,15 +32,37 @@ class display:
 		self.params = tvservice_params
 
 	def get(self):
-		args = [
-		        'convert',
-		        '-depth',
-		        '8',
-		        '-size',
-		        '%dx%d' % (self.width, self.height),
-		        'bgra:/dev/fb0[0]',
-		        'jpg:-'
-		]
+		if self.enabled:
+			args = [
+			        'convert',
+			        '-depth',
+			        '8',
+			        '-size',
+			        '%dx%d' % (self.width, self.height),
+			        'bgra:/dev/fb0[0]',
+			        'jpg:-'
+			]
+		else:
+			args = [
+				'convert',
+				'-size',
+				'%dx%d' % (self.width, self.height),
+				'-background',
+				'black',
+				'-fill',
+				'white',
+				'-gravity',
+				'center',
+				'-weight',
+				'700',
+				'-pointsize',
+				'64',
+				'label:%s' % "Powersave",
+				'-depth',
+				'8',
+				'jpg:-'
+			]
+
 		result = subprocess.check_output(args, stderr=self.void)
 		return (result, 'image/jpeg')
 
