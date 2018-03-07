@@ -31,6 +31,8 @@ class colormatch(Thread):
 		self.void = open(os.devnull, 'wb')
 		self.min = min
 		self.max = max
+		self.listener = None
+		self.allowAdjust = False
 		self.start()
 
 	def setLimits(self, min, max):
@@ -52,7 +54,13 @@ class colormatch(Thread):
 	def getLux(self):
 		return self.lux
 
+	def setUpdateListener(self, listener):
+		self.listener = listener
+
 	def adjust(self, src, dst, temperature = None):
+		if not self.allowAdjust:
+			return False
+
 		if self.temperature is None or self.sensor is None:
 			logging.debug('Temperature is %s and sensor is %s', repr(self.temperature), repr(self.sensor))
 			return False
@@ -106,6 +114,7 @@ class colormatch(Thread):
 		n = (x / divisor - 0.3320) / (0.1858 - y / divisor)
 		cct = 449.0 * n**3 + 3525.0 * n**2 + 6823.3 * n + 5520.33
 		return cct, y
+	###################################################################################
 
 	# This function is mostly based of the example provided by Brad Berkland's blog:
 	# http://bradsrpi.blogspot.com/2013/05/tcs34725-rgb-color-sensor-raspberry-pi.html
@@ -122,8 +131,8 @@ class colormatch(Thread):
 			# Make sure we have the needed script
 			if not os.path.exists(self.script):
 				logging.info('No color temperature script, download it from http://www.fmwconcepts.com/imagemagick/colortemp/index.php and save as "%s"' % self.script)
-				self.sensor = False
-				return
+				self.allowAdjust = False
+			self.allowAdjust = True
 
 			bus.write_byte(0x29, 0x80|0x00) # 0x00 = ENABLE register
 			bus.write_byte(0x29, 0x01|0x02) # 0x01 = Power on, 0x02 RGB sensors enabled
@@ -144,6 +153,10 @@ class colormatch(Thread):
 					# All zero Happens when no light is available, so set temp to zero
 					self.temperature = 0
 					self.lux = 0
+
+				if self.listener:
+					self.listener(self.temperature, self.lux)
+
 				time.sleep(1)
 		else:
 			logging.info('No TCS34725 color sensor detected, will not compensate for ambient color temperature')
