@@ -22,6 +22,7 @@ the images to meld better with the room where it's running.
 - Simple OAuth2.0 even though behind firewall (see further down)
 - Shows error messages on screen
 - Supports ambient room color temperature adjustments
+- Uses ambient sensor to improve powersave
 - Power control via GPIO (turn RPi3 on/off)
 
 # requires
@@ -227,6 +228,14 @@ please visit http://www.fmwconcepts.com/imagemagick/colortemp/index.php and down
 You're done! Reboot your RPi3 (So I2C gets enabled) and from now on, all images will get adjusted to match the ambient color temperature.
 
 If photoframe is unable to use the sensor, it "usually" gives you helpful hints. Check the `/var/log/syslog` file for `frame.py` entries.
+
+## Ambient powersave?
+
+Yes, using the same sensor, you can set a threshold and duration, if the ambient light is below said threshold for the duration, it will trigger
+powersave on the display. If the ambient brightness is above the threshold for same duration, it will wake up the display.
+
+However, if you're combining this with the scheduler, the scheduler takes priority and will keep the display in powersave during the scheduled hours,
+regardless of what the sensor says. The sensor is only used to extend the periods, it cannot power on the display during the off hours.
 
 # Power on/off?
 

@@ -21,6 +21,16 @@
 		<input value="{{autooff-time}}" type="text" class="small" name="autooff-time" data-validate="minutes"> minutes
 		<br>
 		Current ambient environment <span id="lux">-.--</span> lux and <span id="colortemp">----</span>K color temperature.
+		<br>
+		Power saving measures should 
+		<select name="powersave">
+			{{#select powersave}}
+			<option value="">not be used</option>
+			<option value="schedule">use schedule</option>
+			<option value="sensor">use environment</option>
+			<option value="sensor+schedule">use schedule and environment</option>
+			{{/select}}
+		</select>
 	</div>
 </div>
 <br>
@@ -89,6 +99,14 @@
 		}
 		$.ajax({
 			url:"/setting/" + $(this).attr('name') + "/" + $(this).val(),
+			type:"PUT"
+		}).done(function(){
+		});
+	});
+
+	$("select[name=powersave]").change(function() {
+		$.ajax({
+			url:"/setting/" + $(this).attr('name') + "/" + encodeURIComponent($(this).val()),
 			type:"PUT"
 		}).done(function(){
 		});

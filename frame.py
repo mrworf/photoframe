@@ -37,6 +37,7 @@ from modules.helper import helper
 from modules.display import display
 from modules.oauth import OAuth
 from modules.slideshow import slideshow
+from modules.colormatch import colormatch
 
 void = open(os.devnull, 'wb')
 
@@ -127,6 +128,10 @@ def cfg_keyvalue(key, value):
 			display.enable(True, True)
 		if key in ['display-on', 'display-off']:
 			timekeeper.setConfiguration(settings.getUser('display-on'), settings.getUser('display-off'))
+		if key in ['autooff-lux', 'autooff-time']:
+			timekeeper.setAmbientSensitivity(settings.getUser('autooff-lux'), settings.getUser('autooff-time'))
+		if key in ['powersave']:
+			timekeeper.setPowermode(settings.getUser('powersave'))
 		return jsonify({'status':True})
 
 	elif request.method == 'GET':
@@ -220,6 +225,8 @@ def cfg_details(about):
 		return jsonify({'date':lines[2][5:].strip(),'commit':lines[0][7:].strip()})
 	elif about == 'color':
 		return jsonify(slideshow.getColorInformation())
+	elif about == 'display':
+		return jsonify({'display':display.isEnabled()})
 
 	abort(404)
 
@@ -297,9 +304,16 @@ if os.path.exists('/root/oauth.json'):
 
 # Prep random
 random.seed(long(time.clock()))
-slideshow = slideshow(display, settings, oauth)
+colormatch = colormatch(settings.get('colortemp-script'), 2700) # 2700K = Soft white, lowest we'll go
+slideshow = slideshow(display, settings, oauth, colormatch)
 timekeeper = timekeeper(display.enable, slideshow.start)
+slideshow.setQueryPower(timekeeper.getDisplayOn)
+
 timekeeper.setConfiguration(settings.getUser('display-on'), settings.getUser('display-off'))
+timekeeper.setAmbientSensitivity(settings.getUser('autooff-lux'), settings.getUser('autooff-time'))
+timekeeper.setPowermode(settings.getUser('powersave'))
+colormatch.setUpdateListener(timekeeper.sensorListener)
+
 powermanagement = shutdown()
 
 if __name__ == "__main__":

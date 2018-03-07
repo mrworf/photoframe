@@ -62,10 +62,8 @@ Validator = function() {
 
 	this.minutes = function(input) {
 		i = parseInt(input);
-		if (i == 0)
-			i = 0
-		else if (i < 10 || isNaN(i))
-			i = 10;
+		if (i < 1 || isNaN(i))
+			i = 1;
 		return i.toString();
 	}
 
@@ -186,6 +184,12 @@ function getVersion(commit, date) {
 }
 
 TemplateEngine = function() {
+	window.Handlebars.registerHelper('select', function( value, options ){
+		var $el = $('<select />').html( options.fn(this) );
+		$el.find('[value="' + value + '"]').attr({'selected':'selected'});
+		return $el.html();
+	});
+
 	this.regTemplate = {}
 
 	this.loadTemplate= function(templates, i, funcDone) {

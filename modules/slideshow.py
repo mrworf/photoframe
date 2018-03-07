@@ -27,15 +27,15 @@ import subprocess
 
 from modules.remember import remember
 from modules.helper import helper
-from modules.colormatch import colormatch
 
 class slideshow:
-	def __init__(self, display, settings, oauth):
+	def __init__(self, display, settings, oauth, colormatch):
+		self.queryPowerFunc = None
 		self.thread = None
 		self.display = display
 		self.settings = settings
 		self.oauth = oauth
-		self.colormatch = colormatch(self.settings.get('colortemp-script'), 2700) # 2700K = Soft white, lowest we'll go
+		self.colormatch = colormatch
 		self.imageCurrent = None
 		self.imageMime = None
 		self.void = open(os.devnull, 'wb')
@@ -48,6 +48,9 @@ class slideshow:
 			'temperature':self.colormatch.getTemperature(),
 			'lux':self.colormatch.getLux()
 			}
+
+	def setQueryPower(self, func):
+		self.queryPowerFunc = func
 
 	def start(self, blank=False):
 		if blank:
@@ -66,9 +69,9 @@ class slideshow:
 		seen = []
 		delay = 0
 		while True:
-			# Avoid showing images if we're past bedtime
-			if int(time.strftime('%H')) >= self.settings.getUser('display-off'):
-				logging.debug("It's after hours, exit quietly")
+			# Avoid showing images if the display is off
+			if self.queryPowerFunc is not None and self.queryPowerFunc() is False:
+				logging.debug("Display is off, exit quietly")
 				break
 
 			imgs = cache = memory = None

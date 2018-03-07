@@ -22,9 +22,18 @@ class timekeeper(Thread):
 	def __init__(self, cbPower, cbSlideshow):
 		Thread.__init__(self)
 		self.daemon = True
+		self.scheduleOff = False
+		self.ambientOff = False
 		self.standby = False
+		self.ignoreSensor = True
+		self.ignoreSchedule = True
+
 		self.hourOn = None
 		self.hourOff = None
+		self.luxLimit = None
+		self.luxTimeout = None
+		self.luxLow = None
+		self.luxHigh = None
 		self.cbPower = cbPower
 		self.cbSlideshow = cbSlideshow
 		self.start()
@@ -34,22 +43,77 @@ class timekeeper(Thread):
 		self.hourOff = hourOff
 		logging.debug('hourOn = %s, hourOff = %s' % (repr(hourOn), repr(hourOff)))
 
+	def setPowermode(self, mode):
+		if mode == '':
+			self.ignoreSensor = True
+			self.ignoreSchedule = True
+		elif mode == 'sensor':
+			self.ignoreSensor = False
+			self.ignoreSchedule = True
+		elif mode == 'schedule':
+			self.ignoreSensor = True
+			self.ignoreSchedule = False
+		elif mode == 'sensor+schedule':
+			self.ignoreSensor = False
+			self.ignoreSchedule = False
+		logging.debug('Powermode changed to ' + mode)
+		self.luxLow = None
+		self.luxHigh = None
+		self.ambientOff = False
+		self.evaluatePower()
+
+	def setAmbientSensitivity(self, luxLimit, timeout):
+		self.luxLimit = luxLimit
+		self.luxTimeout = timeout
+		self.luxLow = None
+		self.luxHigh = None
+		self.ambientOff = False
+
+	def getDisplayOn(self):
+		return not self.standby
+
+	def sensorListener(self, temperature, lux):
+		if self.luxLimit is None or self.luxTimeout is None:
+			return
+		if lux < self.luxLimit and self.luxLow is None:
+			self.luxLow = time.time() + self.luxTimeout * 60
+			self.luxHigh = None
+		elif lux >= self.luxLimit and self.luxLow is not None:
+			self.luxLow = None
+			self.luxHigh = time.time() + self.luxTimeout * 60
+
+		previously = self.ambientOff
+		if not self.standby and self.luxLow and time.time() > self.luxLow:
+			self.ambientOff = True
+		elif self.standby and self.luxHigh and time.time() > self.luxHigh:
+			self.ambientOff = False
+		if previously != self.ambientOff:
+			logging.debug('Ambient power state has changed: %s', repr(self.ambientOff))
+			self.evaluatePower()
+
+	def evaluatePower(self):
+		# Either source can turn off display but scheduleOff takes priority on power on
+		# NOTE! Schedule and sensor can be overriden 
+		if not self.standby and ((not self.ignoreSchedule and self.scheduleOff) or (not self.ignoreSensor and self.ambientOff)):
+			self.standby = True
+			self.cbPower(False)
+		elif self.standby and (self.ignoreSchedule or not self.scheduleOff) and (self.ignoreSensor or not self.ambientOff):
+			self.standby = False
+			self.cbPower(True)
+			self.cbSlideshow()
+
 	def run(self):
 		while True:
 			time.sleep(60) # every minute
 
 			if self.hourOn is not None and self.hourOff is not None:
-				previously = self.standby
+				previously = self.scheduleOff
 				hour = int(time.strftime('%H'))
 				if hour >= self.hourOff:
-					self.standby = True
+					self.scheduleOff = True
 				elif hour >= self.hourOn:
-					self.standby = False
+					self.scheduleOff = False
 
-				if self.standby != previously:
-					logging.debug('New state for power is %s' % repr(self.standby))
-					if self.standby:
-						self.cbPower(False)
-					else:
-						self.cbPower(True)
-						self.cbSlideshow()
+				if self.scheduleOff != previously:
+					logging.debug('Schedule has triggered change in power %s' % repr(self.scheduleOff))
+					self.evaluatePower()
