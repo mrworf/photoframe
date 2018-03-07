@@ -292,6 +292,7 @@ def oauthGetToken():
 
 def oauthSetToken(token):
 	settings.set('oauth_token', token)
+	settings.save()
 
 oauth = OAuth(settings.get('local-ip'), oauthSetToken, oauthGetToken)
 
