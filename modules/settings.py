@@ -73,7 +73,7 @@ class settings:
 				return float(value)
 			return int(value)
 		except:
-			return str(value)
+			return value
 
 	def setUser(self, key, value):
 		self.settings['cfg'][key] = self.convertToNative(value)
