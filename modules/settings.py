@@ -46,6 +46,7 @@ class settings:
 			],
 			'autooff-lux' : 0.01,
 			'autooff-time' : 0,
+			'powersave' : '',
 		}
 
 	def load(self):
@@ -66,8 +67,16 @@ class settings:
 		with open('/root/settings.json', 'w') as f:
 			json.dump(self.settings, f)
 
+	def convertToNative(self, value):
+		try:
+			if '.' in value:
+				return float(value)
+			return int(value)
+		except:
+			return str(value)
+
 	def setUser(self, key, value):
-		self.settings['cfg'][key] = value
+		self.settings['cfg'][key] = self.convertToNative(value)
 
 	def getUser(self, key=None):
 		if key is None:
@@ -108,7 +117,7 @@ class settings:
 		return len(self.settings['cfg']['keywords'])
 
 	def set(self, key, value):
-		self.settings[key] = value
+		self.settings[key] = self.convertToNative(value)
 
 	def get(self, key):
 		if key in self.settings:
