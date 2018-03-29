@@ -83,6 +83,9 @@
 		$.ajax({
 			url:'/details/color'
 		}).done(function(data) {
+			if (data['temperature'] == null)
+				return;
+
 			$('#colortemp').text(data['temperature'].toFixed(0));
 			$('#lux').text(data['lux'].toFixed(2));
 			setTimeout(updateAmbient, 5000);
