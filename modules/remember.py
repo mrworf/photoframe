@@ -27,13 +27,17 @@ class remember:
 				self.memory = json.load(f)
 			if 'count' not in self.memory or self.memory['count'] == 0:
 				self.memory['count'] = count
+			else:
+				self.debug()
 		else:
 			self.memory = {'seen':[], 'count':count}
 
 	def forget(self):
-		self.memory = {'seen':[]}
+		self.memory = {'seen':[], 'count':0}
 		if os.path.exists(self.filename):
 			os.unlink(self.filename)
+		else:
+			logging.warning("Asked to delete %s but it doesn't exist", self.filename)
 
 	def _hash(self, text):
 		return hashlib.sha1(text).hexdigest()

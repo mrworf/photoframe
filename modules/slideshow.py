@@ -65,13 +65,13 @@ class slideshow:
 			self.thread.start()
 
 	def presentation(self):
-		logging.debug('Starting presentation')
+		logging.info('Starting presentation')
 		seen = []
 		delay = 0
 		while True:
 			# Avoid showing images if the display is off
 			if self.queryPowerFunc is not None and self.queryPowerFunc() is False:
-				logging.debug("Display is off, exit quietly")
+				logging.info("Display is off, exit quietly")
 				break
 
 			imgs = cache = memory = None
@@ -123,6 +123,7 @@ class slideshow:
 				# Now, lets make sure we didn't see this before
 				uri, mime, title, ts = self.pickImage(imgs, memory)
 				if uri == '':
+					logging.warning('No image was returned from pickImage')
 					continue # Do another one (well, it means we exhausted available images for this keyword)
 
 				# Avoid having duplicated because of overlap from keywords
@@ -146,15 +147,15 @@ class slideshow:
 
 			time_process = time.time() - time_process
 
-			if tries == 0:
-				display.message('Ran into issues showing images.\n\nIs network down?')
-
 			# Delay before we show the image (but take processing into account)
 			# This should keep us fairly consistent
 			if time_process < delay:
 				time.sleep(delay - time_process)
-			self.display.image(self.imageCurrent)
-			os.remove(self.imageCurrent)
+			if tries == 0:
+				display.message('Ran into issues showing images.\n\nIs network down?')
+			else:
+				self.display.image(self.imageCurrent)
+				os.remove(self.imageCurrent)
 
 			delay = self.settings.getUser('interval')
 		self.thread = None
