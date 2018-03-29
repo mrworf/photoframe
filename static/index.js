@@ -31,6 +31,15 @@ Validator = function() {
 		return i.toString();
 	}
 
+	this.interval = function(input) {
+		i = parseInt(input);
+		if (i < 1 || isNaN(i))
+			i = 1;
+		if (i < 20)
+			alert("Note! On RPi3, it typically takes 10s to preprocess the image, which can make <20s hard to maintain with consistency");
+		return i.toString();
+	}
+
 	this.refresh = function(input) {
 		i = parseInt(input);
 		if (i < 0 || isNaN(i))
