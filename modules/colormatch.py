@@ -75,7 +75,7 @@ class colormatch(Thread):
 		else:
 			logging.debug('Adjusting color temperature to %dK' % temperature)
 
-		return subprocess.call([self.script, '-t', "%d" % temperature, src, dst], stderr=self.void) == 0
+		return subprocess.call([self.script, '-t', "%d" % temperature, src + '[0]', dst], stderr=self.void) == 0
 
 	# The following function (_temperature_and_lux) is lifted from the 
 	# https://github.com/adafruit/Adafruit_CircuitPython_TCS34725 project and

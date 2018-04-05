@@ -93,7 +93,7 @@ class display:
 		logging.debug('Showing image to user')
 		args = [
 			'convert',
-			filename,
+			filename + '[0]',
 			'-resize',
 			'%dx%d' % (self.width, self.height),
 			'-background',

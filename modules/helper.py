@@ -98,7 +98,7 @@ class helper:
 			# Time to process
 			cmd = [
 				'convert',
-				filename,
+				filename + '[0]',
 				'-resize',
 				'%sx%s^' % (imageWidth, imageHeight),
 				'-gravity',
@@ -111,7 +111,7 @@ class helper:
 				'-brightness-contrast',
 				'-20x0',
 				'(',
-				filename,
+				filename + '[0]',
 				'-bordercolor',
 				'black',
 				'-border',
