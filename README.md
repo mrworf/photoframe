@@ -229,6 +229,10 @@ You're done! Reboot your RPi3 (So I2C gets enabled) and from now on, all images 
 
 If photoframe is unable to use the sensor, it "usually" gives you helpful hints. Check the `/var/log/syslog` file for `frame.py` entries.
 
+## Annoyed with the LED showing on the TCS34725 board from Adafruit?
+
+Just ground the LED pin (for example by connecting it to Pin 9 on your RPi3)
+
 ## Ambient powersave?
 
 Yes, using the same sensor, you can set a threshold and duration, if the ambient light is below said threshold for the duration, it will trigger
