@@ -17,14 +17,21 @@ from threading import Thread
 import select
 import time
 import subprocess
+import os
+import socket
+import logging
 
 class shutdown(Thread):
-	def __init__(self):
+	def __init__(self, usePIN=26):
 		Thread.__init__(self)
 		self.daemon = True
-		self.gpio = 26
+		self.gpio = usePIN
+		self.void = open(os.devnull, 'wb')
+		self.client, self.server = socket.socketpair()
 		self.start()
 
+	def stopmonitor(self):
+		self.client.close()
 
 	def run(self):
 		# Shutdown can be initated from GPIO26
@@ -42,6 +49,11 @@ class shutdown(Thread):
 		with open('/sys/class/gpio/gpio%d/value' % self.gpio, 'rb') as f:
 			data = f.read()
 			poller.register(f, select.POLLPRI)
+			poller.register(self.server, select.POLLHUP)
 			i = poller.poll(None)
-			subprocess.call(['/sbin/poweroff'], stderr=DEVNULL);
-			logging.debug('Shutdown GPIO triggered')
+			for (fd, event) in i:
+				if f.fileno() == fd:
+					subprocess.call(['/sbin/poweroff'], stderr=self.void);
+					logging.debug('Shutdown GPIO triggered')
+				elif self.server.fileno() == fd:
+					logging.debug('Quitting shutdown manager')

@@ -47,6 +47,7 @@ class settings:
 			'autooff-lux' : 0.01,
 			'autooff-time' : 0,
 			'powersave' : '',
+			'shutdown-pin' : 26,
 		}
 
 	def load(self):

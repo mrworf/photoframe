@@ -104,11 +104,20 @@ if user is not None:
 			return user['password']
 		return None
 
+@app.after_request
+def nocache(r):
+    r.headers["Pragma"] = "no-cache"
+    r.headers["Expires"] = "0"
+    r.headers['Cache-Control'] = 'public, max-age=0'
+    return r
+
 @app.route('/setting', methods=['GET'], defaults={'key':None,'value':None})
 @app.route('/setting/<key>', methods=['GET'], defaults={'value':None})
 @app.route('/setting/<key>/<value>', methods=['PUT'])
 @auth.login_required
 def cfg_keyvalue(key, value):
+	global powermanagement
+
 	# Depending on PUT/GET we will either change or read
 	# values. If key is unknown, then this call fails with 404
 	if key is not None:
@@ -132,6 +141,9 @@ def cfg_keyvalue(key, value):
 			timekeeper.setAmbientSensitivity(settings.getUser('autooff-lux'), settings.getUser('autooff-time'))
 		if key in ['powersave']:
 			timekeeper.setPowermode(settings.getUser('powersave'))
+		if key in ['shutdown-pin']:
+			powermanagement.stopmonitor()
+			powermanagement = shutdown(settings.getUser('shutdown-pin'))
 		return jsonify({'status':True})
 
 	elif request.method == 'GET':
@@ -315,7 +327,7 @@ timekeeper.setAmbientSensitivity(settings.getUser('autooff-lux'), settings.getUs
 timekeeper.setPowermode(settings.getUser('powersave'))
 colormatch.setUpdateListener(timekeeper.sensorListener)
 
-powermanagement = shutdown()
+powermanagement = shutdown(settings.getUser('shutdown-pin'))
 
 if __name__ == "__main__":
 	# This allows us to use a plain HTTP callback

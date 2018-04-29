@@ -82,6 +82,29 @@ Validator = function() {
 			i = 0.01;
 		return i.toFixed(2).toString();
 	}
+
+	this.gpio = function(input) {
+		i = parseInt(input);
+		if (i < 0)
+			i = 0;
+		return i;
+	}
+}
+
+Confirmation = function() {
+	this.gpio = function() {
+		var msg = 'WARNING!\n';
+		   msg += '\n';
+		   msg += 'Changing this setting can be potentially dangerous.\n';
+		   msg += '\n';
+		   msg += 'If the designated GPIO pin is already used for something else, it might cause your\n';
+		   msg += 'device to shutdown at random. GPIO 26 is the default chosen for Raspberry Pi 3.\n';
+		   msg += '\n';
+		   msg += 'Please make sure you select an UNUSED gpio pin for your device before you continue.\n';
+		   msg += '\n';
+		   msg += 'Are you sure you want to change this value?';
+		return confirm(msg);
+	}
 }
 
 function populateKeywords() {
