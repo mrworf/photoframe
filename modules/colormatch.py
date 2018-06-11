@@ -33,6 +33,11 @@ class colormatch(Thread):
 		self.max = max
 		self.listener = None
 		self.allowAdjust = False
+		if self.script is not None and self.script != '':
+			self.hasScript = os.path.exists(self.script)
+		else:
+			self.hasScript = False
+
 		self.start()
 
 	def setLimits(self, min, max):
@@ -58,7 +63,7 @@ class colormatch(Thread):
 		self.listener = listener
 
 	def adjust(self, src, dst, temperature = None):
-		if not self.allowAdjust:
+		if not self.allowAdjust or not self.hasScript:
 			return False
 
 		if self.temperature is None or self.sensor is None:
@@ -75,7 +80,11 @@ class colormatch(Thread):
 		else:
 			logging.debug('Adjusting color temperature to %dK' % temperature)
 
-		return subprocess.call([self.script, '-t', "%d" % temperature, src + '[0]', dst], stderr=self.void) == 0
+		try:
+			return subprocess.call([self.script, '-t', "%d" % temperature, src + '[0]', dst], stderr=self.void) == 0
+		except:
+			logging.exception('Unable to run %s:', self.script)
+			return False
 
 	# The following function (_temperature_and_lux) is lifted from the 
 	# https://github.com/adafruit/Adafruit_CircuitPython_TCS34725 project and
