@@ -135,6 +135,10 @@ def cfg_keyvalue(key, value):
 		if key in ['width', 'height', 'depth', 'tvservice']:
 			display.setConfiguration(settings.getUser('width'), settings.getUser('height'), settings.getUser('depth'), settings.getUser('tvservice'))
 			display.enable(True, True)
+		if key in ['timezone']:
+			# Make sure we convert + to /
+			settings.setUser('timezone', value.replace('+', '/'))
+			helper.timezoneSet(settings.getUser('timezone'))
 		if key in ['resolution']:
 			# This one needs some massaging, we essentially deduce all settings from a string (DMT/CEA CODE HDMI)
 			items = settings.getUser('resolution').split(' ')
@@ -245,6 +249,9 @@ def cfg_details(about):
 		response = app.make_response(image)
 		response.headers.set('Content-Type', mime)
 		return response
+	elif about == 'timezone':
+		result = helper.timezoneList()
+		return jsonify(result)
 	elif about == 'version':
 		output = subprocess.check_output(['git', 'log', '-n1'], stderr=void)
 		lines = output.split('\n')
@@ -295,6 +302,10 @@ if not settings.load():
 	settings.setUser('tvservice', '%s %s %s' % (current['group'], current['mode'], current['drive']))
 	settings.setUser('width', int(current['width']))
 	settings.setUser('height', int(current['height']))
+	settings.save()
+
+if settings.getUser('timezone') == '':
+	settings.setUser('timezone', helper.timezoneCurrent())
 	settings.save()
 
 display = display(settings.getUser('width'), settings.getUser('height'), settings.getUser('depth'), settings.getUser('tvservice'))

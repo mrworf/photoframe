@@ -2,7 +2,7 @@
 <img alt="On screen now" title="Realtime view, updates every 30s" src="/details/current" id="screen">
 <div>
 	<div>
-		Screen
+		Options
 	</div>
 	<div>
 		Resolution
@@ -13,15 +13,15 @@
 			{{/each}}
 			{{/select}}
 		</select>
-		<!--
-		Resolution <input value="{{width}}" type="text" class="medium" name="width" data-validate="width">
-		x
-		<input value="{{height}}" type="text" class="medium" name="height" data-validate="height">
-		bitdepth <input value="{{depth}}" type="text" class="small" name="depth" data-validate="depth">
 		<br>
-		<a href="#" id="tv">TV service options</a>
-		<input value="{{tvservice}}" type="text" class="large aleft" name="tvservice">
-		-->
+		Time zone
+		<select name="timezone">
+			{{#select timezone}}
+			{{#each timezones}}
+				<option value="{{this}}">{{this}}</option>
+			{{/each}}
+			{{/select}}
+		</select>
 		<br>
 		GPIO PIN to monitor for shutdown interrupts
 		<input value="{{shutdown-pin}}" type="text" class="small" name="shutdown-pin" data-validate="gpio" data-confirm="gpio">
@@ -138,6 +138,14 @@
 	$("select[name=tvservice]").change(function() {
 		$.ajax({
 			url:"/setting/resolution/" + encodeURIComponent($(this).val()),
+			type:"PUT"
+		}).done(function(){
+		});
+	});
+
+	$("select[name=timezone]").change(function() {
+		$.ajax({
+			url:"/setting/timezone/" + encodeURIComponent($(this).val().replace('/', '+')),
 			type:"PUT"
 		}).done(function(){
 		});

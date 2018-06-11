@@ -40,6 +40,7 @@ class settings:
 			'depth' : 32,
 			'tvservice' : 'DMT 82 DVI',
 			'resolution' : '',					# Place holder, used to deduce correct resolution before setting TV service
+			'timezone' : '',
 			'interval' : 60,					# Delay in seconds between images (minimum)
 			'display-off' : 22,				# What hour (24h) to disable display and sleep
 			'display-on' : 4,					# What hour (24h) to enable display and continue

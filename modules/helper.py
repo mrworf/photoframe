@@ -167,5 +167,6 @@ class helper:
 			with open(os.devnull, 'wb') as void:
 				result = subprocess.check_call(['/usr/bin/timedatectl', 'set-timezone', zone], stderr=void)
 		except:
+			logging.exception('Unable to change timezone')
 			pass
 		return result == 0

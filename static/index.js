@@ -174,6 +174,15 @@ function loadResolution(funcOk)
 	});
 }
 
+function loadTimezone(funcOk)
+{
+	$.ajax({
+		url:"/details/timezone"
+	}).done(function(data) {
+		funcOk(data);
+	});
+}
+
 function loadSettings(funcOk)
 {
 	$.ajax({
@@ -188,7 +197,10 @@ function loadSettings(funcOk)
 		}
 		loadResolution(function(data) {
 			result['resolution'] = data;
-			funcOk(result);
+			loadTimezone(function(data) {
+				result['timezones'] = data;
+				funcOk(result);
+			});
 		});
 	});
 }
