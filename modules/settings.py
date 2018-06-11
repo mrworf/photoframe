@@ -19,6 +19,8 @@ import logging
 import random
 
 class settings:
+	CONFIGFILE = '/root/settings.json'
+
 	def __init__(self):
 		self.settings = {
 			'oauth_token' : None,
@@ -51,8 +53,8 @@ class settings:
 		}
 
 	def load(self):
-		if os.path.exists('/root/settings.json'):
-			with open('/root/settings.json') as f:
+		if os.path.exists(settings.CONFIGFILE):
+			with open(settings.CONFIGFILE) as f:
 				# A bit messy, but it should allow new defaults to be added
 				# to old configurations.
 				tmp = self.settings['cfg']
@@ -60,12 +62,17 @@ class settings:
 				tmp2 = self.settings['cfg']
 				self.settings['cfg'] = tmp
 				self.settings['cfg'].update(tmp2)
+
+				# Also, we need to iterate the settings and make sure numbers and floats are
+				# that, and not strings (which the old version did)
+				for k in self.settings['cfg']:
+					self.settings['cfg'][k] = self.convertToNative(self.settings['cfg'][k])
 			return True
 		else:
 			return False
 
 	def save(self):
-		with open('/root/settings.json', 'w') as f:
+		with open(settings.CONFIGFILE, 'w') as f:
 			json.dump(self.settings, f)
 
 	def convertToNative(self, value):
