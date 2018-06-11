@@ -33,6 +33,14 @@ git log -n1 --oneline >/tmp/client.txt
 if ! diff /tmp/server.txt /tmp/client.txt >/dev/null ; then
 	echo "New version is available"
 	git pull --rebase 2>&1 >>/tmp/update.log && error "Unable to update"
+
+	# Due to older version not enabling the necessary parts,
+	# we need to add i2c-dev to modules if not there
+	if ! grep "i2c-dev" /etc/modules-load.d/modules.conf >/dev/null ; then
+		echo "i2c-dev" >> /etc/modules-load.d/modules.conf
+		modprobe i2c-dev
+	fi
+
 	cp frame.service /etc/systemd/system/
 	systemctl restart frame.service
 fi
