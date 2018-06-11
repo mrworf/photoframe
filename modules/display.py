@@ -134,6 +134,7 @@ class display:
 
 	@staticmethod
 	def current():
+		'''
 		output = subprocess.check_output(['/opt/vc/bin/tvservice', '-s'], stderr=subprocess.STDOUT)
 		print('"%s"' % (output))
 		# state 0x120006 [DVI DMT (82) RGB full 16:9], 1920x1080 @ 60.00Hz, progressive
@@ -146,4 +147,33 @@ class display:
 		'height' : m.group(5)
 		}
 		return result
+		'''
+		output = subprocess.check_output(['/opt/vc/bin/tvservice', '-s'], stderr=subprocess.STDOUT)
+		# state 0x120006 [DVI DMT (82) RGB full 16:9], 1920x1080 @ 60.00Hz, progressive
+		m = re.search('state 0x[0-9a-f]* \[([A-Z]*) ([A-Z]*) \(([0-9]*)\) [^,]*, ([0-9]*)x([0-9]*) \@ ([0-9]*)\.[0-9]*Hz, (.)', output)
+		result = {
+			'mode' : m.group(1),
+			'code' : m.group(3),
+			'width' : m.group(4),
+			'height' : m.group(5),
+			'rate' : m.group(6),
+			'aspect_ratio' : 0,
+			'scan' : m.group(7),
+			'3d_modes' : []
+		}
+		return result
 
+	@staticmethod
+	def available():
+		cea = json.loads(subprocess.check_output(['/opt/vc/bin/tvservice', '-j', '-m', 'CEA'], stderr=subprocess.STDOUT))
+		dmt = json.loads(subprocess.check_output(['/opt/vc/bin/tvservice', '-j', '-m', 'DMT'], stderr=subprocess.STDOUT))
+		result = []
+		for entry in cea:
+			entry['mode'] = 'CEA'
+			result.append(entry)
+		for entry in DMT:
+			entry['mode'] = 'DMT'
+			result.append(entry)
+
+		# Finally, sort by pixelcount
+		return sorted(result, key=lambda k: k['width']*k['height'])
