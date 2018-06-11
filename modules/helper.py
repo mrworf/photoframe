@@ -148,3 +148,24 @@ class helper:
 			return False
 		os.rename(filename_temp, filename)
 		return True
+
+	@staticmethod
+	def timezoneList():
+		zones = subprocess.check_output(['/usr/bin/timedatectl', 'list-timezones']).split('\n')
+		return [x for x in zones if x]
+
+	@staticmethod
+	def timezoneCurrent():
+		with open('/etc/timezone', 'r') as f:
+			result = f.readlines()
+		return result[0].strip()
+
+	@staticmethod
+	def timezoneSet(zone):
+		result = 1
+		try:
+			with open(os.devnull, 'wb') as void:
+				result = subprocess.check_call(['/usr/bin/timedatectl', 'set-timezone', zone], stderr=void)
+		except:
+			pass
+		return result == 0
