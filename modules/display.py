@@ -18,6 +18,7 @@ import subprocess
 import logging
 import time
 import re
+import json
 
 class display:
 	def __init__(self, width, height, depth, tvservice_params):
@@ -152,12 +153,12 @@ class display:
 		# state 0x120006 [DVI DMT (82) RGB full 16:9], 1920x1080 @ 60.00Hz, progressive
 		m = re.search('state 0x[0-9a-f]* \[([A-Z]*) ([A-Z]*) \(([0-9]*)\) [^,]*, ([0-9]*)x([0-9]*) \@ ([0-9]*)\.[0-9]*Hz, (.)', output)
 		result = {
-			'mode' : m.group(1),
-			'code' : m.group(3),
-			'width' : m.group(4),
-			'height' : m.group(5),
-			'rate' : m.group(6),
-			'aspect_ratio' : 0,
+			'mode' : m.group(2),
+			'code' : int(m.group(3)),
+			'width' : int(m.group(4)),
+			'height' : int(m.group(5)),
+			'rate' : int(m.group(6)),
+			'aspect_ratio' : '',
 			'scan' : m.group(7),
 			'3d_modes' : []
 		}
@@ -171,7 +172,7 @@ class display:
 		for entry in cea:
 			entry['mode'] = 'CEA'
 			result.append(entry)
-		for entry in DMT:
+		for entry in dmt:
 			entry['mode'] = 'DMT'
 			result.append(entry)
 

@@ -135,6 +135,21 @@ def cfg_keyvalue(key, value):
 		if key in ['width', 'height', 'depth', 'tvservice']:
 			display.setConfiguration(settings.getUser('width'), settings.getUser('height'), settings.getUser('depth'), settings.getUser('tvservice'))
 			display.enable(True, True)
+		if key in ['resolution']:
+			# This one needs some massaging, we essentially deduce all settings from a string (DMT/CEA CODE HDMI)
+			items = settings.getUser('resolution').split(' ')
+			logging.debug('Items: %s', repr(items))
+			resolutions = display.available()
+			for res in resolutions:
+				if res['code'] == int(items[1]) and res['mode'] == items[0]:
+					logging.debug('Found this item: %s', repr(res))
+					settings.setUser('width',  res['width'])
+					settings.setUser('height', res['height'])
+					settings.setUser('depth', 32)
+					settings.setUser('tvservice', value)
+					display.setConfiguration(settings.getUser('width'), settings.getUser('height'), settings.getUser('depth'), settings.getUser('tvservice'))
+					display.enable(True, True)
+					break
 		if key in ['display-on', 'display-off']:
 			timekeeper.setConfiguration(settings.getUser('display-on'), settings.getUser('display-off'))
 		if key in ['autooff-lux', 'autooff-time']:
@@ -222,9 +237,8 @@ def cfg_shutdown():
 def cfg_details(about):
 	if about == 'tvservice':
 		result = {}
-		result['cea'] = subprocess.check_output(['/opt/vc/bin/tvservice', '-m', 'cea'])
-		result['dmt'] = subprocess.check_output(['/opt/vc/bin/tvservice', '-m', 'dmt'])
-		result['status'] = subprocess.check_output(['/opt/vc/bin/tvservice', '-status'])
+		result['resolution'] = display.available()
+		result['status'] = display.current()
 		return jsonify(result)
 	elif about == 'current':
 		image, mime = display.get()
