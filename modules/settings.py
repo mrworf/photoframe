@@ -57,18 +57,22 @@ class settings:
 	def load(self):
 		if os.path.exists(settings.CONFIGFILE):
 			with open(settings.CONFIGFILE) as f:
-				# A bit messy, but it should allow new defaults to be added
-				# to old configurations.
-				tmp = self.settings['cfg']
-				self.settings = json.load(f)
-				tmp2 = self.settings['cfg']
-				self.settings['cfg'] = tmp
-				self.settings['cfg'].update(tmp2)
+				try:
+					# A bit messy, but it should allow new defaults to be added
+					# to old configurations.
+					tmp = self.settings['cfg']
+					self.settings = json.load(f)
+					tmp2 = self.settings['cfg']
+					self.settings['cfg'] = tmp
+					self.settings['cfg'].update(tmp2)
 
-				# Also, we need to iterate the settings and make sure numbers and floats are
-				# that, and not strings (which the old version did)
-				for k in self.settings['cfg']:
-					self.settings['cfg'][k] = self.convertToNative(self.settings['cfg'][k])
+					# Also, we need to iterate the settings and make sure numbers and floats are
+					# that, and not strings (which the old version did)
+					for k in self.settings['cfg']:
+						self.settings['cfg'][k] = self.convertToNative(self.settings['cfg'][k])
+				except:
+					logging.exception('Failed to load settings.json, corrupt file?')
+					return False
 			return True
 		else:
 			return False
