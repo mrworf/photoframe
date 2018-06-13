@@ -43,9 +43,9 @@ if [ "$1" = "post" ]; then
 
 	#######################################################################
 	####-^^^- ANYTHING HERE MUST HANDLE BEING RUN AGAIN AND AGAIN -^^^-####
-	touch .donepost
+	touch /root/.donepost
 	exit 0
-elif [ ! -f .donepost ]; then
+elif [ ! -f /root/.donepost ]; then
 	# Since we didn't have this behavior, we need to make sure it happens regardless
 	# of availability of new update.
 	/root/photoframe/update.sh post
