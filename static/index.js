@@ -253,7 +253,8 @@ TemplateEngine = function() {
 		thiz = this;
 
 		$.ajax({
-			url:'template/' + url
+			url:'template/' + url,
+			cache: false
 		}).done(function(data){
 			thiz.regTemplate[url] = Handlebars.compile(data);
 			if (i == templates.length)
