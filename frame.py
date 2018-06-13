@@ -299,7 +299,7 @@ if not settings.load():
 	# First run, grab display settings from current mode
 	current = display.current()
 	logging.info('No display settings, using: %s' % repr(current))
-	settings.setUser('tvservice', '%s %s %s' % (current['group'], current['mode'], current['drive']))
+	settings.setUser('tvservice', '%s %s HDMI' % (current['mode'], current['code']))
 	settings.setUser('width', int(current['width']))
 	settings.setUser('height', int(current['height']))
 	settings.save()
