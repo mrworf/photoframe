@@ -27,6 +27,22 @@ function error
 
 cd /root/photoframe
 
+if [ "$1" = "post" ]; then
+	echo "Performing post-update changes (if any)"
+	# Due to older version not enabling the necessary parts,
+	# we need to add i2c-dev to modules if not there
+	if ! grep "i2c-dev" /etc/modules-load.d/modules.conf >/dev/null ; then
+		echo "i2c-dev" >> /etc/modules-load.d/modules.conf
+		modprobe i2c-dev
+	fi
+	touch .donepost
+fi	exit 0
+elif [ ! -f .donepost ]; then
+	# Since we didn't do this before, we need to make sure it happens regardless
+	# of availability of new update.
+	/root/photoframe/update.sh post
+fi
+
 git fetch 2>&1 >/tmp/update.log || error "Unable to load info about latest"
 git log -n1 --oneline origin >/tmp/server.txt
 git log -n1 --oneline >/tmp/client.txt
@@ -34,12 +50,8 @@ if ! diff /tmp/server.txt /tmp/client.txt >/dev/null ; then
 	echo "New version is available"
 	git pull --rebase 2>&1 >>/tmp/update.log && error "Unable to update"
 
-	# Due to older version not enabling the necessary parts,
-	# we need to add i2c-dev to modules if not there
-	if ! grep "i2c-dev" /etc/modules-load.d/modules.conf >/dev/null ; then
-		echo "i2c-dev" >> /etc/modules-load.d/modules.conf
-		modprobe i2c-dev
-	fi
+	# Run again with the post option so any necessary changes can be carried out
+	/root/photoframe/update.sh post
 
 	cp frame.service /etc/systemd/system/
 	systemctl restart frame.service
