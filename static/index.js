@@ -165,6 +165,24 @@ function populateKeywords() {
 	});
 }
 
+function loadResolution(funcOk)
+{
+	$.ajax({
+		url:"/details/tvservice"
+	}).done(function(data) {
+		funcOk(data);
+	});
+}
+
+function loadTimezone(funcOk)
+{
+	$.ajax({
+		url:"/details/timezone"
+	}).done(function(data) {
+		funcOk(data);
+	});
+}
+
 function loadSettings(funcOk)
 {
 	$.ajax({
@@ -177,7 +195,13 @@ function loadSettings(funcOk)
 			value = data[key];
 			result[key] = value;
 		}
-		funcOk(result);
+		loadResolution(function(data) {
+			result['resolution'] = data;
+			loadTimezone(function(data) {
+				result['timezones'] = data;
+				funcOk(result);
+			});
+		});
 	});
 }
 
@@ -229,7 +253,8 @@ TemplateEngine = function() {
 		thiz = this;
 
 		$.ajax({
-			url:'template/' + url
+			url:'template/' + url,
+			cache: false
 		}).done(function(data){
 			thiz.regTemplate[url] = Handlebars.compile(data);
 			if (i == templates.length)

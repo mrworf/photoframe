@@ -22,14 +22,18 @@ class remember:
 	def __init__(self, filename, count):
 		self.filename = os.path.splitext(filename)[0] + '_memory.json'
 		self.count = count
-		if os.path.exists(self.filename):
-			with open(self.filename, 'rb') as f:
-				self.memory = json.load(f)
-			if 'count' not in self.memory or self.memory['count'] == 0:
-				self.memory['count'] = count
+		try:
+			if os.path.exists(self.filename):
+				with open(self.filename, 'rb') as f:
+					self.memory = json.load(f)
+				if 'count' not in self.memory or self.memory['count'] == 0:
+					self.memory['count'] = count
+				else:
+					self.debug()
 			else:
-				self.debug()
-		else:
+				self.memory = {'seen':[], 'count':count}
+		except:
+			logging.exception('Failed to load database')
 			self.memory = {'seen':[], 'count':count}
 
 	def forget(self):

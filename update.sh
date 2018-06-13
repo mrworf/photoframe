@@ -27,13 +27,41 @@ function error
 
 cd /root/photoframe
 
+if [ "$1" = "post" ]; then
+	echo "Performing post-update changes (if any)"
+
+	####-vvv- ANYTHING HERE MUST HANDLE BEING RUN AGAIN AND AGAIN -vvv-####
+	#######################################################################
+
+	# Due to older version not enabling the necessary parts,
+	# we need to add i2c-dev to modules if not there
+	if ! grep "i2c-dev" /etc/modules-load.d/modules.conf >/dev/null ; then
+		echo "i2c-dev" >> /etc/modules-load.d/modules.conf
+		modprobe i2c-dev
+	fi
+	cp frame.service /etc/systemd/system/
+	systemctl daemon-reload
+
+	#######################################################################
+	####-^^^- ANYTHING HERE MUST HANDLE BEING RUN AGAIN AND AGAIN -^^^-####
+	touch /root/.donepost
+	exit 0
+elif [ ! -f /root/.donepost ]; then
+	# Since we didn't have this behavior, we need to make sure it happens regardless
+	# of availability of new update.
+	/root/photoframe/update.sh post
+fi
+
 git fetch 2>&1 >/tmp/update.log || error "Unable to load info about latest"
 git log -n1 --oneline origin >/tmp/server.txt
 git log -n1 --oneline >/tmp/client.txt
 if ! diff /tmp/server.txt /tmp/client.txt >/dev/null ; then
 	echo "New version is available"
-	git pull --rebase 2>&1 >>/tmp/update.log && error "Unable to update"
-	cp frame.service /etc/systemd/system/
+	git pull --rebase 2>&1 >>/tmp/update.log || error "Unable to update"
+
+	# Run again with the post option so any necessary changes can be carried out
+	/root/photoframe/update.sh post
+
 	systemctl restart frame.service
 fi
 

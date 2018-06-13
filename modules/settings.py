@@ -19,6 +19,8 @@ import logging
 import random
 
 class settings:
+	CONFIGFILE = '/root/settings.json'
+
 	def __init__(self):
 		self.settings = {
 			'oauth_token' : None,
@@ -37,6 +39,8 @@ class settings:
 			'height' : 1080,
 			'depth' : 32,
 			'tvservice' : 'DMT 82 DVI',
+			'resolution' : '',					# Place holder, used to deduce correct resolution before setting TV service
+			'timezone' : '',
 			'interval' : 60,					# Delay in seconds between images (minimum)
 			'display-off' : 22,				# What hour (24h) to disable display and sleep
 			'display-on' : 4,					# What hour (24h) to enable display and continue
@@ -51,21 +55,37 @@ class settings:
 		}
 
 	def load(self):
-		if os.path.exists('/root/settings.json'):
-			with open('/root/settings.json') as f:
-				# A bit messy, but it should allow new defaults to be added
-				# to old configurations.
-				tmp = self.settings['cfg']
-				self.settings = json.load(f)
-				tmp2 = self.settings['cfg']
-				self.settings['cfg'] = tmp
-				self.settings['cfg'].update(tmp2)
+		if os.path.exists(settings.CONFIGFILE):
+			with open(settings.CONFIGFILE) as f:
+				try:
+					# A bit messy, but it should allow new defaults to be added
+					# to old configurations.
+					tmp = self.settings['cfg']
+					self.settings = json.load(f)
+					tmp2 = self.settings['cfg']
+					self.settings['cfg'] = tmp
+					self.settings['cfg'].update(tmp2)
+
+					# Also, we need to iterate the settings and make sure numbers and floats are
+					# that, and not strings (which the old version did)
+					for k in self.settings['cfg']:
+						self.settings['cfg'][k] = self.convertToNative(self.settings['cfg'][k])
+					# Lastly, correct the tvservice field, should be "TEXT NUMBER TEXT"
+					# This is a little bit of a cheat
+					parts = self.settings['cfg']['tvservice'].split(' ')
+					if type(self.convertNative(parts[1])) != int and type(self.convertNative(parts[2])) == int:
+						logging.debug('Reordering tvservice value due to old bug')
+						self.settings['cfg']['tvservice'] = "%s %s %s" % (parts[0], parts[2], parts[1])
+						self.save()
+				except:
+					logging.exception('Failed to load settings.json, corrupt file?')
+					return False
 			return True
 		else:
 			return False
 
 	def save(self):
-		with open('/root/settings.json', 'w') as f:
+		with open(settings.CONFIGFILE, 'w') as f:
 			json.dump(self.settings, f)
 
 	def convertToNative(self, value):

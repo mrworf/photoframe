@@ -2,16 +2,26 @@
 <img alt="On screen now" title="Realtime view, updates every 30s" src="/details/current" id="screen">
 <div>
 	<div>
-		Screen
+		Options
 	</div>
 	<div>
-		Resolution <input value="{{width}}" type="text" class="medium" name="width" data-validate="width">
-		x
-		<input value="{{height}}" type="text" class="medium" name="height" data-validate="height">
-		bitdepth <input value="{{depth}}" type="text" class="small" name="depth" data-validate="depth">
+		Resolution
+		<select name="tvservice">
+			{{#select tvservice}}
+			{{#each resolution.resolution}}
+				<option value="{{this.mode}} {{this.code}} HDMI">{{this.width}}x{{this.height}}{{this.scan}} ({{this.rate}}Hz)</option>
+			{{/each}}
+			{{/select}}
+		</select>
 		<br>
-		<a href="#" id="tv">TV service options</a>
-		<input value="{{tvservice}}" type="text" class="large aleft" name="tvservice">
+		Time zone
+		<select name="timezone">
+			{{#select timezone}}
+			{{#each timezones}}
+				<option value="{{this}}">{{this}}</option>
+			{{/each}}
+			{{/select}}
+		</select>
 		<br>
 		GPIO PIN to monitor for shutdown interrupts
 		<input value="{{shutdown-pin}}" type="text" class="small" name="shutdown-pin" data-validate="gpio" data-confirm="gpio">
@@ -23,8 +33,6 @@
 		<input value="{{autooff-lux}}" type="text" class="medium" name="autooff-lux" data-validate="lux"> lux for 
 		<input value="{{autooff-time}}" type="text" class="small" name="autooff-time" data-validate="minutes"> minutes
 		<br>
-		Current ambient environment <span id="lux">-.--</span> lux and <span id="colortemp">----</span>K color temperature.
-		<br>
 		Power saving measures should 
 		<select name="powersave">
 			{{#select powersave}}
@@ -34,6 +42,8 @@
 			<option value="sensor+schedule">use schedule and environment</option>
 			{{/select}}
 		</select>
+		<br>
+		Current ambient environment <span id="lux">-.--</span> lux and <span id="colortemp">----</span>K color temperature.
 	</div>
 </div>
 <br>
@@ -120,6 +130,22 @@
 	$("select[name=powersave]").change(function() {
 		$.ajax({
 			url:"/setting/" + $(this).attr('name') + "/" + encodeURIComponent($(this).val()),
+			type:"PUT"
+		}).done(function(){
+		});
+	});
+
+	$("select[name=tvservice]").change(function() {
+		$.ajax({
+			url:"/setting/resolution/" + encodeURIComponent($(this).val()),
+			type:"PUT"
+		}).done(function(){
+		});
+	});
+
+	$("select[name=timezone]").change(function() {
+		$.ajax({
+			url:"/setting/timezone/" + encodeURIComponent($(this).val().replace('/', '+')),
 			type:"PUT"
 		}).done(function(){
 		});
