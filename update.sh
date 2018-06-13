@@ -56,7 +56,7 @@ git log -n1 --oneline origin >/tmp/server.txt
 git log -n1 --oneline >/tmp/client.txt
 if ! diff /tmp/server.txt /tmp/client.txt >/dev/null ; then
 	echo "New version is available"
-	git pull --rebase 2>&1 >>/tmp/update.log && error "Unable to update"
+	git pull --rebase 2>&1 >>/tmp/update.log || error "Unable to update"
 
 	# Run again with the post option so any necessary changes can be carried out
 	/root/photoframe/update.sh post
