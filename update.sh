@@ -40,6 +40,7 @@ if [ "$1" = "post" ]; then
 		modprobe i2c-dev
 	fi
 	cp frame.service /etc/systemd/system/
+	systemctl daemon-reload
 
 	#######################################################################
 	####-^^^- ANYTHING HERE MUST HANDLE BEING RUN AGAIN AND AGAIN -^^^-####
