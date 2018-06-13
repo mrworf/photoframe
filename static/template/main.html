@@ -9,7 +9,7 @@
 		<select name="tvservice">
 			{{#select tvservice}}
 			{{#each resolution.resolution}}
-				<option value="{{this.mode}} {{this.code}} HDMI">{{this.width}}x{{this.height}} ({{this.rate}}Hz)</option>
+				<option value="{{this.mode}} {{this.code}} HDMI">{{this.width}}x{{this.height}}{{this.scan}} ({{this.rate}}Hz)</option>
 			{{/each}}
 			{{/select}}
 		</select>
