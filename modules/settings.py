@@ -70,6 +70,13 @@ class settings:
 					# that, and not strings (which the old version did)
 					for k in self.settings['cfg']:
 						self.settings['cfg'][k] = self.convertToNative(self.settings['cfg'][k])
+					# Lastly, correct the tvservice field, should be "TEXT NUMBER TEXT"
+					# This is a little bit of a cheat
+					parts = self.settings['cfg']['tvservice'].split(' ')
+					if type(parts[1]) != int and type(parts[2]) == int:
+						logging.debug('Reordering tvservice value due to old bug')
+						self.settings['cfg']['tvservice'] = "%s %s %s" % (parts[0], parts[2], parts[1])
+						self.save()
 				except:
 					logging.exception('Failed to load settings.json, corrupt file?')
 					return False
