@@ -21,18 +21,24 @@ import re
 import json
 
 class display:
-	def __init__(self, width, height, depth, tvservice_params):
-		self.setConfiguration(width, height, depth, tvservice_params)
+	def __init__(self):
 		self.void = open(os.devnull, 'wb')
+		self.params = None
 
-	def setConfiguration(self, width, height, depth, tvservice_params):
-		self.width = width
-		self.height = height
+	def setConfiguration(self, tvservice_params):
 		self.enabled = True
-		self.depth = depth
-		self.reverse = False
-		self.params = tvservice_params
-		self.device = '/dev/fb1'
+
+		# Erase old picture
+		if self.params is not None:
+			self.clear()
+
+		result = display.validate(tvservice_params)
+
+		self.width = result['width']
+		self.height = result['height']
+		self.depth = result['depth']
+		self.reverse = result['reverse']
+		self.params = result['tvservice']
 		if self.reverse:
 			self.format = 'bgr'
 		else:
@@ -40,38 +46,25 @@ class display:
 		if self.depth == 32:
 			self.format += 'a'
 
+		return (self.width, self.height, self.params)
+
+	def getDevice(self):
+		if self.params.split(' ')[0] == 'INTERNAL':
+			return '/dev/fb1'
+		return '/dev/fb0'
+
 	def isHDMI(self):
-		return self.device == '/dev/fb0'
+		return self.getDevice() == '/dev/fb0'
 
 	def get(self):
-		if not self.isHDMI():
-			args = [
-				'convert',
-				'-size',
-				'%dx%d' % (self.width, self.height),
-				'-background',
-				'black',
-				'-fill',
-				'white',
-				'-gravity',
-				'center',
-				'-weight',
-				'700',
-				'-pointsize',
-				'24',
-				'label:%s' % "Unavailable for non-HDMI displays",
-				'-depth',
-				'8',
-				'jpg:-'
-			]
-		elif self.enabled:
+		if self.enabled:
 			args = [
 			        'convert',
 			        '-depth',
 			        '8',
 			        '-size',
 			        '%dx%d' % (self.width, self.height),
-			        '%s:%s[0]' % (self.format, self.device),
+			        '%s:-' % (self.format),
 			        'jpg:-'
 			]
 		else:
@@ -95,36 +88,39 @@ class display:
 				'jpg:-'
 			]
 
-		result = subprocess.check_output(args, stderr=self.void)
+		if not self.enabled:
+			result = subprocess.check_output(args, stderr=self.void)
+		elif self.depth in [24, 32]:
+			with open(self.getDevice(), 'rb') as fb:
+				pip = subprocess.Popen(args, stdin=fb, stdout=subprocess.PIPE, stderr=self.void)
+				result = pip.communicate()[0]
+		elif self.depth == 16:
+			with open(self.getDevice(), 'rb') as fb:
+				src = subprocess.Popen(['/root/photoframe/rgb565/rgb565', 'reverse'], stdout=subprocess.PIPE, stdin=fb, stderr=self.void)
+				pip = subprocess.Popen(args, stdin=src.stdout, stdout=subprocess.PIPE)
+				src.stdout.close()
+				result = pip.communicate()[0]
+		else:
+			logging.error('Do not know how to grab this kind of framebuffer')
 		return (result, 'image/jpeg')
 
-	def _display(self, arguments):
+	def _to_display(self, arguments):
 		if not self.enabled:
 			logging.debug('Don\'t bother, display is off')
 			return
 
 		if self.depth in [24, 32]:
 			logging.debug('Sending image directly to framebuffer')
-			with open(self.device, 'wb') as f:
+			with open(self.getDevice(), 'wb') as f:
 				ret = subprocess.call(arguments, stdout=f, stderr=self.void)
 		elif self.depth == 16: # Typically RGB565
 			logging.debug('Sending image via RGB565 conversion to framebuffer')
 			# For some odd reason, cannot pipe the output directly to the framebuffer, use temp file
-			with open(self.device, 'wb') as fb:
+			with open(self.getDevice(), 'wb') as fb:
 				src = subprocess.Popen(arguments, stdout=subprocess.PIPE, stderr=self.void)
 				pip = subprocess.Popen(['/root/photoframe/rgb565/rgb565'], stdin=src.stdout, stdout=fb)
 				src.stdout.close()
 				pip.communicate()
-			'''
-			with open(self.device, 'wb') as fb:
-				with open('/tmp/fbdump', 'rb') as i:
-					while True:
-						b = i.read(8192)
-						if not b:
-							break
-						fb.write(b)
-			os.remove('/tmp/fbdump')
-			'''
 		else:
 			logging.error('Do not know how to render this, depth is %d', self.depth)
 
@@ -149,7 +145,7 @@ class display:
 			'8',
 			'%s:-' % self.format
 		]
-		self._display(args)
+		self._to_display(args)
 
 	def image(self, filename):
 		logging.debug('Showing image to user')
@@ -168,30 +164,32 @@ class display:
 			'8',
 			'%s:-' % self.format
 		]
-		self._display(args)
+		self._to_display(args)
 
 	def enable(self, enable, force=False):
 		if enable == self.enabled and not force:
 			return
 
 		if enable:
-			if force: # Make sure display is ON and set to our preference
-				subprocess.call(['/opt/vc/bin/tvservice', '-e', self.params], stderr=self.void, stdout=self.void)
-				time.sleep(1)
-				subprocess.call(['/bin/fbset', '-fb', self.device, '-depth', '8'], stderr=self.void)
-				subprocess.call(['/bin/fbset', '-fb', self.device, '-depth', str(self.depth), '-xres', str(self.width), '-yres', str(self.height), '-vxres', str(self.width), '-vyres', str(self.height)], stderr=self.void)
-			else:
-				subprocess.call(['/usr/bin/vcgencmd', 'display_power', '1'], stderr=self.void)
+			if self.isHDMI():
+				if force: # Make sure display is ON and set to our preference
+					subprocess.call(['/opt/vc/bin/tvservice', '-e', self.params], stderr=self.void, stdout=self.void)
+					time.sleep(1)
+					subprocess.call(['/bin/fbset', '-fb', self.getDevice(), '-depth', '8'], stderr=self.void)
+					subprocess.call(['/bin/fbset', '-fb', self.getDevice(), '-depth', str(self.depth), '-xres', str(self.width), '-yres', str(self.height), '-vxres', str(self.width), '-vyres', str(self.height)], stderr=self.void)
+				else:
+					subprocess.call(['/usr/bin/vcgencmd', 'display_power', '1'], stderr=self.void)
 		else:
 			self.clear()
-			subprocess.call(['/usr/bin/vcgencmd', 'display_power', '0'], stderr=self.void)
+			if self.isHDMI():
+				subprocess.call(['/usr/bin/vcgencmd', 'display_power', '0'], stderr=self.void)
 		self.enabled = enable
 
 	def isEnabled(self):
 		return self.enabled
 
 	def clear(self):
-		with open(self.device, 'wb') as f:
+		with open(self.getDevice(), 'wb') as f:
 			subprocess.call(['cat' , '/dev/zero'], stdout=f, stderr=self.void)
 
 	@staticmethod
@@ -214,6 +212,8 @@ class display:
 					parts = line.split(' ')
 					entry['width'] = int(parts[1])
 					entry['height'] = int(parts[2])
+					entry['depth'] = int(parts[5])
+					entry['reverse'] = False
 					entry['code'] = int(parts[5])
 			if entry['code'] != 0:
 				return entry
@@ -233,7 +233,9 @@ class display:
 				'rate' : int(m.group(6)),
 				'aspect_ratio' : '',
 				'scan' : m.group(7),
-				'3d_modes' : []
+				'3d_modes' : [],
+				'depth':32,
+				'reverse':True,
 			}
 		else:
 			result = display._internaldisplay()
@@ -247,9 +249,13 @@ class display:
 		result = []
 		for entry in cea:
 			entry['mode'] = 'CEA'
+			entry['depth'] = 32
+			entry['reverse'] = True
 			result.append(entry)
 		for entry in dmt:
 			entry['mode'] = 'DMT'
+			entry['depth'] = 32
+			entry['reverse'] = True
 			result.append(entry)
 
 		internal = display._internaldisplay()
@@ -258,3 +264,22 @@ class display:
 
 		# Finally, sort by pixelcount
 		return sorted(result, key=lambda k: k['width']*k['height'])
+
+	@staticmethod
+	def validate(tvservice):
+		# Takes a string and returns valid width, height, depth and service
+		items = tvservice.split(' ')
+		resolutions = display.available()
+		res = resolutions[0]
+		for res in resolutions:
+			if res['code'] == int(items[1]) and res['mode'] == items[0]:
+				logging.debug('Found this item: %s', repr(res))
+				break
+
+		return {
+			'width':res['width'], 
+			'height':res['height'], 
+			'depth':res['depth'], 
+			'reverse':res['reverse'], 
+			'tvservice':'%s %s %s' % (res['mode'], res['code'], 'HDMI')
+		}

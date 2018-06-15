@@ -132,28 +132,17 @@ def cfg_keyvalue(key, value):
 			return
 		settings.setUser(key, value)
 		settings.save()
-		if key in ['width', 'height', 'depth', 'tvservice']:
-			display.setConfiguration(settings.getUser('width'), settings.getUser('height'), settings.getUser('depth'), settings.getUser('tvservice'))
-			display.enable(True, True)
 		if key in ['timezone']:
 			# Make sure we convert + to /
 			settings.setUser('timezone', value.replace('+', '/'))
 			helper.timezoneSet(settings.getUser('timezone'))
-		if key in ['resolution']:
-			# This one needs some massaging, we essentially deduce all settings from a string (DMT/CEA CODE HDMI)
-			items = settings.getUser('resolution').split(' ')
-			logging.debug('Items: %s', repr(items))
-			resolutions = display.available()
-			for res in resolutions:
-				if res['code'] == int(items[1]) and res['mode'] == items[0]:
-					logging.debug('Found this item: %s', repr(res))
-					settings.setUser('width',  res['width'])
-					settings.setUser('height', res['height'])
-					settings.setUser('depth', 32)
-					settings.setUser('tvservice', value)
-					display.setConfiguration(settings.getUser('width'), settings.getUser('height'), settings.getUser('depth'), settings.getUser('tvservice'))
-					display.enable(True, True)
-					break
+		if key in ['resolution', 'tvservice']:
+			width, height, tvservice = display.setConfiguration(value)
+			settings.setUser('tvservice', tvservice)
+			settings.setUser('width',  width)
+			settings.setUser('height', height)
+			settings.save()
+			display.enable(True, True)
 		if key in ['display-on', 'display-off']:
 			timekeeper.setConfiguration(settings.getUser('display-on'), settings.getUser('display-off'))
 		if key in ['autooff-lux', 'autooff-time']:
@@ -300,15 +289,17 @@ if not settings.load():
 	current = display.current()
 	logging.info('No display settings, using: %s' % repr(current))
 	settings.setUser('tvservice', '%s %s HDMI' % (current['mode'], current['code']))
-	settings.setUser('width', int(current['width']))
-	settings.setUser('height', int(current['height']))
 	settings.save()
 
 if settings.getUser('timezone') == '':
 	settings.setUser('timezone', helper.timezoneCurrent())
 	settings.save()
 
-display = display(settings.getUser('width'), settings.getUser('height'), settings.getUser('depth'), settings.getUser('tvservice'))
+display = display()
+width, height, tvservice = display.setConfiguration(settings.getUser('tvservice'))
+settings.setUser('tvservice', tvservice)
+settings.setUser('width',  width)
+settings.setUser('height', height)
 
 # Force display to desired user setting
 display.enable(True, True)
