@@ -5,6 +5,7 @@
 		Options
 	</div>
 	<div>
+		{{#if resolution.resolution}}
 		Resolution
 		<select name="tvservice">
 			{{#select tvservice}}
@@ -13,6 +14,9 @@
 			{{/each}}
 			{{/select}}
 		</select>
+		{{else}}
+			No display connected or detected 
+		{{/if}}
 		<br>
 		Time zone
 		<select name="timezone">

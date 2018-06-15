@@ -33,6 +33,10 @@ class display:
 			self.clear()
 
 		result = display.validate(tvservice_params)
+		if result is None:
+			self.enabled = False
+			self.params = None
+			return (1280, 720, '')
 
 		self.width = result['width']
 		self.height = result['height']
@@ -49,7 +53,7 @@ class display:
 		return (self.width, self.height, self.params)
 
 	def getDevice(self):
-		if self.params.split(' ')[0] == 'INTERNAL':
+		if self.params and self.params.split(' ')[0] == 'INTERNAL':
 			return '/dev/fb1'
 		return '/dev/fb0'
 
@@ -71,7 +75,7 @@ class display:
 			args = [
 				'convert',
 				'-size',
-				'%dx%d' % (self.width, self.height),
+				'%dx%d' % (640, 360),
 				'-background',
 				'black',
 				'-fill',
@@ -81,8 +85,8 @@ class display:
 				'-weight',
 				'700',
 				'-pointsize',
-				'64',
-				'label:%s' % "Powersave",
+				'32',
+				'label:%s' % "Display off",
 				'-depth',
 				'8',
 				'jpg:-'
@@ -105,10 +109,6 @@ class display:
 		return (result, 'image/jpeg')
 
 	def _to_display(self, arguments):
-		if not self.enabled:
-			logging.debug('Don\'t bother, display is off')
-			return
-
 		if self.depth in [24, 32]:
 			logging.debug('Sending image directly to framebuffer')
 			with open(self.getDevice(), 'wb') as f:
@@ -126,6 +126,10 @@ class display:
 
 
 	def message(self, message):
+		if not self.enabled:
+			logging.debug('Don\'t bother, display is off')
+			return
+
 		args = [
 			'convert',
 			'-size',
@@ -148,6 +152,10 @@ class display:
 		self._to_display(args)
 
 	def image(self, filename):
+		if not self.enabled:
+			logging.debug('Don\'t bother, display is off')
+			return
+
 		logging.debug('Showing image to user')
 		args = [
 			'convert',
@@ -168,6 +176,10 @@ class display:
 
 	def enable(self, enable, force=False):
 		if enable == self.enabled and not force:
+			return
+
+		# Do not do things if we don't know how to display
+		if self.params is None:
 			return
 
 		if enable:
@@ -270,10 +282,12 @@ class display:
 		# Takes a string and returns valid width, height, depth and service
 		items = tvservice.split(' ')
 		resolutions = display.available()
+		if len(resolutions) == 0:
+			return None
+
 		res = resolutions[0]
 		for res in resolutions:
 			if res['code'] == int(items[1]) and res['mode'] == items[0]:
-				logging.debug('Found this item: %s', repr(res))
 				break
 
 		return {
