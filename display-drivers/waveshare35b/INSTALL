@@ -1,6 +1,0 @@
-[install]
-waveshare35b-overlay.dtb=/boot/overlays/waveshare35b.dtbo
-waveshare35b-overlay.dtb=/boot/overlays/waveshare35b-overlay.dtb
-
-[options]
-dtoverlay=waveshare35b

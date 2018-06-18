@@ -18,6 +18,17 @@
 			No display connected or detected 
 		{{/if}}
 		<br>
+		Select custom display
+		<select name="display-driver">
+			{{#select display-driver}}
+			<option value="none">Use HDMI only</option>
+			{{#each drivers}}
+				<option value="{{this}}">{{this}}</option>
+			{{/each}}
+			{{/select}}
+		</select>
+		<input style="position:absolute; top: -100px" type="file" data-url="custom-driver" id="driver" name="driver"><button id="driver-button">Upload new driver</button>
+		<br>
 		Time zone
 		<select name="timezone">
 			{{#select timezone}}
@@ -90,6 +101,28 @@
 
 <script type="text/javascript">
 	// Refresh image every 30s
+	$('#driver').fileupload({
+        add: function (e, data) {
+        	$('#driver-button').prop('disabled', 'disabled');
+            data.submit();
+        },
+        done: function (e, data) {
+            alert("Upload complete, refreshing drivers");
+            location.reload();
+        },
+        fail: function (e, data) {
+        	alert('Failed to upload the driver');
+        },
+        always: function(e, data) {
+        	$('#driver-button').prop('disabled', '');
+        }
+    });
+
+	$("#driver-button").click(function() {
+		$('#driver').trigger('click');
+	});
+
+
 	function reloadScreen() {
 		$('#screen').attr('src', "/details/current?" + new Date().getTime())
 		setTimeout(reloadScreen, 30000);
@@ -155,6 +188,27 @@
 		});
 	});
 
+	$("select[name=display-driver]").change(function() {
+		$.ajax({
+			url:"/setting/display-driver/" + encodeURIComponent($(this).val()),
+			type:"PUT"
+		}).done(function(data){
+			if (data['status']) {
+				if(confirm('In order to fully enable this change, you must reboot the photoframe. Do you wish to do this now?')) {
+					$.ajax({
+						url:"/reboot"
+					}).done(function(){
+					});					
+					var newDoc = document.open("text/html", "replace");
+					newDoc.write("<html><body><h1>Rebooting</h1></body></html>");
+					newDoc.close();
+				}
+
+			}
+			console.log(data);
+		});
+	});
+
 	$("#reset").click(function() {
 		if (confirm("Are you sure? Link to photos will also be reset")) {
 			$.ajax({
@@ -170,10 +224,10 @@
 			$.ajax({
 				url:"/reboot"
 			}).done(function(){
-				var newDoc = document.open("text/html", "replace");
-				newDoc.write("<html><body><h1>Power off</h1></body></html>");
-				newDoc.close();
 			});
+			var newDoc = document.open("text/html", "replace");
+			newDoc.write("<html><body><h1>Rebooting</h1></body></html>");
+			newDoc.close();
 		}
 	});
 
@@ -182,10 +236,10 @@
 			$.ajax({
 				url:"/shutdown"
 			}).done(function(){
-				var newDoc = document.open("text/html", "replace");
-				newDoc.write("<html><body><h1>Power off</h1></body></html>");
-				newDoc.close();
 			});
+			var newDoc = document.open("text/html", "replace");
+			newDoc.write("<html><body><h1>Power off</h1></body></html>");
+			newDoc.close();
 		}
 	});
 

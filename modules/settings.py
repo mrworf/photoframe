@@ -52,6 +52,7 @@ class settings:
 			'autooff-time' : 0,
 			'powersave' : '',
 			'shutdown-pin' : 26,
+			'display-driver' : 'none',
 		}
 
 	def load(self):

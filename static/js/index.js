@@ -183,6 +183,15 @@ function loadTimezone(funcOk)
 	});
 }
 
+function loadDrivers(funcOk)
+{
+	$.ajax({
+		url:"/details/drivers"
+	}).done(function(data) {
+		funcOk(data);
+	});
+}
+
 function loadSettings(funcOk)
 {
 	$.ajax({
@@ -199,7 +208,10 @@ function loadSettings(funcOk)
 			result['resolution'] = data;
 			loadTimezone(function(data) {
 				result['timezones'] = data;
-				funcOk(result);
+				loadDrivers(function(data) {
+					result['drivers'] = data;
+					funcOk(result);
+				});
 			});
 		});
 	});

@@ -38,14 +38,16 @@ from modules.display import display
 from modules.oauth import OAuth
 from modules.slideshow import slideshow
 from modules.colormatch import colormatch
+from modules.drivers import drivers
 
 void = open(os.devnull, 'wb')
 
 import requests
 from requests_oauthlib import OAuth2Session
-from flask import Flask, request, redirect, session, url_for, abort
+from flask import Flask, request, redirect, session, url_for, abort, flash
 from flask.json import jsonify
 from flask_httpauth import HTTPBasicAuth
+from werkzeug.utils import secure_filename
 
 # used if we don't find authentication json
 class NoAuth:
@@ -74,6 +76,7 @@ logging.getLogger('oauthlib').setLevel(logging.ERROR)
 logging.getLogger('urllib3').setLevel(logging.ERROR)
 
 app = Flask(__name__, static_url_path='')
+app.config['UPLOAD_FOLDER'] = '/tmp/' 
 user = None
 userfiles = ['/boot/http-auth.json', '/root/http-auth.json']
 
@@ -126,12 +129,20 @@ def cfg_keyvalue(key, value):
 			return
 
 	if request.method == 'PUT':
+		status = True
 		if key == "keywords":
 			# Keywords has its own API
 			abort(404)
 			return
 		settings.setUser(key, value)
 		settings.save()
+		if key in ['display-driver']:
+			drv = settings.getUser('display-driver')
+			if drv == 'none':
+				drv = None
+			if not drivers.activate(drv):
+				settings.setUser('display-driver', 'none')
+				status = False
 		if key in ['timezone']:
 			# Make sure we convert + to /
 			settings.setUser('timezone', value.replace('+', '/'))
@@ -152,7 +163,7 @@ def cfg_keyvalue(key, value):
 		if key in ['shutdown-pin']:
 			powermanagement.stopmonitor()
 			powermanagement = shutdown(settings.getUser('shutdown-pin'))
-		return jsonify({'status':True})
+		return jsonify({'status':status})
 
 	elif request.method == 'GET':
 		if key is None:
@@ -238,6 +249,9 @@ def cfg_details(about):
 		response = app.make_response(image)
 		response.headers.set('Content-Type', mime)
 		return response
+	elif about == 'drivers':
+		result = drivers.list().keys()
+		return jsonify(result)
 	elif about == 'timezone':
 		result = helper.timezoneList()
 		return jsonify(result)
@@ -251,6 +265,28 @@ def cfg_details(about):
 		return jsonify({'display':display.isEnabled()})
 
 	abort(404)
+
+@app.route('/custom-driver', methods=['POST'])
+@auth.login_required
+def upload_driver():
+	if request.method == 'POST':
+		# check if the post request has the file part
+		if 'driver' not in request.files:
+			logging.error('No file part')
+			abort(405)
+		file = request.files['driver']
+		# if user does not select file, browser also
+		# submit an empty part without filename
+		if file.filename == '' or not file.filename.lower().endswith('.zip'):
+			logging.error('No filename or invalid filename')
+			abort(405)
+		filename = os.path.join('/tmp/', secure_filename(file.filename))
+		file.save(filename)
+		if drivers.install(filename):
+			return ''
+		else:
+			abort(500)
+	abort(405)
 
 @app.route("/link")
 @auth.login_required
@@ -295,6 +331,7 @@ if settings.getUser('timezone') == '':
 	settings.setUser('timezone', helper.timezoneCurrent())
 	settings.save()
 
+drivers = drivers()
 display = display()
 width, height, tvservice = display.setConfiguration(settings.getUser('tvservice'))
 settings.setUser('tvservice', tvservice)
