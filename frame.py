@@ -320,23 +320,27 @@ def web_template(file):
 	return app.send_static_file('template/' + file)
 
 settings = settings()
+drivers = drivers()
+display = display()
+
 if not settings.load():
 	# First run, grab display settings from current mode
 	current = display.current()
-	logging.info('No display settings, using: %s' % repr(current))
-	settings.setUser('tvservice', '%s %s HDMI' % (current['mode'], current['code']))
-	settings.save()
-
+	if current is not None:
+		logging.info('No display settings, using: %s' % repr(current))
+		settings.setUser('tvservice', '%s %s HDMI' % (current['mode'], current['code']))
+		settings.save()
+	else:
+		logging.info('No display attached?')
 if settings.getUser('timezone') == '':
 	settings.setUser('timezone', helper.timezoneCurrent())
 	settings.save()
 
-drivers = drivers()
-display = display()
 width, height, tvservice = display.setConfiguration(settings.getUser('tvservice'))
 settings.setUser('tvservice', tvservice)
 settings.setUser('width',  width)
 settings.setUser('height', height)
+settings.save()
 
 # Force display to desired user setting
 display.enable(True, True)

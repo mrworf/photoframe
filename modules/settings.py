@@ -20,6 +20,7 @@ import random
 
 class settings:
 	CONFIGFILE = '/root/settings.json'
+	DEPRECATED_USER = ['resolution']
 
 	def __init__(self):
 		self.settings = {
@@ -39,7 +40,6 @@ class settings:
 			'height' : 1080,
 			'depth' : 32,
 			'tvservice' : 'DMT 82 DVI',
-			'resolution' : '',					# Place holder, used to deduce correct resolution before setting TV service
 			'timezone' : '',
 			'interval' : 60,					# Delay in seconds between images (minimum)
 			'display-off' : 22,				# What hour (24h) to disable display and sleep
@@ -67,6 +67,10 @@ class settings:
 					self.settings['cfg'] = tmp
 					self.settings['cfg'].update(tmp2)
 
+					# Remove deprecated fields
+					for field in settings.DEPRECATED_USER:
+						self.settings['cfg'].pop(field, None)
+
 					# Also, we need to iterate the settings and make sure numbers and floats are
 					# that, and not strings (which the old version did)
 					for k in self.settings['cfg']:
@@ -74,7 +78,7 @@ class settings:
 					# Lastly, correct the tvservice field, should be "TEXT NUMBER TEXT"
 					# This is a little bit of a cheat
 					parts = self.settings['cfg']['tvservice'].split(' ')
-					if type(self.convertToNative(parts[1])) != int and type(self.convertToNative(parts[2])) == int:
+					if len(parts) == 3 and type(self.convertToNative(parts[1])) != int and type(self.convertToNative(parts[2])) == int:
 						logging.debug('Reordering tvservice value due to old bug')
 						self.settings['cfg']['tvservice'] = "%s %s %s" % (parts[0], parts[2], parts[1])
 						self.save()

@@ -197,11 +197,11 @@
 				if(confirm('In order to fully enable this change, you must reboot the photoframe. Do you wish to do this now?')) {
 					$.ajax({
 						url:"/reboot"
-					}).done(function(){
+					}).always(function(){
+						var newDoc = document.open("text/html", "replace");
+						newDoc.write("<html><body><h1>Rebooting</h1></body></html>");
+						newDoc.close();
 					});					
-					var newDoc = document.open("text/html", "replace");
-					newDoc.write("<html><body><h1>Rebooting</h1></body></html>");
-					newDoc.close();
 				}
 
 			}

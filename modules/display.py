@@ -237,6 +237,8 @@ class display:
 			output = subprocess.check_output(['/opt/vc/bin/tvservice', '-s'], stderr=subprocess.STDOUT)
 			# state 0x120006 [DVI DMT (82) RGB full 16:9], 1920x1080 @ 60.00Hz, progressive
 			m = re.search('state 0x[0-9a-f]* \[([A-Z]*) ([A-Z]*) \(([0-9]*)\) [^,]*, ([0-9]*)x([0-9]*) \@ ([0-9]*)\.[0-9]*Hz, (.)', output)
+			if m is None:
+				return None
 			result = {
 				'mode' : m.group(2),
 				'code' : int(m.group(3)),
@@ -286,9 +288,12 @@ class display:
 			return None
 
 		res = resolutions[0]
-		for res in resolutions:
-			if res['code'] == int(items[1]) and res['mode'] == items[0]:
-				break
+		if len(items) == 3:
+			for res in resolutions:
+				if res['code'] == int(items[1]) and res['mode'] == items[0]:
+					break
+		else:
+			logging.warning('Invalid tvservice data, using first available instead')
 
 		return {
 			'width':res['width'], 
