@@ -197,11 +197,8 @@
 				if(confirm('In order to fully enable this change, you must reboot the photoframe. Do you wish to do this now?')) {
 					$.ajax({
 						url:"/reboot"
-					}).always(function(){
-						var newDoc = document.open("text/html", "replace");
-						newDoc.write("<html><body><h1>Rebooting</h1></body></html>");
-						newDoc.close();
 					});					
+					$(document.body).html('<h1>Rebooting</h1>')
 				}
 
 			}
@@ -223,11 +220,8 @@
 		if (confirm("Are you sure you want to REBOOT?")) {
 			$.ajax({
 				url:"/reboot"
-			}).done(function(){
 			});
-			var newDoc = document.open("text/html", "replace");
-			newDoc.write("<html><body><h1>Rebooting</h1></body></html>");
-			newDoc.close();
+			$(document.body).html('<h1>Rebooting</h1>')
 		}
 	});
 
@@ -235,31 +229,9 @@
 		if (confirm("Are you sure you want to POWER OFF the frame?")) {
 			$.ajax({
 				url:"/shutdown"
-			}).done(function(){
 			});
-			var newDoc = document.open("text/html", "replace");
-			newDoc.write("<html><body><h1>Power off</h1></body></html>");
-			newDoc.close();
+			$(document.body).html('<h1>Powering off</h1>')
 		}
-	});
-
-	$('#tv').click(function() {
-		$.ajax({
-			url:"/details/tvservice"
-		}).done(function(data) {
-			txt = "";
-			if (data['cea'].indexOf(' 0 ') === -1) {
-				txt += data['cea'];
-			}
-			if (data['dmt'].indexOf(' 0 ') === -1) {
-				txt += data['dmt'];
-			}
-			if (txt == "")
-				txt = "No modes found for connected monitor";
-			else
-				txt += "\nOption format: <DMT/CEA> <MODE NBR> <HDMI/DVI>"
-			alert(txt);
-		});
 	});
 	populateKeywords();
 </script>
