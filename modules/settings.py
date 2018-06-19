@@ -19,7 +19,7 @@ import logging
 import random
 
 class settings:
-	CONFIGFILE = '/root/settings.json'
+	CONFIGFILE = '/root/photoframe_config/settings.json'
 	DEPRECATED_USER = ['resolution']
 
 	def __init__(self):
@@ -29,7 +29,7 @@ class settings:
 			'local-ip' : None,
 			'tempfolder' : '/tmp/',
 			'colortemp' : None,
-			'colortemp-script' : '/root/colortemp.sh',
+			'colortemp-script' : '/root/photoframe_config/colortemp.sh',
 			'cfg' : None
 		}
 		self.userDefaults()

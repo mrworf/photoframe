@@ -41,6 +41,16 @@ from modules.colormatch import colormatch
 from modules.drivers import drivers
 
 void = open(os.devnull, 'wb')
+# Supercritical, since we store all photoframe files in a subdirectory, make sure to create it
+if not os.path.exists('/root/photoframe_config'):
+	try:
+		os.mkdir('/root/photoframe_config')
+	except:
+		logging.exception('Unable to create configuration directory, cannot start')
+		sys.exit(255)
+elif not os.path.isdir('/root/photoframe_config'):
+	logging.error('/root/photoframe_config isn\'t a folder, cannot start')
+	sys.exit(255)
 
 import requests
 from requests_oauthlib import OAuth2Session
@@ -76,9 +86,9 @@ logging.getLogger('oauthlib').setLevel(logging.ERROR)
 logging.getLogger('urllib3').setLevel(logging.ERROR)
 
 app = Flask(__name__, static_url_path='')
-app.config['UPLOAD_FOLDER'] = '/tmp/' 
+app.config['UPLOAD_FOLDER'] = '/tmp/'
 user = None
-userfiles = ['/boot/http-auth.json', '/root/http-auth.json']
+userfiles = ['/boot/http-auth.json', '/root/photoframe_config/http-auth.json']
 
 for userfile in userfiles:
 	if os.path.exists(userfile):
@@ -212,7 +222,7 @@ def cfg_oauth_info():
 		abort(500)
 	data = request.json['web']
 	oauth.setOAuth(data)
-	with open('/root/oauth.json', 'wb') as f:
+	with open('/root/photoframe_config/oauth.json', 'wb') as f:
 		json.dump(data, f);
 	return jsonify({'result' : True})
 
@@ -365,8 +375,8 @@ def oauthSetToken(token):
 
 oauth = OAuth(settings.get('local-ip'), oauthSetToken, oauthGetToken)
 
-if os.path.exists('/root/oauth.json'):
-	with open('/root/oauth.json') as f:
+if os.path.exists('/root/photoframe_config/oauth.json'):
+	with open('/root/photoframe_config/oauth.json') as f:
 		data = json.load(f)
 	if 'web' in data: # if someone added it via command-line
 		data = data['web']
