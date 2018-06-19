@@ -84,11 +84,19 @@ class helper:
 		if height < imageHeight:
 			border = '0x%d' % width_border
 			spacing = '0x%d' % width_spacing
-			logging.debug('Landscape image, reframing')
+			zoomed = ((imageHeight-height)/2-width_border)
+			logging.debug('Landscape image, reframing (visible zoomed is %d)' % zoomed)
+			if zoomed < 20:
+				logging.debug('That\'s less than 20px so skip reframing')
+				return False
 		elif height > imageHeight:
 			border = '%dx0' % width_border
 			spacing = '%dx0' % width_spacing
-			logging.debug('Portrait image, reframing')
+			zoomed = ((imageWidth-width)/2-width_border)
+			logging.debug('Portrait image, reframing (visible zoomed is %d)' % zoomed)
+			if zoomed < 20:
+				logging.debug('That\'s less than 20px so skip reframing')
+				return False
 		else:
 			logging.debug('Image is fullscreen, no reframing needed')
 			return False

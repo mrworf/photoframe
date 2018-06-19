@@ -133,7 +133,11 @@ class colormatch(Thread):
 		# I2C address 0x29
 		# Register 0x12 has device ver.
 		# Register addresses must be OR'ed with 0x80
-		bus.write_byte(0x29,0x80|0x12)
+		try:
+			bus.write_byte(0x29,0x80|0x12)
+		except:
+			logging.info('ColorSensor not available')
+			return
 		ver = bus.read_byte(0x29)
 		# version # should be 0x44
 		if ver == 0x44:

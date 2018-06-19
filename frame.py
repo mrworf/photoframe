@@ -38,14 +38,26 @@ from modules.display import display
 from modules.oauth import OAuth
 from modules.slideshow import slideshow
 from modules.colormatch import colormatch
+from modules.drivers import drivers
 
 void = open(os.devnull, 'wb')
+# Supercritical, since we store all photoframe files in a subdirectory, make sure to create it
+if not os.path.exists('/root/photoframe_config'):
+	try:
+		os.mkdir('/root/photoframe_config')
+	except:
+		logging.exception('Unable to create configuration directory, cannot start')
+		sys.exit(255)
+elif not os.path.isdir('/root/photoframe_config'):
+	logging.error('/root/photoframe_config isn\'t a folder, cannot start')
+	sys.exit(255)
 
 import requests
 from requests_oauthlib import OAuth2Session
-from flask import Flask, request, redirect, session, url_for, abort
+from flask import Flask, request, redirect, session, url_for, abort, flash
 from flask.json import jsonify
 from flask_httpauth import HTTPBasicAuth
+from werkzeug.utils import secure_filename
 
 # used if we don't find authentication json
 class NoAuth:
@@ -74,8 +86,9 @@ logging.getLogger('oauthlib').setLevel(logging.ERROR)
 logging.getLogger('urllib3').setLevel(logging.ERROR)
 
 app = Flask(__name__, static_url_path='')
+app.config['UPLOAD_FOLDER'] = '/tmp/'
 user = None
-userfiles = ['/boot/http-auth.json', '/root/http-auth.json']
+userfiles = ['/boot/http-auth.json', '/root/photoframe_config/http-auth.json']
 
 for userfile in userfiles:
 	if os.path.exists(userfile):
@@ -126,34 +139,31 @@ def cfg_keyvalue(key, value):
 			return
 
 	if request.method == 'PUT':
+		status = True
 		if key == "keywords":
 			# Keywords has its own API
 			abort(404)
 			return
 		settings.setUser(key, value)
 		settings.save()
-		if key in ['width', 'height', 'depth', 'tvservice']:
-			display.setConfiguration(settings.getUser('width'), settings.getUser('height'), settings.getUser('depth'), settings.getUser('tvservice'))
-			display.enable(True, True)
+		if key in ['display-driver']:
+			drv = settings.getUser('display-driver')
+			if drv == 'none':
+				drv = None
+			if not drivers.activate(drv):
+				settings.setUser('display-driver', 'none')
+				status = False
 		if key in ['timezone']:
 			# Make sure we convert + to /
 			settings.setUser('timezone', value.replace('+', '/'))
 			helper.timezoneSet(settings.getUser('timezone'))
-		if key in ['resolution']:
-			# This one needs some massaging, we essentially deduce all settings from a string (DMT/CEA CODE HDMI)
-			items = settings.getUser('resolution').split(' ')
-			logging.debug('Items: %s', repr(items))
-			resolutions = display.available()
-			for res in resolutions:
-				if res['code'] == int(items[1]) and res['mode'] == items[0]:
-					logging.debug('Found this item: %s', repr(res))
-					settings.setUser('width',  res['width'])
-					settings.setUser('height', res['height'])
-					settings.setUser('depth', 32)
-					settings.setUser('tvservice', value)
-					display.setConfiguration(settings.getUser('width'), settings.getUser('height'), settings.getUser('depth'), settings.getUser('tvservice'))
-					display.enable(True, True)
-					break
+		if key in ['resolution', 'tvservice']:
+			width, height, tvservice = display.setConfiguration(value)
+			settings.setUser('tvservice', tvservice)
+			settings.setUser('width',  width)
+			settings.setUser('height', height)
+			settings.save()
+			display.enable(True, True)
 		if key in ['display-on', 'display-off']:
 			timekeeper.setConfiguration(settings.getUser('display-on'), settings.getUser('display-off'))
 		if key in ['autooff-lux', 'autooff-time']:
@@ -163,7 +173,7 @@ def cfg_keyvalue(key, value):
 		if key in ['shutdown-pin']:
 			powermanagement.stopmonitor()
 			powermanagement = shutdown(settings.getUser('shutdown-pin'))
-		return jsonify({'status':True})
+		return jsonify({'status':status})
 
 	elif request.method == 'GET':
 		if key is None:
@@ -212,7 +222,7 @@ def cfg_oauth_info():
 		abort(500)
 	data = request.json['web']
 	oauth.setOAuth(data)
-	with open('/root/oauth.json', 'wb') as f:
+	with open('/root/photoframe_config/oauth.json', 'wb') as f:
 		json.dump(data, f);
 	return jsonify({'result' : True})
 
@@ -249,6 +259,9 @@ def cfg_details(about):
 		response = app.make_response(image)
 		response.headers.set('Content-Type', mime)
 		return response
+	elif about == 'drivers':
+		result = drivers.list().keys()
+		return jsonify(result)
 	elif about == 'timezone':
 		result = helper.timezoneList()
 		return jsonify(result)
@@ -262,6 +275,28 @@ def cfg_details(about):
 		return jsonify({'display':display.isEnabled()})
 
 	abort(404)
+
+@app.route('/custom-driver', methods=['POST'])
+@auth.login_required
+def upload_driver():
+	if request.method == 'POST':
+		# check if the post request has the file part
+		if 'driver' not in request.files:
+			logging.error('No file part')
+			abort(405)
+		file = request.files['driver']
+		# if user does not select file, browser also
+		# submit an empty part without filename
+		if file.filename == '' or not file.filename.lower().endswith('.zip'):
+			logging.error('No filename or invalid filename')
+			abort(405)
+		filename = os.path.join('/tmp/', secure_filename(file.filename))
+		file.save(filename)
+		if drivers.install(filename):
+			return ''
+		else:
+			abort(500)
+	abort(405)
 
 @app.route("/link")
 @auth.login_required
@@ -295,20 +330,27 @@ def web_template(file):
 	return app.send_static_file('template/' + file)
 
 settings = settings()
+drivers = drivers()
+display = display()
+
 if not settings.load():
 	# First run, grab display settings from current mode
 	current = display.current()
-	logging.info('No display settings, using: %s' % repr(current))
-	settings.setUser('tvservice', '%s %s HDMI' % (current['mode'], current['code']))
-	settings.setUser('width', int(current['width']))
-	settings.setUser('height', int(current['height']))
-	settings.save()
-
+	if current is not None:
+		logging.info('No display settings, using: %s' % repr(current))
+		settings.setUser('tvservice', '%s %s HDMI' % (current['mode'], current['code']))
+		settings.save()
+	else:
+		logging.info('No display attached?')
 if settings.getUser('timezone') == '':
 	settings.setUser('timezone', helper.timezoneCurrent())
 	settings.save()
 
-display = display(settings.getUser('width'), settings.getUser('height'), settings.getUser('depth'), settings.getUser('tvservice'))
+width, height, tvservice = display.setConfiguration(settings.getUser('tvservice'))
+settings.setUser('tvservice', tvservice)
+settings.setUser('width',  width)
+settings.setUser('height', height)
+settings.save()
 
 # Force display to desired user setting
 display.enable(True, True)
@@ -333,8 +375,8 @@ def oauthSetToken(token):
 
 oauth = OAuth(settings.get('local-ip'), oauthSetToken, oauthGetToken)
 
-if os.path.exists('/root/oauth.json'):
-	with open('/root/oauth.json') as f:
+if os.path.exists('/root/photoframe_config/oauth.json'):
+	with open('/root/photoframe_config/oauth.json') as f:
 		data = json.load(f)
 	if 'web' in data: # if someone added it via command-line
 		data = data['web']

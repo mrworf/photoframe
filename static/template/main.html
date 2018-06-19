@@ -5,6 +5,7 @@
 		Options
 	</div>
 	<div>
+		{{#if resolution.resolution}}
 		Resolution
 		<select name="tvservice">
 			{{#select tvservice}}
@@ -13,6 +14,20 @@
 			{{/each}}
 			{{/select}}
 		</select>
+		{{else}}
+			No display connected or detected 
+		{{/if}}
+		<br>
+		Select custom display
+		<select name="display-driver">
+			{{#select display-driver}}
+			<option value="none">Use HDMI only</option>
+			{{#each drivers}}
+				<option value="{{this}}">{{this}}</option>
+			{{/each}}
+			{{/select}}
+		</select>
+		<input style="position:absolute; top: -100px" type="file" data-url="custom-driver" id="driver" name="driver"><button id="driver-button">Upload new driver</button>
 		<br>
 		Time zone
 		<select name="timezone">
@@ -36,7 +51,7 @@
 		Power saving measures should 
 		<select name="powersave">
 			{{#select powersave}}
-			<option value="">not be used</option>
+			<option value="none">not be used</option>
 			<option value="schedule">use schedule</option>
 			<option value="sensor">use environment</option>
 			<option value="sensor+schedule">use schedule and environment</option>
@@ -86,6 +101,28 @@
 
 <script type="text/javascript">
 	// Refresh image every 30s
+	$('#driver').fileupload({
+        add: function (e, data) {
+        	$('#driver-button').prop('disabled', 'disabled');
+            data.submit();
+        },
+        done: function (e, data) {
+            alert("Upload complete, refreshing drivers");
+            location.reload();
+        },
+        fail: function (e, data) {
+        	alert('Failed to upload the driver');
+        },
+        always: function(e, data) {
+        	$('#driver-button').prop('disabled', '');
+        }
+    });
+
+	$("#driver-button").click(function() {
+		$('#driver').trigger('click');
+	});
+
+
 	function reloadScreen() {
 		$('#screen').attr('src', "/details/current?" + new Date().getTime())
 		setTimeout(reloadScreen, 30000);
@@ -137,7 +174,7 @@
 
 	$("select[name=tvservice]").change(function() {
 		$.ajax({
-			url:"/setting/resolution/" + encodeURIComponent($(this).val()),
+			url:"/setting/tvservice/" + encodeURIComponent($(this).val()),
 			type:"PUT"
 		}).done(function(){
 		});
@@ -148,6 +185,24 @@
 			url:"/setting/timezone/" + encodeURIComponent($(this).val().replace('/', '+')),
 			type:"PUT"
 		}).done(function(){
+		});
+	});
+
+	$("select[name=display-driver]").change(function() {
+		$.ajax({
+			url:"/setting/display-driver/" + encodeURIComponent($(this).val()),
+			type:"PUT"
+		}).done(function(data){
+			if (data['status']) {
+				if(confirm('In order to fully enable this change, you must reboot the photoframe. Do you wish to do this now?')) {
+					$.ajax({
+						url:"/reboot"
+					});					
+					$(document.body).html('<h1>Rebooting</h1>')
+				}
+
+			}
+			console.log(data);
 		});
 	});
 
@@ -165,11 +220,8 @@
 		if (confirm("Are you sure you want to REBOOT?")) {
 			$.ajax({
 				url:"/reboot"
-			}).done(function(){
-				var newDoc = document.open("text/html", "replace");
-				newDoc.write("<html><body><h1>Power off</h1></body></html>");
-				newDoc.close();
 			});
+			$(document.body).html('<h1>Rebooting</h1>')
 		}
 	});
 
@@ -177,31 +229,9 @@
 		if (confirm("Are you sure you want to POWER OFF the frame?")) {
 			$.ajax({
 				url:"/shutdown"
-			}).done(function(){
-				var newDoc = document.open("text/html", "replace");
-				newDoc.write("<html><body><h1>Power off</h1></body></html>");
-				newDoc.close();
 			});
+			$(document.body).html('<h1>Powering off</h1>')
 		}
-	});
-
-	$('#tv').click(function() {
-		$.ajax({
-			url:"/details/tvservice"
-		}).done(function(data) {
-			txt = "";
-			if (data['cea'].indexOf(' 0 ') === -1) {
-				txt += data['cea'];
-			}
-			if (data['dmt'].indexOf(' 0 ') === -1) {
-				txt += data['dmt'];
-			}
-			if (txt == "")
-				txt = "No modes found for connected monitor";
-			else
-				txt += "\nOption format: <DMT/CEA> <MODE NBR> <HDMI/DVI>"
-			alert(txt);
-		});
 	});
 	populateKeywords();
 </script>

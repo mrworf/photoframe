@@ -44,7 +44,7 @@ class timekeeper(Thread):
 		logging.debug('hourOn = %s, hourOff = %s' % (repr(hourOn), repr(hourOff)))
 
 	def setPowermode(self, mode):
-		if mode == '':
+		if mode == '' or mode == 'none':
 			self.ignoreSensor = True
 			self.ignoreSchedule = True
 		elif mode == 'sensor':

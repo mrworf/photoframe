@@ -102,6 +102,9 @@ class slideshow:
 
 				keyword = self.settings.getKeyword(index)
 				imgs, cache = self.getImages(keyword)
+				if imgs is None:
+					# Try again!
+					continue
 
 				# If we've seen all images for this keyword, skip to next
 				if cache in seen:

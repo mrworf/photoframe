@@ -39,6 +39,15 @@ if [ "$1" = "post" ]; then
 		echo "i2c-dev" >> /etc/modules-load.d/modules.conf
 		modprobe i2c-dev
 	fi
+
+	# Make sure all old files are moved into the new config folder
+	mkdir /root/photoframe_config >/dev/null 2>/dev/null
+	FILES="oauth.json settings.json http_auth.json colortemp.sh"
+	for FILE in ${FILES}; do
+		mv /root/${FILE} /root/photoframe_config/ >/dev/null 2>/dev/null
+	done
+
+	# Copy new service and reload systemd
 	cp frame.service /etc/systemd/system/
 	systemctl daemon-reload
 
