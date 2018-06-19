@@ -174,7 +174,7 @@
 
 	$("select[name=tvservice]").change(function() {
 		$.ajax({
-			url:"/setting/resolution/" + encodeURIComponent($(this).val()),
+			url:"/setting/tvservice/" + encodeURIComponent($(this).val()),
 			type:"PUT"
 		}).done(function(){
 		});
