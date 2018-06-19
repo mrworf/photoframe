@@ -223,7 +223,9 @@ GND -> Pin 9 (GND)
 You also need to tell your RPi3 to enable the I2C bus, start the `raspi-config` and go to submenu 5 (interfaces) and select I2C and enable it.
 
 Once all this is done, you have one more thing left to do before rebooting, you need to download the imagemagick script that will adjust the image,
-please visit http://www.fmwconcepts.com/imagemagick/colortemp/index.php and download and store it as `colortemp.sh` inside `/root/`.
+please visit http://www.fmwconcepts.com/imagemagick/colortemp/index.php and download and store it as `colortemp.sh` inside `/root/photoframe_config`.
+
+Don't forget to make it executable by `chmod +x /root/photoframe_config/colortemp.sh` or it will still not work.
 
 You're done! Reboot your RPi3 (So I2C gets enabled) and from now on, all images will get adjusted to match the ambient color temperature.
 
