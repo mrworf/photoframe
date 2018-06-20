@@ -1,0 +1,1 @@
+{"driver": "waveshare35b", "options": {"dtoverlay": "waveshare35b"}, "install": [{"src": "waveshare35b-overlay.dtb", "dst": "/boot/overlays/waveshare35b.dtbo"}, {"src": "waveshare35b-overlay.dtb", "dst": "/boot/overlays/waveshare35b-overlay.dtb"}]}

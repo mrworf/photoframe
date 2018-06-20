@@ -376,11 +376,14 @@ def oauthSetToken(token):
 oauth = OAuth(settings.get('local-ip'), oauthSetToken, oauthGetToken)
 
 if os.path.exists('/root/photoframe_config/oauth.json'):
-	with open('/root/photoframe_config/oauth.json') as f:
-		data = json.load(f)
-	if 'web' in data: # if someone added it via command-line
-		data = data['web']
-	oauth.setOAuth(data)
+	try:
+		with open('/root/photoframe_config/oauth.json') as f:
+			data = json.load(f)
+		if 'web' in data: # if someone added it via command-line
+			data = data['web']
+		oauth.setOAuth(data)
+	except:
+		logging.exception('OAuth file is corrupt, do not use')
 
 # Prep random
 random.seed(long(time.clock()))
