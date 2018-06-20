@@ -1,6 +1,6 @@
 # photoframe
 
-A Raspberry Pi 3 software which automatically pulls photos from Google Photos and displays them
+A Raspberry Pi (Zero, 1 or 3) software which automatically pulls photos from Google Photos and displays them
 on the attached screen, just like a photoframe. No need to upload photos to 3rd party service
 or fiddle with local storage or SD card.
 
@@ -23,19 +23,19 @@ the images to meld better with the room where it's running.
 - Shows error messages on screen
 - Supports ambient room color temperature adjustments
 - Uses ambient sensor to improve powersave
-- Power control via GPIO (turn RPi3 on/off)
+- Power control via GPIO (turn RPi on/off)
+- Non-HDMI displays (SPI, DPI, etc)
 
 # requires
 
-- Raspberry Pi 3
-- *bian distro (recommend minibian, https://minibianpi.wordpress.com/ )
-- Display of some sort
+- Raspberry Pi 1, 3 or Zero
+- Display of some sort (HDMI or SPI/DPI displays)
 - Google Photos account
 - Internet
 
-# installation using ready-made image
+# installation
 
-On the release page, you'll find prepared raspbian image(s) for RaspberryPi 3
+On the release page, you'll find prepared raspbian image(s) for RaspberryPi 1, 3 or Zero
 
 To use these (and I really recommend that to doing the manual steps), here's how:
 
@@ -45,8 +45,8 @@ To use these (and I really recommend that to doing the manual steps), here's how
    Change the two fields to point out your wifi and the password needed for it
 4. Save the file
 5. Place SDcard in your RPi3 which is connected to a monitor/TV
-6. Start the RPi3
-7. Wait (takes up to a minute depending on card and the fact that it's expanding to use the entire SDcard)
+6. Start the RPi
+7. Wait (takes up to a minute depending on card and the fact that it's expanding to use the entire SDcard ... slower still on non-RPi3)
 8. Follow instructions shown on the display
 
 The default username/password for the web page is `photoframe` and `password`. This can be changed by editing the file called `http-auth.json` on the `boot` drive
@@ -54,78 +54,6 @@ The default username/password for the web page is `photoframe` and `password`. T
 ## tl;dr
 
 Flash image to SDcard, edit `wifi-config.txt` and boot the RPi3 with the SDcard and follow instructions. Username and password is above this paragraph.
-
-# installation the old fashion way
-
-First, install your favorite debian distro (recommend minibian, https://minibianpi.wordpress.com/ )
-
-NOTE!
-Photoframe requires about 1GB of storage due to all dependencies. If you're using minibian, please see https://minibianpi.wordpress.com/how-to/resize-sd/ for instructions on how to resize the root filesystem.
-
-Make your distro of choice is up-to-date by issuing
-
-`apt update && apt upgrade`
-
-Once done, we need to install all dependencies
-
-`apt install apt-utils raspi-config git fbset python python-requests python-requests-oauthlib python-flask python-flask-httpauth imagemagick python-smbus bc`
-
-Next, let's tweak the boot so we don't get a bunch of output
-
-Edit the `/boot/cmdline.txt` and add the following to the end of the line:
-
-```
-console=tty3 loglevel=3 consoleblank=0 vt.global_cursor_default=0 logo.nologo
-```
-
-You also need to edit the `/boot/config.txt`
-
-Add the following
-
-```
-disable_splash=1
-framebuffer_ignore_alpha=1
-```
-
-We also want to disable the first console (since that's going to be our frame). This is done by
-issuing
-
-```
-systemctl disable getty@tty1.service
-```
-
-If you're using a rasbian (or a varity of said distro) you may need to also do
-
-```
-systemctl mask plymouth-start.service
-```
-
-or you might still see the boot messages.
-
-Almost there, we also need to set the timezone for the device, or it will be confusing when the on/off hours doesn't meet expectations.
-
-```
-timedatectl set-timezone America/Los_Angeles
-```
-
-If you don't know your timezone, you can list all supported
-
-```
-timedatectl list-timezones
-```
-
-Finally, time to install photoframe, which means downloading the repo, install the service and reboot
-
-```
-cd /root
-git clone https://github.com/mrworf/photoframe.git
-cd photoframe
-cp frame.service /etc/systemd/system/
-systemctl enable /etc/systemd/system/frame.service
-reboot
-```
-
-Done! Once the device has rebooted, it will tell you how to connect to it and then using your webbrowser you can link it to Google Photos.
 
 ## It keeps asking for OAuth2.0 data?
 
@@ -157,56 +85,6 @@ On the line with the name of your app, there will be a download button at the ri
 Click it, and it downloads a JSON file. It is the contents of this file which needs to be copy-n-paste:ed into the box you see in photoframe.
 
 Once you've copy-n-paste:ed this and submit it to photoframe, it will unlock the main settings and allow you to perform the google photos link, configure parameters, etc.
-
-# wifi setup
-
-This requires a couple of extra steps, first we need more software
-
-```
-apt install firmware-brcm80211 pi-bluetooth wpasupplicant iw crda wireless-regdb
-```
-
-Next, we need to configure the wifi interface, open `/etc/network/interfaces` in your favorite editor and
-add the following
-
-```
-allow-hotplug wlan0
-auto wlan0
-
-iface wlan0 inet dhcp
-        wpa-ssid "<replace with the name of your wifi>"
-        wpa-psk "<replace with the password for your wifi>"
-```
-
-Next, let's make sure it works, so issue `ifup wlan0` and after it completes, running `ifconfig wlan0` and it should show something similar to this
-
-```
-wlan0     Link encap:Ethernet  HWaddr de:ad:be:ef:11:11
-          inet addr:10.0.0.2  Bcast:10.0.0.255  Mask:255.255.255.0
-          inet6 addr: fe80::bc27:ffff:fe9c:aa6/64 Scope:Link
-          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
-          RX packets:108005 errors:0 dropped:0 overruns:0 frame:0
-          TX packets:77150 errors:0 dropped:0 overruns:0 carrier:0
-          collisions:0 txqueuelen:1000
-          RX bytes:129102030 (123.1 MiB)  TX bytes:7841326 (7.4 MiB)
-```
-
-What we care about is that the line with `inet addr:` is present, it indicates network. At this point, try using SSH to connect to this IP just to be sure it works.
-If that pans out, reboot and make sure it still works, I've been biten by this before. Once you see that you can SSH into the RPi3 using the wifi address, it's time
-to disable the wired interface.
-
-Open `/etc/network/interfaces` and add a hash `#` in front of the two lines with `eth0`, it should look like this
-
-```
-#auto eth0
-#iface eth0 inet dhcp
-```
-
-Save it and then start `raspi-config`.
-
-Here you need to go to option 3, boot options and choose option 2, wait for network. It should be set to no.
-
-Exit the config tool and then reboot, now your RPi3 will boot directly to WiFi and WiFi only. If you don't do it this way, the RPi3 will wait forever for a wired connection.
 
 # color temperature?
 
@@ -286,44 +164,35 @@ php with memcached. Ideally you use a SSL endpoint as well.
 
 # faq
 
-## My screen is black or won't show anything?
-
-The default for photoframe is 1920x1080 at 60Hz, this may or may not be the correct settings for your screen. The web interface is located on port 7777 on your RPi3, by going there you can change these defaults. It also allows you to configure tvservice. By SSH:ing into your RPi3, you can list all available modes exposed by your monitor by issuing `/opt/vc/bin/tvservice -m <CEA or DMT>`. From here you should be able to find the correct mode to use for your screen.
-
-The syntax for `Arguments for Raspberry Pi 3 tv service` in the web interface is:
-
-`<DMT or CEA> <mode id> <DVI or HDMI>`
-
-If it still doesn't work, I'd recommend googling it a bit, you may need to add parameters to the `/boot/config.txt` file to make it all work.
-
 ## Can I avoid photoframe.sensenet.nu ?
 
 You could run the same service yourself (see `extras/`). It requires a DNS name which doesn't change and HTTPS support. You'll also need to change the relevant parts of this guide and the `frame.py` file so all references are correct. You might also be able to use server tokens instead, but that would require you to do more invasive changes. I don't have any support for this at this time.
 
-## I made a mistake and my RPi3 is unreachable
-
-### Option 1 - Hard but fast
-Install vmware player, run ubuntu on your computer and then attach the memory card to your computer. It should be recognized and allow you to
-edit the `/etc/network/interfaces` file located on the SD card. This method retains all work you've done.
-
-### Option 2 - Easy but slow
-Start over from step 1 and install your distribution of choice on the memory card
-
-## I want it to auto-update
-
-Easy, just schedule a cronjob to run `update.sh`. It will use git to update (if there are changes) as well as restart the service if it has updated. Ideally you run this once a week.
-
-If you're using the ready-made image, it will already update automatically
-
 ## I want to build my own ready-made image of this
 
-Check out the `photoframe` branch on https://github.com/mrworf/pi-gen ... It contains all the changes and patches needed to create the image.
+Check out the `photoframe` branch on https://github.com/mrworf/pi-gen ... It contains all the changes and patches needed to create the image. Starting with v1.1.1 it will match tags.
+
+## How do I get ssh access?
+
+Place a file called `ssh` on the boot drive and the ssh daemon will be enabled. Login is pi/raspberry (just like raspbian). Beware that if you start changing files inside `/root/photoframe/` the automatic update will no longer function as expected.
+
+## Are there any logs?
+
+By default, it logs very little and what it logs can be found under `/var/log/syslog`, just look for frame entries
+
+## What if I want more logs?
+
+If you're having issues and you want more details, do the following as root:
+```
+service frame stop
+/root/photoframe/frame.py --debug
+```
+This will cause photoframe to run in the foreground and provide tons of debug information
 
 # todo
 
 Tracks ideas and improvements planned. No specific timeframe is mentioned, but the order of things should be fairly true
 
-- Create RPi3 image with photoframe
-- Timezone control from web UI
+- Use fileupload for oauth data instead of copy-n-paste
 - Make photo sources modular (allow multiple Google Photos)
-- More services: Instagram, Amazon, ...
+- More services: Instagram, Amazon, local network share...
