@@ -54,11 +54,13 @@ class display:
 
 	def getDevice(self):
 		if self.params and self.params.split(' ')[0] == 'INTERNAL':
-			return '/dev/fb1'
+			device = '/dev/fb' + self.params.split(' ')[1]
+			if os.path.exists(device):
+				return device
 		return '/dev/fb0'
 
 	def isHDMI(self):
-		return self.getDevice() == '/dev/fb0'
+		return self.getDevice() == '/dev/fb0' and not display._isDPI()
 
 	def get(self):
 		if self.enabled:
@@ -205,19 +207,31 @@ class display:
 			subprocess.call(['cat' , '/dev/zero'], stdout=f, stderr=self.void)
 
 	@staticmethod
+	def _isDPI():
+		output = subprocess.check_output(['/opt/vc/bin/tvservice', '-s'], stderr=subprocess.STDOUT)
+		return '[LCD]' in output
+
+	@staticmethod
 	def _internaldisplay():
-		if os.path.exists('/dev/fb1'):
-			entry = {
-				'mode' : 'INTERNAL',
-				'code' : '0',
-				'width' : 0,
-				'height' : 0,
-				'rate' : 60,
-				'aspect_ratio' : '',
-				'scan' : '(internal)',
-				'3d_modes' : []
-			}
-			info = subprocess.check_output(['/bin/fbset', '-fb', '/dev/fb1'], stderr=subprocess.STDOUT).split('\n')
+		entry = {
+			'mode' : 'INTERNAL',
+			'code' : None,
+			'width' : 0,
+			'height' : 0,
+			'rate' : 60,
+			'aspect_ratio' : '',
+			'scan' : '(internal)',
+			'3d_modes' : [],
+			'reverse' : False
+		}
+		device = '/dev/fb1'
+		if not os.path.exists(device):
+			if display._isDPI():
+				device = '/dev/fb0'
+			else:
+				device = None
+		if device:
+			info = subprocess.check_output(['/bin/fbset', '-fb', device], stderr=subprocess.STDOUT).split('\n')
 			for line in info:
 				line = line.strip()
 				if line.startswith('geometry'):
@@ -225,9 +239,15 @@ class display:
 					entry['width'] = int(parts[1])
 					entry['height'] = int(parts[2])
 					entry['depth'] = int(parts[5])
-					entry['reverse'] = False
-					entry['code'] = int(parts[5])
-			if entry['code'] != 0:
+					entry['code'] = int(device[-1])
+				# rgba 8/16,8/8,8/0,8/24 <== Detect rgba order
+				if line.startswith('rgba'):
+					m = re.search('rgba [0-9]*/([0-9]*),[0-9]*/([0-9]*),[0-9]*/([0-9]*),[0-9]*/([0-9]*)', line)
+					if m is None:
+						logging.error('fbset output has changed, cannot parse')
+						return None
+					entry['reverse'] = m.group(1) != 0
+			if entry['code'] is not None:
 				return entry
 		return None
 
@@ -296,9 +316,9 @@ class display:
 			logging.warning('Invalid tvservice data, using first available instead')
 
 		return {
-			'width':res['width'], 
-			'height':res['height'], 
-			'depth':res['depth'], 
-			'reverse':res['reverse'], 
+			'width':res['width'],
+			'height':res['height'],
+			'depth':res['depth'],
+			'reverse':res['reverse'],
 			'tvservice':'%s %s %s' % (res['mode'], res['code'], 'HDMI')
 		}

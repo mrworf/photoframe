@@ -173,6 +173,13 @@ class drivers:
 		self._deletefolder(folder)
 		return True
 
+	def isint(self, value):
+		try:
+			int(value)
+			return True
+		except:
+			return False
+
 	def activate(self, driver=None):
 		'''
 		Activates a driver, meaning it gets copied into the necessary places and
@@ -221,7 +228,10 @@ class drivers:
 		if len(config['options']) > 0:
 			lines.append(drivers.MARKER)
 			for key in config['options']:
-				lines.append('%s=%s' % (key, config['options'][key]))
+				if self.isint(key):
+					lines.append('%s' % (config['options'][key]))
+				else:
+					lines.append('%s=%s' % (key, config['options'][key]))
 
 		# Save the new file
 		try:
