@@ -19,6 +19,7 @@ import logging
 import random
 
 class settings:
+	CONFIGFOLDER = '/root/photoframe_config'
 	CONFIGFILE = '/root/photoframe_config/settings.json'
 	COLORMATCH = '/root/photoframe_config/colortemp.sh'
 	DEPRECATED_USER = ['resolution']

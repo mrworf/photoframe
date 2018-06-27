@@ -192,6 +192,14 @@ function loadDrivers(funcOk)
 	});
 }
 
+function loadSensor(funcOk) {
+	$.ajax({
+		url:"/details/sensor"
+	}).done(function(data) {
+		funcOk(data);
+	});
+}
+
 function loadSettings(funcOk)
 {
 	$.ajax({
@@ -204,13 +212,17 @@ function loadSettings(funcOk)
 			value = data[key];
 			result[key] = value;
 		}
-		loadResolution(function(data) {
-			result['resolution'] = data;
-			loadTimezone(function(data) {
-				result['timezones'] = data;
-				loadDrivers(function(data) {
-					result['drivers'] = data;
-					funcOk(result);
+		loadSensor(function(data) {
+			result['sensor'] = data['sensor'];
+
+			loadResolution(function(data) {
+				result['resolution'] = data;
+				loadTimezone(function(data) {
+					result['timezones'] = data;
+					loadDrivers(function(data) {
+						result['drivers'] = data;
+						funcOk(result);
+					});
 				});
 			});
 		});

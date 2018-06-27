@@ -28,6 +28,7 @@ import logging
 import socket
 import threading
 import argparse
+import shutil
 
 from modules.remember import remember
 from modules.shutdown import shutdown
@@ -42,14 +43,14 @@ from modules.drivers import drivers
 
 void = open(os.devnull, 'wb')
 # Supercritical, since we store all photoframe files in a subdirectory, make sure to create it
-if not os.path.exists('/root/photoframe_config'):
+if not os.path.exists(settings.CONFIGFOLDER):
 	try:
-		os.mkdir('/root/photoframe_config')
+		os.mkdir(settings.CONFIGFOLDER)
 	except:
 		logging.exception('Unable to create configuration directory, cannot start')
 		sys.exit(255)
-elif not os.path.isdir('/root/photoframe_config'):
-	logging.error('/root/photoframe_config isn\'t a folder, cannot start')
+elif not os.path.isdir(settings.CONFIGFOLDER):
+	logging.error('%s isn\'t a folder, cannot start', settings.CONFIGFOLDER)
 	sys.exit(255)
 
 import requests
@@ -88,7 +89,7 @@ logging.getLogger('urllib3').setLevel(logging.ERROR)
 app = Flask(__name__, static_url_path='')
 app.config['UPLOAD_FOLDER'] = '/tmp/'
 user = None
-userfiles = ['/boot/http-auth.json', '/root/photoframe_config/http-auth.json']
+userfiles = ['/boot/http-auth.json', settings.CONFIGFOLDER + '/http-auth.json']
 
 for userfile in userfiles:
 	if os.path.exists(userfile):
@@ -225,16 +226,20 @@ def cfg_oauth_info():
 		abort(500)
 	data = request.json['web']
 	oauth.setOAuth(data)
-	with open('/root/photoframe_config/oauth.json', 'wb') as f:
+	with open(settings.CONFIGFOLDER + '/oauth.json', 'wb') as f:
 		json.dump(data, f);
 	return jsonify({'result' : True})
 
 @app.route('/reset')
 @auth.login_required
 def cfg_reset():
-	settings.userDefaults();
-	settings.set('oauth_token', None)
-	saveSettings()
+	# Remove driver if active
+	drivers.activate(None)
+	# Delete configuration data
+	if os.path.exists(settings.CONFIGFOLDER):
+		shutil.rmtree(settings.CONFIGFOLDER, True) 
+	# Reboot
+	subprocess.call(['/sbin/reboot'], stderr=void);
 	return jsonify({'reset': True})
 
 @app.route('/reboot')
@@ -274,6 +279,8 @@ def cfg_details(about):
 		return jsonify({'date':lines[2][5:].strip(),'commit':lines[0][7:].strip()})
 	elif about == 'color':
 		return jsonify(slideshow.getColorInformation())
+	elif about == 'sensor':
+		return jsonify({'sensor' : colormatch.hasSensor()})
 	elif about == 'display':
 		return jsonify({'display':display.isEnabled()})
 
@@ -402,9 +409,9 @@ def oauthSetToken(token):
 
 oauth = OAuth(settings.get('local-ip'), oauthSetToken, oauthGetToken)
 
-if os.path.exists('/root/photoframe_config/oauth.json'):
+if os.path.exists(settings.CONFIGFOLDER + '/oauth.json'):
 	try:
-		with open('/root/photoframe_config/oauth.json') as f:
+		with open(settings.CONFIGFOLDER + '/oauth.json') as f:
 			data = json.load(f)
 		if 'web' in data: # if someone added it via command-line
 			data = data['web']

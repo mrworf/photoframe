@@ -44,21 +44,23 @@
 		Turn on display at hour <input value="{{display-on}}" type="text" class="small aright" name="display-on" data-validate="time">
 		and off at hour <input value="{{display-off}}" type="text" class="small aright" name="display-off" data-validate="time"> (24h time)
 		<br>
+		{{#if sensor}}
 		Auto off if ambient lux is below 
 		<input value="{{autooff-lux}}" type="text" class="medium" name="autooff-lux" data-validate="lux"> lux for 
 		<input value="{{autooff-time}}" type="text" class="small" name="autooff-time" data-validate="minutes"> minutes
 		<br>
+		Current ambient environment <span id="lux">-.--</span> lux and <span id="colortemp">----</span>K color temperature.
+		<br>
+		{{/if}}
 		Power saving measures should 
 		<select name="powersave">
 			{{#select powersave}}
 			<option value="none">not be used</option>
 			<option value="schedule">use schedule</option>
-			<option value="sensor">use environment</option>
-			<option value="sensor+schedule">use schedule and environment</option>
+			<option value="sensor">use environment {{#if sensor}}{{else}}(no sensor){{/if}}</option>
+			<option value="sensor+schedule">use schedule and environment {{#if sensor}}{{else}}(no sensor){{/if}}</option>
 			{{/select}}
 		</select>
-		<br>
-		Current ambient environment <span id="lux">-.--</span> lux and <span id="colortemp">----</span>K color temperature.
 	</div>
 </div>
 <br>
