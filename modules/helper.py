@@ -59,6 +59,9 @@ class helper:
 
 	@staticmethod
 	def makeFullframe(filename, imageWidth, imageHeight):
+		'''
+		imageWidth and imageHeight refer to available display size
+		'''
 		name, ext = os.path.splitext(filename)
 		filename_temp = "%s-frame%s" % (name, ext)
 
@@ -76,26 +79,37 @@ class helper:
 		width = int(m.group(1))
 		height = int(m.group(2))
 
-		# Since we know we're looking to get an image which is 1920x??? we can make assumptions
 		width_border = 15
 		width_spacing = 3
 		border = None
 		borderSmall = None
+
+		# Calculate actual size of image based on display
+		aspect = (float)(imageWidth) / (float)(imageHeight)
+		adjWidth = width
+		adjHeight = height
+		if width > imageWidth:
+			adjWidth = imageWidth
+			adjHeight = (int)((float)(imageHeight) / aspect)
+		elif height > imageHeight:
+			adjHeight = imageHeight
+			adjWidth = (int)((float)(imageWidth) * aspect)
+
 		if height < imageHeight:
 			border = '0x%d' % width_border
 			spacing = '0x%d' % width_spacing
-			zoomed = ((imageHeight-height)/2-width_border)
-			logging.debug('Landscape image, reframing (visible zoomed is %d)' % zoomed)
-			if zoomed < 20:
-				logging.debug('That\'s less than 20px so skip reframing')
+			padding = ((adjHeight-height)/2-width_border)
+			logging.debug('Landscape image, reframing (padding required %dpx)' % padding)
+			if padding < 20:
+				logging.debug('That\'s less than 20px so skip reframing (%dx%d => %dx%d)', width, height, adjWidth, adjHeight)
 				return False
 		elif height > imageHeight:
 			border = '%dx0' % width_border
 			spacing = '%dx0' % width_spacing
-			zoomed = ((imageWidth-width)/2-width_border)
-			logging.debug('Portrait image, reframing (visible zoomed is %d)' % zoomed)
-			if zoomed < 20:
-				logging.debug('That\'s less than 20px so skip reframing')
+			padding = ((adjWidth-width)/2-width_border)
+			logging.debug('Portrait image, reframing (padding required %dpx)' % padding)
+			if padding < 20:
+				logging.debug('That\'s less than 20px so skip reframing (%dx%d => %dx%d)', width, height, adjWidth, adjHeight)
 				return False
 		else:
 			logging.debug('Image is fullscreen, no reframing needed')
