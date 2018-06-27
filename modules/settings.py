@@ -20,7 +20,9 @@ import random
 
 class settings:
 	CONFIGFILE = '/root/photoframe_config/settings.json'
+	COLORMATCH = '/root/photoframe_config/colortemp.sh'
 	DEPRECATED_USER = ['resolution']
+	DEPRECATED_SYSTEM = ['colortemp-script']
 
 	def __init__(self):
 		self.settings = {
@@ -29,7 +31,6 @@ class settings:
 			'local-ip' : None,
 			'tempfolder' : '/tmp/',
 			'colortemp' : None,
-			'colortemp-script' : '/root/photoframe_config/colortemp.sh',
 			'cfg' : None
 		}
 		self.userDefaults()
@@ -53,6 +54,7 @@ class settings:
 			'powersave' : '',
 			'shutdown-pin' : 26,
 			'display-driver' : 'none',
+			'display-special' : None,
 		}
 
 	def load(self):
@@ -70,6 +72,8 @@ class settings:
 					# Remove deprecated fields
 					for field in settings.DEPRECATED_USER:
 						self.settings['cfg'].pop(field, None)
+					for field in settings.DEPRECATED_SYSTEM:
+						self.settings.pop(field, None)
 
 					# Also, we need to iterate the settings and make sure numbers and floats are
 					# that, and not strings (which the old version did)
@@ -111,6 +115,10 @@ class settings:
 		if key in self.settings['cfg']:
 			return self.settings['cfg'][key]
 		logging.warning('Trying to access non-existent user config key "%s"' % key)
+		try:
+			a = 1 /0
+		except:
+			logging.exception('Where did this come from??')
 		return None
 
 	def addKeyword(self, keyword):
@@ -146,6 +154,8 @@ class settings:
 		self.settings[key] = self.convertToNative(value)
 
 	def get(self, key):
+		if key == 'colortemp-script':
+			return settings.COLORMATCH
 		if key in self.settings:
 			return self.settings[key]
 		logging.warning('Trying to access non-existent config key "%s"' % key)
