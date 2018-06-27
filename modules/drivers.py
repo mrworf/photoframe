@@ -67,7 +67,7 @@ class drivers:
 
 	def _parse(self, installer):
 		root = os.path.dirname(installer)
-		config = {'driver' : os.path.basename(root), 'install' : [], 'options' : {}}
+		config = {'version':2,'driver' : os.path.basename(root), 'install' : []}
 		state = 0
 		lc = 0
 		try:
@@ -80,8 +80,13 @@ class drivers:
 					if line.lower() == '[install]':
 						state = 1
 						continue
-					if line.lower() == '[options]':
+					if line.lower() == '[config]':
+						config['config'] = []
 						state = 2
+						continue
+					if line.lower() == '[options]':
+						config['options'] = {}
+						state = 3
 						continue
 					if state == 1:
 						src, dst = line.split('=', 1)
@@ -99,6 +104,9 @@ class drivers:
 							return None
 						config['install'].append({'src':src, 'dst':dst})
 					elif state == 2:
+						if line != '':
+							config['config'].append(line)
+					elif state == 3:
 						key, value = line.split('=', 1)
 						key = key.strip()
 						value = value.strip()
@@ -107,10 +115,23 @@ class drivers:
 							return None
 						if key in config['options']:
 							logging.warning('Key "%s" will be overridden since it is defined multiple times (Line %d)', lc)
+						if value.lower() in ['true', 'yes']:
+							value = True
+						elif value.lower() in ['false', 'no']:
+							value = False
 						config['options'][key] = value
 		except:
 			logging.exception('Failed to read INSTALL manifest')
 			return None
+
+		# Support old INSTALL format
+		if 'config' not in config:
+			logging.info('All drivers have typically ONE config value, this must be an old INSTALL file, try to compensate')
+			config['config'] = []
+			for k in config['options']:
+				config['config'].append('%s=%s' % (k, config['options'][k]))
+			config.pop('options', None)
+
 		return config
 
 	def install(self, file):
@@ -171,7 +192,7 @@ class drivers:
 			json.dump(config, f)
 
 		self._deletefolder(folder)
-		return True
+		return config
 
 	def isint(self, value):
 		try:
@@ -190,9 +211,9 @@ class drivers:
 			# Check that this driver exists
 			if driver not in driverlist:
 				logging.error('Tried to active non-existant driver "%s"', driver)
-				return False
+				return None
 
-		config = {'name':'', 'install':[], 'options':{}}
+		config = {'name':'', 'install':[], 'config' : [], 'options':{}}
 		root = ''
 		if driver:
 			try:
@@ -201,7 +222,16 @@ class drivers:
 				root = driverlist[driver]
 			except:
 				logging.exception('Failed to load manifest for %s', driver)
-				return False
+				return None
+			# Reformat old
+			if 'version' not in config:
+				logging.debug('Old driver, rejigg the data')
+				if 'options' in config:
+					config['config'] = config['options']
+					config.pop('options', None)
+				if 'special' in config:
+					config['options'] = config['special']
+					config.pop('special', None)
 
 		# Copy the files into desired locations
 		for copy in config['install']:
@@ -209,7 +239,7 @@ class drivers:
 				shutil.copyfile(os.path.join(root, copy['src']), copy['dst'])
 			except:
 				logging.exception('Failed to copy "%s" to "%s"', copy['src'], copy['dst'])
-				return False
+				return None
 
 		# Next, load the config.txt and insert/replace our section
 		lines = []
@@ -222,16 +252,13 @@ class drivers:
 					lines.append(line)
 		except:
 			logging.exception('Failed to read /boot/config.txt')
-			return False
+			return None
 
 		# Add our options
-		if len(config['options']) > 0:
+		if len(config['config']) > 0:
 			lines.append(drivers.MARKER)
-			for key in config['options']:
-				if self.isint(key):
-					lines.append('%s' % (config['options'][key]))
-				else:
-					lines.append('%s=%s' % (key, config['options'][key]))
+			for entry in config['config']:
+				lines.append(entry)
 
 		# Save the new file
 		try:
@@ -240,7 +267,7 @@ class drivers:
 					f.write('%s\n' % line)
 		except:
 			logging.exception('Failed to generate new config.txt')
-			return False
+			return None
 
 		# On success, we rename and delete the old config
 		try:
@@ -253,4 +280,8 @@ class drivers:
 				os.rename('/boot/config.txt.old', '/boot/config.txt.original')
 		except:
 			logging.exception('Failed to activate new config.txt, you may need to restore the config.txt')
-		return True
+			return None
+		if 'special' in config:
+			return config['special']
+		else:
+			return {}

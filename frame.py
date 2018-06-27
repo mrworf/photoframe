@@ -145,24 +145,26 @@ def cfg_keyvalue(key, value):
 			abort(404)
 			return
 		settings.setUser(key, value)
-		settings.save()
 		if key in ['display-driver']:
 			drv = settings.getUser('display-driver')
 			if drv == 'none':
 				drv = None
-			if not drivers.activate(drv):
+			special = drivers.activate(drv)
+			if special is None:
 				settings.setUser('display-driver', 'none')
+				settings.setUser('display-special', None)
 				status = False
+			else:
+				settings.setUser('display-special', special)
 		if key in ['timezone']:
 			# Make sure we convert + to /
 			settings.setUser('timezone', value.replace('+', '/'))
 			helper.timezoneSet(settings.getUser('timezone'))
 		if key in ['resolution', 'tvservice']:
-			width, height, tvservice = display.setConfiguration(value)
+			width, height, tvservice = display.setConfiguration(value, settings.getUser('display-special'))
 			settings.setUser('tvservice', tvservice)
 			settings.setUser('width',  width)
 			settings.setUser('height', height)
-			settings.save()
 			display.enable(True, True)
 		if key in ['display-on', 'display-off']:
 			timekeeper.setConfiguration(settings.getUser('display-on'), settings.getUser('display-off'))
@@ -173,6 +175,7 @@ def cfg_keyvalue(key, value):
 		if key in ['shutdown-pin']:
 			powermanagement.stopmonitor()
 			powermanagement = shutdown(settings.getUser('shutdown-pin'))
+		settings.save()
 		return jsonify({'status':status})
 
 	elif request.method == 'GET':
@@ -276,26 +279,50 @@ def cfg_details(about):
 
 	abort(404)
 
-@app.route('/custom-driver', methods=['POST'])
+@app.route('/upload/<item>', methods=['POST'])
 @auth.login_required
-def upload_driver():
+def upload(item):
+	retval = {'status':200, 'return':{}}
+
 	if request.method == 'POST':
 		# check if the post request has the file part
-		if 'driver' not in request.files:
+		if 'filename' not in request.files:
 			logging.error('No file part')
 			abort(405)
-		file = request.files['driver']
-		# if user does not select file, browser also
-		# submit an empty part without filename
-		if file.filename == '' or not file.filename.lower().endswith('.zip'):
-			logging.error('No filename or invalid filename')
-			abort(405)
+		file = request.files['filename']
+		if item == 'driver':
+			# if user does not select file, browser also
+			# submit an empty part without filename
+			if file.filename == '' or not file.filename.lower().endswith('.zip'):
+				logging.error('No filename or invalid filename')
+				abort(405)
 		filename = os.path.join('/tmp/', secure_filename(file.filename))
 		file.save(filename)
-		if drivers.install(filename):
-			return ''
-		else:
-			abort(500)
+
+		if item == 'driver':
+			result = drivers.install(filename)
+			if result is not False:
+				# Check and see if this is the driver we're using
+				if result['driver'] == settings.getUser('display-driver'):
+					# Yes it is, we need to activate it and return info about restarting
+					special = drivers.activate(result['driver'])
+					if special is None:
+						settings.setUser('display-driver', 'none')
+						settings.setUser('display-special', None)
+						retval['status'] = 500
+					else:
+						settings.setUser('display-special', special)
+						retval['return'] = {'reboot' : True}
+				else:
+					retval['return'] = {'reboot' : False}
+
+		try:
+			os.remove(filename)
+		except:
+			pass
+		if retval['status'] == 200:
+			return jsonify(retval['return'])
+		abort(retval['status'])
 	abort(405)
 
 @app.route("/link")
@@ -346,7 +373,7 @@ if settings.getUser('timezone') == '':
 	settings.setUser('timezone', helper.timezoneCurrent())
 	settings.save()
 
-width, height, tvservice = display.setConfiguration(settings.getUser('tvservice'))
+width, height, tvservice = display.setConfiguration(settings.getUser('tvservice'), settings.getUser('display-special'))
 settings.setUser('tvservice', tvservice)
 settings.setUser('width',  width)
 settings.setUser('height', height)

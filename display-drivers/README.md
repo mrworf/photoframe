@@ -23,7 +23,7 @@ file and create the following structure:
 ```
 [install]
 
-[options]
+[config]
 ```
 
 ### The install section
@@ -45,19 +45,34 @@ locations with different names (but it's the same file).
 
 NOTE! The installer will NOT create any directories when activating.
 
-### The options section
+### The config section
 
-This is also a `key/value` setup, but unlike the `install` section, here the key is UNIQUE. If you
-define a key multiple times, only the last definition will be used.
+This is a list of directives which should be placed in the `config.txt`
 
 At the very least, this section holds the key `dtoverlay` which is the `/boot/config.txt` keyword
 for pointing out an overlay to use. But you can add as many things as you'd like (some DPI displays
-require a multitude of key/value pairs).
+require a number of config options to be set).
 
 In the waveshare 3.5" display case, all it does is point out the overlay:
 ```
-[options]
+[config]
 dtoverlay=waveshare35b
+```
+
+### The options section
+
+Yes, there is a third optional section. The `options` section. This holds specific driver tweaks
+which photoframe needs to take into consideration.
+
+For now, the only option supported is `reverse` which will override the subpixel order. Setting this
+to True, will cause the format to be BGR, False will be RGB. 
+
+Waveshare 3.5" model B requires this to be false since fbset is reporting the incorrect subpixel
+order.
+
+```
+[options]
+reverse=false
 ```
 
 ## Saving the display driver package
@@ -74,20 +89,3 @@ Simply upload it again. The old driver will be deleted and replaced with the new
 ## This all seem complicated, do you have an example?
 
 Sure, just unzip the `waveshare35b.zip` and look at it for guidance.
-
-## What is `manifest.json` ?
-
-That's a generated file by photoframe which it creates upon installing a driver. You can
-create sub-directories in `display-drivers` with pre-processed drivers which will then be
-available by default when installing photoframe.
-
-Note that if you install a driver with the same name as one of the provided ones, the new
-driver will take priority
-
-## Known gotchas
-
-If you install a driver which you're already using, you need to switch to HDMI and back to
-force update the active driver (and no, no need to reboot when going to HDMI, only when
-you go back to your updated driver). 
-
-This will eventually be fixed.

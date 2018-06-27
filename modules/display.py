@@ -24,18 +24,20 @@ class display:
 	def __init__(self):
 		self.void = open(os.devnull, 'wb')
 		self.params = None
+		self.special = None
 
-	def setConfiguration(self, tvservice_params):
+	def setConfiguration(self, tvservice_params, special=None):
 		self.enabled = True
 
 		# Erase old picture
 		if self.params is not None:
 			self.clear()
 
-		result = display.validate(tvservice_params)
+		result = display.validate(tvservice_params, special)
 		if result is None:
 			self.enabled = False
 			self.params = None
+			self.special = None
 			return (1280, 720, '')
 
 		self.width = result['width']
@@ -248,6 +250,7 @@ class display:
 						return None
 					entry['reverse'] = m.group(1) != 0
 			if entry['code'] is not None:
+				logging.debug('Internal display: ' + repr(entry))
 				return entry
 		return None
 
@@ -300,7 +303,7 @@ class display:
 		return sorted(result, key=lambda k: k['width']*k['height'])
 
 	@staticmethod
-	def validate(tvservice):
+	def validate(tvservice, special):
 		# Takes a string and returns valid width, height, depth and service
 		items = tvservice.split(' ')
 		resolutions = display.available()
@@ -315,10 +318,16 @@ class display:
 		else:
 			logging.warning('Invalid tvservice data, using first available instead')
 
-		return {
+		result = {
 			'width':res['width'],
 			'height':res['height'],
 			'depth':res['depth'],
 			'reverse':res['reverse'],
 			'tvservice':'%s %s %s' % (res['mode'], res['code'], 'HDMI')
 		}
+
+		# Allow items to be overriden
+		if special and 'INTERNAL' in result['tvservice']:
+			if 'reverse' in special:
+				result['reverse'] = special['reverse']
+		return result
