@@ -206,7 +206,7 @@ class slideshow:
   def getImages(self, keyword):
     # Create filename from keyword
     filename = hashlib.new('sha1')
-    filename.update(keyword)
+    filename.update(repr(keyword))
     filename = filename.hexdigest() + ".json"
     filename = os.path.join(self.settings.get('tempfolder'), filename)
 
