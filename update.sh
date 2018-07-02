@@ -71,7 +71,10 @@ if ! diff /tmp/server.txt /tmp/client.txt >/dev/null ; then
 	# Run again with the post option so any necessary changes can be carried out
 	/root/photoframe/update.sh post
 
-	systemctl restart frame.service
+	# Skip service restart if we were running an update only
+  if [ "$1" != "updateonly" ]; then
+		systemctl restart frame.service
+	fi
 fi
 
 # Clean up

@@ -44,14 +44,14 @@ from modules.drivers import drivers
 void = open(os.devnull, 'wb')
 # Supercritical, since we store all photoframe files in a subdirectory, make sure to create it
 if not os.path.exists(settings.CONFIGFOLDER):
-	try:
-		os.mkdir(settings.CONFIGFOLDER)
-	except:
-		logging.exception('Unable to create configuration directory, cannot start')
-		sys.exit(255)
+  try:
+    os.mkdir(settings.CONFIGFOLDER)
+  except:
+    logging.exception('Unable to create configuration directory, cannot start')
+    sys.exit(255)
 elif not os.path.isdir(settings.CONFIGFOLDER):
-	logging.error('%s isn\'t a folder, cannot start', settings.CONFIGFOLDER)
-	sys.exit(255)
+  logging.error('%s isn\'t a folder, cannot start', settings.CONFIGFOLDER)
+  sys.exit(255)
 
 import requests
 from requests_oauthlib import OAuth2Session
@@ -62,14 +62,14 @@ from werkzeug.utils import secure_filename
 
 # used if we don't find authentication json
 class NoAuth:
-	def __init__(self):
-		pass
+  def __init__(self):
+    pass
 
-	def login_required(self, fn):
-		def wrap(*args, **kwargs):
-			return fn(*args, **kwargs)
-		wrap.func_name = fn.func_name
-		return wrap
+  def login_required(self, fn):
+    def wrap(*args, **kwargs):
+      return fn(*args, **kwargs)
+    wrap.func_name = fn.func_name
+    return wrap
 
 parser = argparse.ArgumentParser(description="PhotoFrame - A RPi3 based digital photoframe", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--logfile', default=None, help="Log to file instead of stdout")
@@ -79,9 +79,9 @@ parser.add_argument('--debug', action='store_true', default=False, help='Enable 
 cmdline = parser.parse_args()
 
 if cmdline.debug:
-	logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+  logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 else:
-	logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+  logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 logging.getLogger('oauthlib').setLevel(logging.ERROR)
 logging.getLogger('urllib3').setLevel(logging.ERROR)
@@ -92,31 +92,31 @@ user = None
 userfiles = ['/boot/http-auth.json', settings.CONFIGFOLDER + '/http-auth.json']
 
 for userfile in userfiles:
-	if os.path.exists(userfile):
-		logging.debug('Found "%s", loading the data' % userfile)
-		try:
-			with open(userfile, 'rb') as f:
-				user = json.load(f)
-				if 'user' not in user or 'password' not in user:
-					logging.warning("\"%s\" doesn't contain a user and password key" % userfile)
-					user = None
-				else:
-					break
-		except:
-			logging.exception('Unable to load JSON from "%s"' % userfile)
-			user = None
+  if os.path.exists(userfile):
+    logging.debug('Found "%s", loading the data' % userfile)
+    try:
+      with open(userfile, 'rb') as f:
+        user = json.load(f)
+        if 'user' not in user or 'password' not in user:
+          logging.warning("\"%s\" doesn't contain a user and password key" % userfile)
+          user = None
+        else:
+          break
+    except:
+      logging.exception('Unable to load JSON from "%s"' % userfile)
+      user = None
 
 if user is None:
-	logging.info('No http-auth.json found, disabling http authentication')
+  logging.info('No http-auth.json found, disabling http authentication')
 
 auth = NoAuth()
 if user is not None:
-	auth = HTTPBasicAuth()
-	@auth.get_password
-	def check_password(username):
-		if user['user'] == username:
-			return user['password']
-		return None
+  auth = HTTPBasicAuth()
+  @auth.get_password
+  def check_password(username):
+    if user['user'] == username:
+      return user['password']
+    return None
 
 @app.after_request
 def nocache(r):
@@ -130,255 +130,255 @@ def nocache(r):
 @app.route('/setting/<key>/<value>', methods=['PUT'])
 @auth.login_required
 def cfg_keyvalue(key, value):
-	global powermanagement
+  global powermanagement
 
-	# Depending on PUT/GET we will either change or read
-	# values. If key is unknown, then this call fails with 404
-	if key is not None:
-		if settings.getUser(key) is None:
-			abort(404)
-			return
+  # Depending on PUT/GET we will either change or read
+  # values. If key is unknown, then this call fails with 404
+  if key is not None:
+    if settings.getUser(key) is None:
+      abort(404)
+      return
 
-	if request.method == 'PUT':
-		status = True
-		if key == "keywords":
-			# Keywords has its own API
-			abort(404)
-			return
-		settings.setUser(key, value)
-		if key in ['display-driver']:
-			drv = settings.getUser('display-driver')
-			if drv == 'none':
-				drv = None
-			special = drivers.activate(drv)
-			if special is None:
-				settings.setUser('display-driver', 'none')
-				settings.setUser('display-special', None)
-				status = False
-			else:
-				settings.setUser('display-special', special)
-		if key in ['timezone']:
-			# Make sure we convert + to /
-			settings.setUser('timezone', value.replace('+', '/'))
-			helper.timezoneSet(settings.getUser('timezone'))
-		if key in ['resolution', 'tvservice']:
-			width, height, tvservice = display.setConfiguration(value, settings.getUser('display-special'))
-			settings.setUser('tvservice', tvservice)
-			settings.setUser('width',  width)
-			settings.setUser('height', height)
-			display.enable(True, True)
-		if key in ['display-on', 'display-off']:
-			timekeeper.setConfiguration(settings.getUser('display-on'), settings.getUser('display-off'))
-		if key in ['autooff-lux', 'autooff-time']:
-			timekeeper.setAmbientSensitivity(settings.getUser('autooff-lux'), settings.getUser('autooff-time'))
-		if key in ['powersave']:
-			timekeeper.setPowermode(settings.getUser('powersave'))
-		if key in ['shutdown-pin']:
-			powermanagement.stopmonitor()
-			powermanagement = shutdown(settings.getUser('shutdown-pin'))
-		settings.save()
-		return jsonify({'status':status})
+  if request.method == 'PUT':
+    status = True
+    if key == "keywords":
+      # Keywords has its own API
+      abort(404)
+      return
+    settings.setUser(key, value)
+    if key in ['display-driver']:
+      drv = settings.getUser('display-driver')
+      if drv == 'none':
+        drv = None
+      special = drivers.activate(drv)
+      if special is None:
+        settings.setUser('display-driver', 'none')
+        settings.setUser('display-special', None)
+        status = False
+      else:
+        settings.setUser('display-special', special)
+    if key in ['timezone']:
+      # Make sure we convert + to /
+      settings.setUser('timezone', value.replace('+', '/'))
+      helper.timezoneSet(settings.getUser('timezone'))
+    if key in ['resolution', 'tvservice']:
+      width, height, tvservice = display.setConfiguration(value, settings.getUser('display-special'))
+      settings.setUser('tvservice', tvservice)
+      settings.setUser('width',  width)
+      settings.setUser('height', height)
+      display.enable(True, True)
+    if key in ['display-on', 'display-off']:
+      timekeeper.setConfiguration(settings.getUser('display-on'), settings.getUser('display-off'))
+    if key in ['autooff-lux', 'autooff-time']:
+      timekeeper.setAmbientSensitivity(settings.getUser('autooff-lux'), settings.getUser('autooff-time'))
+    if key in ['powersave']:
+      timekeeper.setPowermode(settings.getUser('powersave'))
+    if key in ['shutdown-pin']:
+      powermanagement.stopmonitor()
+      powermanagement = shutdown(settings.getUser('shutdown-pin'))
+    settings.save()
+    return jsonify({'status':status})
 
-	elif request.method == 'GET':
-		if key is None:
-			return jsonify(settings.getUser())
-		else:
-			return jsonify({key : settings.getUser(key)})
-	abort(404)
+  elif request.method == 'GET':
+    if key is None:
+      return jsonify(settings.getUser())
+    else:
+      return jsonify({key : settings.getUser(key)})
+  abort(404)
 
 @app.route('/keywords', methods=['GET'])
 @app.route('/keywords/add', methods=['POST'])
 @app.route('/keywords/delete', methods=['POST'])
 @auth.login_required
 def cfg_keywords():
-	if request.method == 'GET':
-		return jsonify({'keywords' : settings.getUser('keywords')})
-	elif request.method == 'POST' and request.json is not None:
-		result = True
-		if 'id' not in request.json:
-			if settings.addKeyword(request.json['keywords']):
-				settings.save()
-		else:
-			if settings.removeKeyword(request.json['id']):
-				settings.save()
-			else:
-				result = False
-		return jsonify({'status':result})
-	abort(500)
+  if request.method == 'GET':
+    return jsonify({'keywords' : settings.getUser('keywords')})
+  elif request.method == 'POST' and request.json is not None:
+    result = True
+    if 'id' not in request.json:
+      if settings.addKeyword(request.json['keywords']):
+        settings.save()
+    else:
+      if settings.removeKeyword(request.json['id']):
+        settings.save()
+      else:
+        result = False
+    return jsonify({'status':result})
+  abort(500)
 
 @app.route('/has/token')
 @app.route('/has/oauth')
 @auth.login_required
 def cfg_hasthis():
-	result = False
-	if '/token' in request.path:
-		if settings.get('oauth_token') is not None:
-			result = True
-	elif '/oauth' in request.path:
-		result = oauth.hasOAuth()
+  result = False
+  if '/token' in request.path:
+    if settings.get('oauth_token') is not None:
+      result = True
+  elif '/oauth' in request.path:
+    result = oauth.hasOAuth()
 
-	return jsonify({'result' : result})
+  return jsonify({'result' : result})
 
 @app.route('/oauth', methods=['POST'])
 @auth.login_required
 def cfg_oauth_info():
-	if request.json is None or 'web' not in request.json:
-		abort(500)
-	data = request.json['web']
-	oauth.setOAuth(data)
-	with open(settings.CONFIGFOLDER + '/oauth.json', 'wb') as f:
-		json.dump(data, f);
-	return jsonify({'result' : True})
+  if request.json is None or 'web' not in request.json:
+    abort(500)
+  data = request.json['web']
+  oauth.setOAuth(data)
+  with open(settings.CONFIGFOLDER + '/oauth.json', 'wb') as f:
+    json.dump(data, f);
+  return jsonify({'result' : True})
 
 @app.route('/reset')
 @auth.login_required
 def cfg_reset():
-	# Remove driver if active
-	drivers.activate(None)
-	# Delete configuration data
-	if os.path.exists(settings.CONFIGFOLDER):
-		shutil.rmtree(settings.CONFIGFOLDER, True) 
-	# Reboot
-	subprocess.call(['/sbin/reboot'], stderr=void);
-	return jsonify({'reset': True})
+  # Remove driver if active
+  drivers.activate(None)
+  # Delete configuration data
+  if os.path.exists(settings.CONFIGFOLDER):
+    shutil.rmtree(settings.CONFIGFOLDER, True) 
+  # Reboot
+  subprocess.call(['/sbin/reboot'], stderr=void);
+  return jsonify({'reset': True})
 
 @app.route('/reboot')
 @auth.login_required
 def cfg_reboot():
-	subprocess.call(['/sbin/reboot'], stderr=void);
-	return jsonify({'reboot' : True})
+  subprocess.call(['/sbin/reboot'], stderr=void);
+  return jsonify({'reboot' : True})
 
 @app.route('/shutdown')
 @auth.login_required
 def cfg_shutdown():
-	subprocess.call(['/sbin/poweroff'], stderr=void);
-	return jsonify({'shutdown': True})
+  subprocess.call(['/sbin/poweroff'], stderr=void);
+  return jsonify({'shutdown': True})
 
 @app.route('/details/<about>')
 @auth.login_required
 def cfg_details(about):
-	if about == 'tvservice':
-		result = {}
-		result['resolution'] = display.available()
-		result['status'] = display.current()
-		return jsonify(result)
-	elif about == 'current':
-		image, mime = display.get()
-		response = app.make_response(image)
-		response.headers.set('Content-Type', mime)
-		return response
-	elif about == 'drivers':
-		result = drivers.list().keys()
-		return jsonify(result)
-	elif about == 'timezone':
-		result = helper.timezoneList()
-		return jsonify(result)
-	elif about == 'version':
-		output = subprocess.check_output(['git', 'log', '-n1'], stderr=void)
-		lines = output.split('\n')
-		return jsonify({'date':lines[2][5:].strip(),'commit':lines[0][7:].strip()})
-	elif about == 'color':
-		return jsonify(slideshow.getColorInformation())
-	elif about == 'sensor':
-		return jsonify({'sensor' : colormatch.hasSensor()})
-	elif about == 'display':
-		return jsonify({'display':display.isEnabled()})
+  if about == 'tvservice':
+    result = {}
+    result['resolution'] = display.available()
+    result['status'] = display.current()
+    return jsonify(result)
+  elif about == 'current':
+    image, mime = display.get()
+    response = app.make_response(image)
+    response.headers.set('Content-Type', mime)
+    return response
+  elif about == 'drivers':
+    result = drivers.list().keys()
+    return jsonify(result)
+  elif about == 'timezone':
+    result = helper.timezoneList()
+    return jsonify(result)
+  elif about == 'version':
+    output = subprocess.check_output(['git', 'log', '-n1'], stderr=void)
+    lines = output.split('\n')
+    return jsonify({'date':lines[2][5:].strip(),'commit':lines[0][7:].strip()})
+  elif about == 'color':
+    return jsonify(slideshow.getColorInformation())
+  elif about == 'sensor':
+    return jsonify({'sensor' : colormatch.hasSensor()})
+  elif about == 'display':
+    return jsonify({'display':display.isEnabled()})
 
-	abort(404)
+  abort(404)
 
 @app.route('/upload/<item>', methods=['POST'])
 @auth.login_required
 def upload(item):
-	retval = {'status':200, 'return':{}}
+  retval = {'status':200, 'return':{}}
 
-	if request.method == 'POST':
-		# check if the post request has the file part
-		if 'filename' not in request.files:
-			logging.error('No file part')
-			abort(405)
-		file = request.files['filename']
-		if item == 'driver':
-			# if user does not select file, browser also
-			# submit an empty part without filename
-			if file.filename == '' or not file.filename.lower().endswith('.zip'):
-				logging.error('No filename or invalid filename')
-				abort(405)
-		filename = os.path.join('/tmp/', secure_filename(file.filename))
-		file.save(filename)
+  if request.method == 'POST':
+    # check if the post request has the file part
+    if 'filename' not in request.files:
+      logging.error('No file part')
+      abort(405)
+    file = request.files['filename']
+    if item == 'driver':
+      # if user does not select file, browser also
+      # submit an empty part without filename
+      if file.filename == '' or not file.filename.lower().endswith('.zip'):
+        logging.error('No filename or invalid filename')
+        abort(405)
+    filename = os.path.join('/tmp/', secure_filename(file.filename))
+    file.save(filename)
 
-		if item == 'driver':
-			result = drivers.install(filename)
-			if result is not False:
-				# Check and see if this is the driver we're using
-				if result['driver'] == settings.getUser('display-driver'):
-					# Yes it is, we need to activate it and return info about restarting
-					special = drivers.activate(result['driver'])
-					if special is None:
-						settings.setUser('display-driver', 'none')
-						settings.setUser('display-special', None)
-						retval['status'] = 500
-					else:
-						settings.setUser('display-special', special)
-						retval['return'] = {'reboot' : True}
-				else:
-					retval['return'] = {'reboot' : False}
+    if item == 'driver':
+      result = drivers.install(filename)
+      if result is not False:
+        # Check and see if this is the driver we're using
+        if result['driver'] == settings.getUser('display-driver'):
+          # Yes it is, we need to activate it and return info about restarting
+          special = drivers.activate(result['driver'])
+          if special is None:
+            settings.setUser('display-driver', 'none')
+            settings.setUser('display-special', None)
+            retval['status'] = 500
+          else:
+            settings.setUser('display-special', special)
+            retval['return'] = {'reboot' : True}
+        else:
+          retval['return'] = {'reboot' : False}
 
-		try:
-			os.remove(filename)
-		except:
-			pass
-		if retval['status'] == 200:
-			return jsonify(retval['return'])
-		abort(retval['status'])
-	abort(405)
+    try:
+      os.remove(filename)
+    except:
+      pass
+    if retval['status'] == 200:
+      return jsonify(retval['return'])
+    abort(retval['status'])
+  abort(405)
 
 @app.route("/link")
 @auth.login_required
 def oauth_step1():
-	return redirect(oauth.initiate())
+  return redirect(oauth.initiate())
 
 @app.route("/callback", methods=["GET"])
 @auth.login_required
 def oauth_step3():
-	oauth.complete(request.url)
-	return redirect(url_for('.complete'))
+  oauth.complete(request.url)
+  return redirect(url_for('.complete'))
 
 @app.route("/complete", methods=['GET'])
 @auth.login_required
 def complete():
-	slideshow.start(True)
-	return redirect('/')
+  slideshow.start(True)
+  return redirect('/')
 
 @app.route('/', defaults={'file':None})
 @app.route('/<file>')
 @auth.login_required
 def web_main(file):
-	if file is None:
-		return app.send_static_file('index.html')
-	else:
-		return app.send_static_file(file)
+  if file is None:
+    return app.send_static_file('index.html')
+  else:
+    return app.send_static_file(file)
 
 @app.route('/template/<file>')
 @auth.login_required
 def web_template(file):
-	return app.send_static_file('template/' + file)
+  return app.send_static_file('template/' + file)
 
 settings = settings()
 drivers = drivers()
 display = display()
 
 if not settings.load():
-	# First run, grab display settings from current mode
-	current = display.current()
-	if current is not None:
-		logging.info('No display settings, using: %s' % repr(current))
-		settings.setUser('tvservice', '%s %s HDMI' % (current['mode'], current['code']))
-		settings.save()
-	else:
-		logging.info('No display attached?')
+  # First run, grab display settings from current mode
+  current = display.current()
+  if current is not None:
+    logging.info('No display settings, using: %s' % repr(current))
+    settings.setUser('tvservice', '%s %s HDMI' % (current['mode'], current['code']))
+    settings.save()
+  else:
+    logging.info('No display attached?')
 if settings.getUser('timezone') == '':
-	settings.setUser('timezone', helper.timezoneCurrent())
-	settings.save()
+  settings.setUser('timezone', helper.timezoneCurrent())
+  settings.save()
 
 width, height, tvservice = display.setConfiguration(settings.getUser('tvservice'), settings.getUser('display-special'))
 settings.setUser('tvservice', tvservice)
@@ -391,33 +391,33 @@ display.enable(True, True)
 
 # Spin until we have internet, check every 10s
 while True:
-	settings.set('local-ip', helper.getIP())
+  settings.set('local-ip', helper.getIP())
 
-	if settings.get('local-ip') is None:
-		logging.error('You must have functional internet connection to use this app')
-		display.message('No internet')
-		time.sleep(10)
-	else:
-		break
+  if settings.get('local-ip') is None:
+    logging.error('You must have functional internet connection to use this app')
+    display.message('No internet')
+    time.sleep(10)
+  else:
+    break
 
 def oauthGetToken():
-	return settings.get('oauth_token')
+  return settings.get('oauth_token')
 
 def oauthSetToken(token):
-	settings.set('oauth_token', token)
-	settings.save()
+  settings.set('oauth_token', token)
+  settings.save()
 
 oauth = OAuth(settings.get('local-ip'), oauthSetToken, oauthGetToken)
 
 if os.path.exists(settings.CONFIGFOLDER + '/oauth.json'):
-	try:
-		with open(settings.CONFIGFOLDER + '/oauth.json') as f:
-			data = json.load(f)
-		if 'web' in data: # if someone added it via command-line
-			data = data['web']
-		oauth.setOAuth(data)
-	except:
-		logging.exception('OAuth file is corrupt, do not use')
+  try:
+    with open(settings.CONFIGFOLDER + '/oauth.json') as f:
+      data = json.load(f)
+    if 'web' in data: # if someone added it via command-line
+      data = data['web']
+    oauth.setOAuth(data)
+  except:
+    logging.exception('OAuth file is corrupt, do not use')
 
 # Prep random
 random.seed(long(time.clock()))
@@ -434,10 +434,10 @@ colormatch.setUpdateListener(timekeeper.sensorListener)
 powermanagement = shutdown(settings.getUser('shutdown-pin'))
 
 if __name__ == "__main__":
-	# This allows us to use a plain HTTP callback
-	os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-	app.secret_key = os.urandom(24)
-	slideshow.start()
-	app.run(debug=False, port=cmdline.port, host=cmdline.listen )
+  # This allows us to use a plain HTTP callback
+  os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+  app.secret_key = os.urandom(24)
+  slideshow.start()
+  app.run(debug=False, port=cmdline.port, host=cmdline.listen )
 
 sys.exit(0)
