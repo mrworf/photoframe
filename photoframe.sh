@@ -1,8 +1,10 @@
+#!/bin/bash
+#
 # This file is part of photoframe (https://github.com/mrworf/photoframe).
 #
 # photoframe is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 2 of the License, or
+# the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
 # photoframe is distributed in the hope that it will be useful,
@@ -13,17 +15,22 @@
 # You should have received a copy of the GNU General Public License
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
-[Unit]
-Description=Photo Frame
-After=network.target
 
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/root/photoframe
-ExecStart=/root/photoframe/photoframe.sh
-SyslogIdentifier=photoframe
-#Restart=on-abort
+# Make sure we're running from where the script is located
+cd "$(dirname "$0")"
 
-[Install]
-WantedBy=multi-user.target
+# Allow photoframe to change itself
+if [ -f /root/photoframe_config/options ]; then
+  source /root/photoframe_config/options
+fi
+
+# If we never did update, this would be a good time
+if [ ! -f /root/.firstupdate ]; then
+  ./update.sh onlyupdate
+fi
+
+# Allows options to inject pre/post commands and options,
+# paving the way for grabbing logs via web interface.
+${PRERUN}
+${PRECMD} ./frame.py ${POSTCMD}
+${POSTRUN}

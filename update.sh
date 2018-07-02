@@ -76,6 +76,8 @@ if ! diff /tmp/server.txt /tmp/client.txt >/dev/null ; then
 		systemctl restart frame.service
 	fi
 fi
+# Mark this has being done
+touch /root/.firstupdate
 
 # Clean up
 rm /tmp/server.txt 2>&- 1>&-
