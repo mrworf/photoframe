@@ -71,7 +71,7 @@ git log -n1 --oneline >/tmp/client.txt
 
 if ! diff /tmp/server.txt /tmp/client.txt >/dev/null ; then
 	echo "New version is available (for branch ${BRANCH})"
-	git pull --rebase 2>&1 >>/tmp/update.log || error "Unable to update"
+	git pull --rebase >>/tmp/update.log 2>&1 || error "Unable to update"
 
 	# Run again with the post option so any necessary changes can be carried out
 	/root/photoframe/update.sh post
@@ -87,7 +87,7 @@ fi
 touch /root/.firstupdate
 
 # Clean up
-rm /tmp/server.txt 2>&- 1>&-
-rm /tmp/client.txt 2>&- 1>&-
-rm /tmp/update.log 2>&- 1>&-
+rm /tmp/server.txt 2>/dev/null 1>/dev/null
+rm /tmp/client.txt 2>/dev/null 1>/dev/null
+rm /tmp/update.log 2>/dev/null 1>/dev/null
 exit 0
