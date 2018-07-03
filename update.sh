@@ -28,8 +28,6 @@ function error
 cd /root/photoframe
 
 if [ "$1" = "post" ]; then
-	echo "Performing post-update changes (if any)"
-
 	####-vvv- ANYTHING HERE MUST HANDLE BEING RUN AGAIN AND AGAIN -vvv-####
 	#######################################################################
 
