@@ -64,6 +64,12 @@ fi
 git fetch 2>&1 >/tmp/update.log || error "Unable to load info about latest"
 git log -n1 --oneline origin >/tmp/server.txt
 git log -n1 --oneline >/tmp/client.txt
+
+# See if we have changes locally or commits locally (because then we cannot update)
+if git status | egrep '(not staged|Untracked|ahead|to be committed)' >/dev/null; then
+	error "Unable to update due to local changes"
+fi
+
 if ! diff /tmp/server.txt /tmp/client.txt >/dev/null ; then
 	echo "New version is available"
 	git pull --rebase 2>&1 >>/tmp/update.log || error "Unable to update"
