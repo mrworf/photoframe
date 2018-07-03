@@ -18,7 +18,7 @@
 
 function error
 {
-	echo "ERROR: $1"
+	echo "error: $1"
 	if [ -f /tmp/update.log ]; then
 		cat /tmp/update.log
 	fi
@@ -61,17 +61,18 @@ elif [ ! -f /root/.donepost ]; then
 	/root/photoframe/update.sh post
 fi
 
-git fetch 2>&1 >/tmp/update.log || error "Unable to load info about latest"
-git log -n1 --oneline origin >/tmp/server.txt
-git log -n1 --oneline >/tmp/client.txt
-
 # See if we have changes locally or commits locally (because then we cannot update)
 if git status | egrep '(not staged|Untracked|ahead|to be committed)' >/dev/null; then
 	error "Unable to update due to local changes"
 fi
 
+BRANCH="$(git status | head -n1)" ; BRANCH=${BRANCH:10}
+git fetch 2>&1 >/tmp/update.log || error "Unable to load info about latest"
+git log -n1 --oneline origin/${BRANCH} >/tmp/server.txt
+git log -n1 --oneline >/tmp/client.txt
+
 if ! diff /tmp/server.txt /tmp/client.txt >/dev/null ; then
-	echo "New version is available"
+	echo "New version is available (for branch ${BRANCH})"
 	git pull --rebase 2>&1 >>/tmp/update.log || error "Unable to update"
 
 	# Run again with the post option so any necessary changes can be carried out
@@ -81,6 +82,8 @@ if ! diff /tmp/server.txt /tmp/client.txt >/dev/null ; then
   if [ "$1" != "updateonly" ]; then
 		systemctl restart frame.service
 	fi
+else
+	echo "No new version"
 fi
 # Mark this has being done
 touch /root/.firstupdate
