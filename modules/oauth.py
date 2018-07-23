@@ -89,7 +89,7 @@ class OAuth:
 		self.rid = self.getRedirectId()
 
 		auth = OAuth2Session(self.oauth['client_id'],
-							scope=['https://picasaweb.google.com/data/'],
+							scope=['https://www.googleapis.com/auth/photos'],
 							redirect_uri=self.ridURI,
 							state='%s-%s' % (self.rid, self.ip))
 		authorization_url, state = auth.authorization_url(self.oauth['auth_uri'],
@@ -101,7 +101,7 @@ class OAuth:
 
 	def complete(self, url):
 		auth = OAuth2Session(self.oauth['client_id'],
-		                     scope=['https://picasaweb.google.com/data/'],
+		                     scope=['https://www.googleapis.com/auth/photos'],
 		                     redirect_uri=self.ridURI,
 		                     state='%s-%s' % (self.rid, self.ip))
 
