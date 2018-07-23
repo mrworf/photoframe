@@ -152,6 +152,34 @@ def show_error(e):
     '''
   return message, code    
 
+@app.route('/debug', methods=['GET'], defaults={'all' : False})
+@app.route('/debug/all', methods=['GET'], defaults={'all' : True})
+def show_logs(all):
+  # Special URL, we simply try to extract latest 100 lines from syslog
+  # and filter out frame messages. These are shown so the user can
+  # add these to issues.
+  stats = os.stat('/var/log/syslog')
+  cmd = 'grep "photoframe\[" /var/log/syslog | tail -n 100'
+  title = 'Last 100 lines from the log'
+  if all:
+    title = 'Last 100 lines from the log (unfiltered)'
+    cmd = 'tail -n 100 /var/log/syslog'
+  lines = subprocess.check_output(cmd, shell=True)
+  message = '''
+  <html><head><title>Internal debugging</title></head><body style="font-family: Verdana"><h1>%s</h1>
+  <pre style="margin: 15pt; padding: 10pt; border: 1px solid; background-color: #eeeeee">''' % title
+  if lines:
+    for line in lines.splitlines():
+      message += line + '\n'
+  else:
+    message += 'Logs unavailable, perhaps it was archived recently (size will be less than 5000 bytes)'
+  message += '''</pre>
+  (size of logfile %d bytes, created %s)
+  </body>
+  </html>
+  ''' % (stats.st_size, datetime.datetime.fromtimestamp(stats.st_ctime).strftime('%c'))
+  return message, 200
+
 @app.route('/setting', methods=['GET'], defaults={'key':None,'value':None})
 @app.route('/setting/<key>', methods=['GET'], defaults={'value':None})
 @app.route('/setting/<key>/<value>', methods=['PUT'])
