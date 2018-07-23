@@ -152,6 +152,14 @@ def show_error(e):
     '''
   return message, code    
 
+@app.route('/update/force', methods=['GET'])
+def force_update():
+  if os.path.exists('/root/photoframe/update.sh'):
+    p = subprocess.Popen('/bin/bash /root/photoframe/update.sh 2>&1 | logger -t forced_update', shell=True)
+    return 'Update in process', 200
+  else:
+    return 'Cannot find update tool', 404
+
 @app.route('/debug', methods=['GET'], defaults={'all' : False})
 @app.route('/debug/all', methods=['GET'], defaults={'all' : True})
 def show_logs(all):
