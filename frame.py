@@ -29,6 +29,7 @@ import socket
 import threading
 import argparse
 import shutil
+import traceback
 
 from modules.remember import remember
 from modules.shutdown import shutdown
@@ -59,6 +60,7 @@ from flask import Flask, request, redirect, session, url_for, abort, flash
 from flask.json import jsonify
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.utils import secure_filename
+from werkzeug.exceptions import HTTPException
 
 # used if we don't find authentication json
 class NoAuth:
@@ -124,6 +126,31 @@ def nocache(r):
     r.headers["Expires"] = "0"
     r.headers['Cache-Control'] = 'public, max-age=0'
     return r
+
+@app.errorhandler(Exception)
+def show_error(e):
+  if isinstance(e, HTTPException):
+    code = e.code
+    message = str(e)
+  else:
+    code = 500
+    #exc_type, exc_value, exc_traceback = sys.exc_info()
+    lines = traceback.format_exc().splitlines()
+    issue = lines[-1]
+    message = '''
+    <html><head><title>Internal error</title></head><body style="font-family: Verdana"><h1>Uh oh, something went wrong...</h1>
+    Please go to <a href="https://github.com/mrworf/photoframe/issues">github</a> 
+    and see if this is a known issue, if not, feel free to file a <a href="https://github.com/mrworf/photoframe/issues/new">new issue<a> with the
+    following information:
+    <pre style="margin: 15pt; padding: 10pt; border: 1px solid; background-color: #eeeeee">'''  
+    for line in lines:
+      message += line + '\n'
+    message += '''</pre>
+    Thank you for your patience
+    </body>
+    </html>
+    '''
+  return message, code    
 
 @app.route('/setting', methods=['GET'], defaults={'key':None,'value':None})
 @app.route('/setting/<key>', methods=['GET'], defaults={'value':None})
