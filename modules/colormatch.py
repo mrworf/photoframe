@@ -129,7 +129,11 @@ class colormatch(Thread):
 	# http://bradsrpi.blogspot.com/2013/05/tcs34725-rgb-color-sensor-raspberry-pi.html
 	#
 	def run(self):
-		bus = smbus.SMBus(1)
+		try:
+			bus = smbus.SMBus(1)
+		except:
+			logging.info('No SMB subsystem, color sensor unavailable')
+			return
 		# I2C address 0x29
 		# Register 0x12 has device ver.
 		# Register addresses must be OR'ed with 0x80

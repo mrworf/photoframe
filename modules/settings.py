@@ -19,9 +19,13 @@ import logging
 import random
 
 class settings:
-	CONFIGFOLDER = '/root/photoframe_config'
-	CONFIGFILE = '/root/photoframe_config/settings.json'
-	COLORMATCH = '/root/photoframe_config/colortemp.sh'
+	CONFIGFOLDER = './photoframe_config'
+	CONFIGFILE = './photoframe_config/settings.json'
+	COLORMATCH = './photoframe_config/colortemp.sh'
+
+	DRV_BUILTIN = './photoframe/display-drivers'
+	DRV_EXTERNAL = './photoframe_config/display-drivers/'
+
 	DEPRECATED_USER = ['resolution']
 	DEPRECATED_SYSTEM = ['colortemp-script']
 

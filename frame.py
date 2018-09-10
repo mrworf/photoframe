@@ -78,6 +78,8 @@ parser.add_argument('--logfile', default=None, help="Log to file instead of stdo
 parser.add_argument('--port', default=7777, type=int, help="Port to listen on")
 parser.add_argument('--listen', default="0.0.0.0", help="Address to listen on")
 parser.add_argument('--debug', action='store_true', default=False, help='Enable loads more logging')
+parser.add_argument('--emulate', action='store_true', default=False, help='Emulate the framebuffer')
+
 cmdline = parser.parse_args()
 
 if cmdline.debug:
@@ -428,7 +430,7 @@ def web_template(file):
 
 settings = settings()
 drivers = drivers()
-display = display()
+display = display(cmdline.emulate)
 
 if not settings.load():
   # First run, grab display settings from current mode
