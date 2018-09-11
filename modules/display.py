@@ -31,9 +31,9 @@ class emulator(Thread):
     self.start()
 
   def run(self):
-    args = ['/usr/bin/display', '-update', '1', '-resize', '50%', '-size', '%dx%d' % (self.width, self.height), '-depth', '8', 'rgba:' + self.file]
-    logging.debug('Calling: ' + repr(args))
-    subprocess.call(args)
+    while (True):
+      args = ['/usr/bin/display', '-update', '1', '-resize', '50%', '-size', '%dx%d' % (self.width, self.height), '-depth', '8', 'rgba:' + self.file]
+      result = subprocess.check_output(args)
 
 
 class display:
@@ -127,6 +127,9 @@ class display:
     if not self.enabled:
       result = subprocess.check_output(args, stderr=self.void)
     elif self.depth in [24, 32]:
+      device = self.getDevice()
+      if self.emulate:
+        device = '/tmp/fb.bin'
       with open(self.getDevice(), 'rb') as fb:
         pip = subprocess.Popen(args, stdin=fb, stdout=subprocess.PIPE, stderr=self.void)
         result = pip.communicate()[0]
@@ -243,6 +246,8 @@ class display:
     return self.enabled
 
   def clear(self):
+    if self.emulate:
+      return
     with open(self.getDevice(), 'wb') as f:
       subprocess.call(['cat' , '/dev/zero'], stdout=f, stderr=self.void)
 

@@ -45,7 +45,8 @@ class drivers:
 
 	def list(self):
 		result = {}
-		result = self._list_dir(settings.DRV_BUILTIN)
+		if os.path.exists(settings.DRV_BUILTIN):
+			result = self._list_dir(settings.DRV_BUILTIN)
 		# Any driver defined in external that has the same name as an internal one
 		# will replace the internal one.
 		result.update(self._list_dir(settings.DRV_EXTERNAL))

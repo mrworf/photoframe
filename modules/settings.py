@@ -19,15 +19,22 @@ import logging
 import random
 
 class settings:
-	CONFIGFOLDER = './photoframe_config'
-	CONFIGFILE = './photoframe_config/settings.json'
-	COLORMATCH = './photoframe_config/colortemp.sh'
+	CONFIGFOLDER = '/root/photoframe_config'
+	CONFIGFILE = '/root/photoframe_config/settings.json'
+	COLORMATCH = '/root/photoframe_config/colortemp.sh'
 
-	DRV_BUILTIN = './photoframe/display-drivers'
-	DRV_EXTERNAL = './photoframe_config/display-drivers/'
+	DRV_BUILTIN = '/root/photoframe/display-drivers'
+	DRV_EXTERNAL = '/root/photoframe_config/display-drivers/'
 
 	DEPRECATED_USER = ['resolution']
 	DEPRECATED_SYSTEM = ['colortemp-script']
+
+	def reassign(self, newbase):
+		settings.CONFIGFOLDER = settings.CONFIGFOLDER.replace('/root/', newbase)
+		settings.CONFIGFILE = settings.CONFIGFILE.replace('/root/', newbase)
+		settings.COLORMATCH = settings.COLORMATCH.replace('/root/', newbase)
+		settings.DRV_BUILTIN = settings.DRV_BUILTIN.replace('/root/', newbase)
+		settings.DRV_EXTERNAL = settings.DRV_EXTERNAL.replace('/root/', newbase)
 
 	def __init__(self):
 		self.settings = {

@@ -42,6 +42,24 @@ from modules.slideshow import slideshow
 from modules.colormatch import colormatch
 from modules.drivers import drivers
 
+parser = argparse.ArgumentParser(description="PhotoFrame - A RPi3 based digital photoframe", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('--logfile', default=None, help="Log to file instead of stdout")
+parser.add_argument('--port', default=7777, type=int, help="Port to listen on")
+parser.add_argument('--listen', default="0.0.0.0", help="Address to listen on")
+parser.add_argument('--debug', action='store_true', default=False, help='Enable loads more logging')
+parser.add_argument('--emulatefb', action='store_true', default=False, help='Emulate the framebuffer')
+parser.add_argument('--basedir', default=None, help='Change the root folder of photoframe')
+cmdline = parser.parse_args()
+
+if cmdline.debug:
+  logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+else:
+  logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+if cmdline.basedir is not None:
+  logging.info('Altering default basedir from /root/ to %s', cmdline.basedir)
+  settings().reassign(cmdline.basedir)
+
 void = open(os.devnull, 'wb')
 # Supercritical, since we store all photoframe files in a subdirectory, make sure to create it
 if not os.path.exists(settings.CONFIGFOLDER):
@@ -62,6 +80,11 @@ from flask_httpauth import HTTPBasicAuth
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import HTTPException
 
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
+logging.getLogger('oauthlib').setLevel(logging.ERROR)
+logging.getLogger('urllib3').setLevel(logging.ERROR)
+
+
 # used if we don't find authentication json
 class NoAuth:
   def __init__(self):
@@ -72,23 +95,6 @@ class NoAuth:
       return fn(*args, **kwargs)
     wrap.func_name = fn.func_name
     return wrap
-
-parser = argparse.ArgumentParser(description="PhotoFrame - A RPi3 based digital photoframe", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--logfile', default=None, help="Log to file instead of stdout")
-parser.add_argument('--port', default=7777, type=int, help="Port to listen on")
-parser.add_argument('--listen', default="0.0.0.0", help="Address to listen on")
-parser.add_argument('--debug', action='store_true', default=False, help='Enable loads more logging')
-parser.add_argument('--emulate', action='store_true', default=False, help='Emulate the framebuffer')
-
-cmdline = parser.parse_args()
-
-if cmdline.debug:
-  logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-else:
-  logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logging.getLogger('werkzeug').setLevel(logging.ERROR)
-logging.getLogger('oauthlib').setLevel(logging.ERROR)
-logging.getLogger('urllib3').setLevel(logging.ERROR)
 
 app = Flask(__name__, static_url_path='')
 app.config['UPLOAD_FOLDER'] = '/tmp/'
@@ -430,7 +436,7 @@ def web_template(file):
 
 settings = settings()
 drivers = drivers()
-display = display(cmdline.emulate)
+display = display(cmdline.emulatefb)
 
 if not settings.load():
   # First run, grab display settings from current mode
