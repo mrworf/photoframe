@@ -130,7 +130,7 @@ class display:
       device = self.getDevice()
       if self.emulate:
         device = '/tmp/fb.bin'
-      with open(self.getDevice(), 'rb') as fb:
+      with open(device, 'rb') as fb:
         pip = subprocess.Popen(args, stdin=fb, stdout=subprocess.PIPE, stderr=self.void)
         result = pip.communicate()[0]
     elif self.depth == 16:
