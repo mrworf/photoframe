@@ -32,9 +32,9 @@ class emulator(Thread):
 
   def run(self):
     while (True):
-      args = ['/usr/bin/display', '-update', '1', '-resize', '50%', '-size', '%dx%d' % (self.width, self.height), '-depth', '8', 'rgba:' + self.file]
+      args = ['/usr/bin/fim', '-qc', 'while(1){pread "convert -size %dx%d -depth 8 rgba:%s -resize 50%% png:-" ;reload;sleep 1;}' % (self.width, self.height, self.file)]
+      logging.debug('Cmdline: ' + ' '.join(args))
       result = subprocess.check_output(args)
-
 
 class display:
   def __init__(self, use_emulator=False):

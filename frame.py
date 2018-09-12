@@ -61,6 +61,7 @@ if cmdline.basedir is not None:
   settings().reassign(cmdline.basedir)
 
 void = open(os.devnull, 'wb')
+
 # Supercritical, since we store all photoframe files in a subdirectory, make sure to create it
 if not os.path.exists(settings.CONFIGFOLDER):
   try:
@@ -70,6 +71,10 @@ if not os.path.exists(settings.CONFIGFOLDER):
     sys.exit(255)
 elif not os.path.isdir(settings.CONFIGFOLDER):
   logging.error('%s isn\'t a folder, cannot start', settings.CONFIGFOLDER)
+  sys.exit(255)
+
+if cmdline.emulatefb and not os.path.exists('/usr/bin/fim'):
+  logging.error('--emulatefb requires fim to be installed')
   sys.exit(255)
 
 import requests
@@ -470,6 +475,13 @@ while True:
     time.sleep(10)
   else:
     break
+
+# Once we have IP, show for 30s
+cd = 10
+while (cd > 0):
+	display.message('Starting in %d seconds\n\nFrame configuration\n\nhttp://%s:7777' % (cd, settings.get('local-ip')))
+	cd -= 1
+	time.sleep(1)
 
 def oauthGetToken():
   return settings.get('oauth_token')
