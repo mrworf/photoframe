@@ -42,7 +42,26 @@ from modules.slideshow import slideshow
 from modules.colormatch import colormatch
 from modules.drivers import drivers
 
+parser = argparse.ArgumentParser(description="PhotoFrame - A RPi3 based digital photoframe", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('--logfile', default=None, help="Log to file instead of stdout")
+parser.add_argument('--port', default=7777, type=int, help="Port to listen on")
+parser.add_argument('--listen', default="0.0.0.0", help="Address to listen on")
+parser.add_argument('--debug', action='store_true', default=False, help='Enable loads more logging')
+parser.add_argument('--emulatefb', action='store_true', default=False, help='Emulate the framebuffer')
+parser.add_argument('--basedir', default=None, help='Change the root folder of photoframe')
+cmdline = parser.parse_args()
+
+if cmdline.debug:
+  logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+else:
+  logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+if cmdline.basedir is not None:
+  logging.info('Altering default basedir from /root/ to %s', cmdline.basedir)
+  settings().reassign(cmdline.basedir)
+
 void = open(os.devnull, 'wb')
+
 # Supercritical, since we store all photoframe files in a subdirectory, make sure to create it
 if not os.path.exists(settings.CONFIGFOLDER):
   try:
@@ -54,6 +73,10 @@ elif not os.path.isdir(settings.CONFIGFOLDER):
   logging.error('%s isn\'t a folder, cannot start', settings.CONFIGFOLDER)
   sys.exit(255)
 
+if cmdline.emulatefb and not os.path.exists('/usr/bin/fim'):
+  logging.error('--emulatefb requires fim to be installed')
+  sys.exit(255)
+
 import requests
 from requests_oauthlib import OAuth2Session
 from flask import Flask, request, redirect, session, url_for, abort, flash
@@ -61,6 +84,11 @@ from flask.json import jsonify
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import HTTPException
+
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
+logging.getLogger('oauthlib').setLevel(logging.ERROR)
+logging.getLogger('urllib3').setLevel(logging.ERROR)
+
 
 # used if we don't find authentication json
 class NoAuth:
@@ -72,21 +100,6 @@ class NoAuth:
       return fn(*args, **kwargs)
     wrap.func_name = fn.func_name
     return wrap
-
-parser = argparse.ArgumentParser(description="PhotoFrame - A RPi3 based digital photoframe", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--logfile', default=None, help="Log to file instead of stdout")
-parser.add_argument('--port', default=7777, type=int, help="Port to listen on")
-parser.add_argument('--listen', default="0.0.0.0", help="Address to listen on")
-parser.add_argument('--debug', action='store_true', default=False, help='Enable loads more logging')
-cmdline = parser.parse_args()
-
-if cmdline.debug:
-  logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-else:
-  logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logging.getLogger('werkzeug').setLevel(logging.ERROR)
-logging.getLogger('oauthlib').setLevel(logging.ERROR)
-logging.getLogger('urllib3').setLevel(logging.ERROR)
 
 app = Flask(__name__, static_url_path='')
 app.config['UPLOAD_FOLDER'] = '/tmp/'
@@ -428,7 +441,7 @@ def web_template(file):
 
 settings = settings()
 drivers = drivers()
-display = display()
+display = display(cmdline.emulatefb)
 
 if not settings.load():
   # First run, grab display settings from current mode
@@ -462,6 +475,13 @@ while True:
     time.sleep(10)
   else:
     break
+
+# Once we have IP, show for 30s
+cd = 10
+while (cd > 0):
+	display.message('Starting in %d seconds\n\nFrame configuration\n\nhttp://%s:7777' % (cd, settings.get('local-ip')))
+	cd -= 1
+	time.sleep(1)
 
 def oauthGetToken():
   return settings.get('oauth_token')

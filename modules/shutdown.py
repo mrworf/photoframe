@@ -42,8 +42,12 @@ class shutdown(Thread):
 		except:
 			# Usually it means we ran this before
 			pass
-		with open('/sys/class/gpio/gpio%d/direction' % self.gpio, 'wb') as f:
-			f.write('in')
+		try:
+			with open('/sys/class/gpio/gpio%d/direction' % self.gpio, 'wb') as f:
+				f.write('in')
+		except:
+			logging.warn('Either no GPIO subsystem or no access')
+			return
 		with open('/sys/class/gpio/gpio%d/edge' % self.gpio, 'wb') as f:
 			f.write('both')
 		with open('/sys/class/gpio/gpio%d/value' % self.gpio, 'rb') as f:

@@ -165,6 +165,9 @@
 	confirmation = new Confirmation();
 
 	$("input[type='text']").change(function() {
+		if ($(this).attr('name') == undefined)
+			return;
+
 		confirmit = $(this).data('confirm');
 		if (confirmit && !eval('confirmation.' + confirmit + '()')) {
 			// Yeah, not pretty, but easier
@@ -175,6 +178,7 @@
 		if (validate) {
 			$(this).val(eval('valid.' + validate + '($(this).val());'));
 		}
+		console.log("/setting/" + $(this).attr('name') + "/" + $(this).val());
 		$.ajax({
 			url:"/setting/" + $(this).attr('name') + "/" + $(this).val(),
 			type:"PUT"
