@@ -15,6 +15,15 @@
  * along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
  */
 Validator = function() {
+	this.no_of_pic = function(input) {
+		i = parseInt(input);
+		if(i<0)
+			i=10;
+		if(i>1000)
+			i=1000;
+		return i.toString();
+	}
+
 	this.time = function(input) {
 		i = parseInt(input);
 		if (i > 23)

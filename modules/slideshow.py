@@ -225,7 +225,7 @@ class slideshow:
       params = {
         'kind' : 'photo',
         'start-index' : 1,
-        'max-results' : 1000,
+        'max-results' : self.settings.get('no_of_pic'),
         'alt' : 'json',
         'access' : 'all',
         'imgmax' : '1600u', # We will replace this with width of framebuffer in pick_image

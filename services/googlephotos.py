@@ -16,6 +16,7 @@
 import os
 import hashlib
 import json
+import ..modules.settings as settings
 
 class GooglePhotos:
 	def __init__(self, storage):
@@ -24,6 +25,8 @@ class GooglePhotos:
 		self.storage = storage
 		self.cacheImages = None
 		self.cacheId = None
+		self.settings = settings()
+		self.settings.load()
 
 	def getScope(self):
 		return self.scope
@@ -61,7 +64,7 @@ class GooglePhotos:
 			params = {
 				'kind' : 'photo',
 				'start-index' : 1,
-				'max-results' : 1000,
+				'max-results' : self.settings.get('no_of_pic'),
 				'alt' : 'json',
 				'access' : 'all',
 				'imgmax' : '1600u', # We will replace this with width of framebuffer in pick_image
