@@ -223,18 +223,12 @@ class slideshow:
       # Request albums
       # Picasa limits all results to the first 1000, so get them
       params = {
-        'kind' : 'photo',
-        'start-index' : 1,
-        'max-results' : self.settings.get('no_of_pic'),
-        'alt' : 'json',
-        'access' : 'all',
-        'imgmax' : '1600u', # We will replace this with width of framebuffer in pick_image
-        # This is where we get cute, we pick from a list of keywords
-        'fields' : 'entry(title,content,gphoto:timestamp,gphoto:videostatus)' # No unnecessary stuff
+        'albumID' : 'ALAXEtl1b9n1IHi-7KANmtZtq7ZnYo0tt_CuuQ5TOTnuOrf8ewI9KRnNq7UQxK0PSNCms_f6UXKO',
+        'pageSize' : self.settings.get('no_of_pic'),
       }
       if keyword != "":
         params['q'] = keyword
-      url = 'https://picasaweb.google.com/data/feed/api/user/default'
+      url = 'https://photoslibrary.googleapis.com/v1/mediaItems:search'
       logging.debug('Downloading image list for %s...' % keyword)
       data = self.oauth.request(url, params=params)
       if data.status_code != 200:
