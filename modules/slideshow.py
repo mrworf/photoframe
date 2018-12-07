@@ -226,8 +226,6 @@ class slideshow:
         'albumID' : 'ALAXEtl1b9n1IHi-7KANmtZtq7ZnYo0tt_CuuQ5TOTnuOrf8ewI9KRnNq7UQxK0PSNCms_f6UXKO',
         'pageSize' : self.settings.get('no_of_pic'),
       }
-      if keyword != "":
-        params['q'] = keyword
       url = 'https://photoslibrary.googleapis.com/v1/mediaItems:search'
       logging.debug('Downloading image list for %s...' % keyword)
       data = self.oauth.request(url, params=params)
