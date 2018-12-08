@@ -223,12 +223,13 @@ class slideshow:
       # Request albums
       # Picasa limits all results to the first 1000, so get them
       params = {
-        'albumID' : 'ALAXEtl1b9n1IHi-7KANmtZtq7ZnYo0tt_CuuQ5TOTnuOrf8ewI9KRnNq7UQxK0PSNCms_f6UXKO',
+        'albumID' : 'ACYy3Q-er0Z6-vsJ5TNhIBoDVCEMbkamrZjEDGb1nF1cuf9Tn0wn_twUytSYN5pc32zMej4KUrSk2wiryLLmmdaA-FWwcgMObg',
         'pageSize' : self.settings.get('no_of_pic'),
       }
       url = 'https://photoslibrary.googleapis.com/v1/mediaItems:search'
       logging.debug('Downloading image list for %s...' % keyword)
       data = self.oauth.request(url, params=params)
+    
       if data.status_code != 200:
         logging.warning('Requesting photo failed with status code %d (%s)', data.status_code, data.reason)
         return None, filename
