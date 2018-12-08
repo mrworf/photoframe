@@ -216,6 +216,7 @@ class slideshow:
       url = 'https://photoslibrary.googleapis.com/v1/albums'
       data = self.oauth.request(url).json()
       albumid = None
+      picturecount = self.settings.getUser('picturecount')
       for i in range(len(data['albums'])):
         if 'title' in data['albums'][i] and data['albums'][i]['title'] == keyword:
           albumid = data['albums'][i]['id']
@@ -232,12 +233,12 @@ class slideshow:
         logging.debug('Got album: %s' % keyword)
         params = {
           'albumId' : albumid,
-          'pageSize' : self.settings.get('picturecount'),
+          'pageSize' : picturecount,
         }
       else:
         logging.debug('Couldn\'t get album: %s falling back to all images.' % keyword)
         params = {
-          'pageSize' : self.settings.get('picturecount'),
+          'pageSize' : picturecount,
           'filters': {
             'mediaTypeFilter': {
               'mediaTypes': [
