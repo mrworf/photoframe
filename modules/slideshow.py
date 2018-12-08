@@ -220,12 +220,32 @@ class slideshow:
         memory.forget()
 
     if not os.path.exists(filename):
-      # Request albums
-      # Picasa limits all results to the first 1000, so get them
-      params = {
-        'albumId' : 'ACYy3Q-er0Z6-vsJ5TNhIBoDVCEMbkamrZjEDGb1nF1cuf9Tn0wn_twUytSYN5pc32zMej4KUrSk2wiryLLmmdaA-FWwcgMObg',
-        'pageSize' : self.settings.get('no_of_pic'),
-      }
+      # check if keyword is album
+      url = 'https://photoslibrary.googleapis.com/v1/albums'
+      data = self.oauth.request(url)
+      albumid = None
+      for i in range(len(data['albums'])):
+        if data['albums'][i]['title'] == keyword:
+          albumid = data['albums'][i][id]
+      
+      # fallback to all pictures if album not available
+      if albumid is not None:
+        params = {
+          'albumId' : albumid,
+          'pageSize' : self.settings.get('no_of_pic'),
+        }
+      else:
+        params = {
+          'pageSize' : self.settings.get('no_of_pic'),
+          'filters': {
+            'mediaTypeFilter': {
+              'mediaTypes': [
+                'PHOTO'
+              ]
+            }
+          }
+        }
+      # Request albums      
       url = 'https://photoslibrary.googleapis.com/v1/mediaItems:search'
       logging.debug('Downloading image list for %s...' % keyword)
       data = self.oauth.request(url, params=params,post=True)
@@ -238,8 +258,8 @@ class slideshow:
     images = None
     try:
       with open(filename) as f:
-        images = json.load(f)
-      logging.debug('Loaded %d images into list' % len(images['mediaItems']))
+        images = json.load(f)['mediaItems']
+      logging.debug('Loaded %d images into list' % len(images))
       return images, filename
     except:
       logging.exception('Failed to load images')
