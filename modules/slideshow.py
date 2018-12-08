@@ -113,7 +113,7 @@ class slideshow:
             index = 0
           continue
 
-        memory = remember(cache, len(imgs['feed']['entry']))
+        memory = remember(cache, len(imgs))
 
         if not imgs or memory.seenAll():
           if not imgs:
@@ -165,21 +165,19 @@ class slideshow:
 
   def pickImage(self, images, memory):
     ext = ['jpg','png','dng','jpeg','gif','bmp']
-    count = len(images['feed']['entry'])
+    count = len(images)
 
     i = random.SystemRandom().randint(0,count-1)
     while not memory.seenAll():
-      proposed = images['feed']['entry'][i]['content']['src']
+      proposed = images[i]['id']
       if not memory.seen(proposed):
         memory.saw(proposed)
-        entry = images['feed']['entry'][i]
+        entry = images[i]
         # Make sure we don't get a video, unsupported for now (gif is usually bad too)
-        if 'image' in entry['content']['type'] and 'gphoto$videostatus' not in entry:
+        if 'video' not in entry['mimeType']:
           break
-        elif 'gphoto$videostatus' in entry:
-          logging.debug('Image is thumbnail for videofile')
         else:
-          logging.warning('Unsupported media: %s (video = %s)' % (entry['content']['type'], repr('gphoto$videostatus' in entry)))
+          logging.warning('Unsupported media: %s' % entry['mimeType'])
       else:
         i += 1
         if i == count:
@@ -189,17 +187,11 @@ class slideshow:
       logging.error('Failed to find any image, abort')
       return ('', '', '', 0)
 
-    title = entry['title']['$t']
-    parts = title.lower().split('.')
-    if len(parts) > 0 and parts[len(parts)-1] in ext:
-      # Title isn't title, it's a filename
-      title = ""
-    uri = entry['content']['src']
-    timestamp = datetime.datetime.fromtimestamp((float)(entry['gphoto$timestamp']['$t']) / 1000)
-    mime = entry['content']['type']
-
-    # Due to google's unwillingness to return what I own, we need to hack the URI
-    uri = uri.replace('/s1600/', '/s%s/' % self.settings.getUser('width'), 1)
+    
+    title = ""
+    uri = entry['baseUrl']
+    timestamp = entry['mediaMetadata']['creationTime']
+    mime = entry['mimeType']
 
     return (uri, mime, title, timestamp)
 
