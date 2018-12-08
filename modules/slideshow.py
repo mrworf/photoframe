@@ -224,8 +224,8 @@ class slideshow:
         url = 'https://photoslibrary.googleapis.com/v1/sharedAlbums'
         data = self.oauth.request(url).json()
         for i in range(len(data['sharedAlbums'])):
-        if data['sharedAlbums'][i]['title'] == keyword:
-          albumid = data['sharedAlbums'][i][id]
+          if data['sharedAlbums'][i]['title'] == keyword:
+            albumid = data['sharedAlbums'][i][id]
 
       # fallback to all pictures if album not available
       if albumid is not None:
