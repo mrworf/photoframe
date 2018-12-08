@@ -149,7 +149,7 @@ class slideshow:
           logging.warning('Mime type %s isn\'t supported' % mime)
 
       time_process = time.time() - time_process
-
+      logging.debug('Processing time was %d seconds.' % time_process)
       # Delay before we show the image (but take processing into account)
       # This should keep us fairly consistent
       if time_process < delay:
