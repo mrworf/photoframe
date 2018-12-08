@@ -273,7 +273,8 @@ class slideshow:
     filename, ext = os.path.splitext(dest)
     temp = "%s-org%s" % (filename, ext)
     if self.oauth.request(uri, destination=temp):
-      helper.makeFullframe(temp, self.settings.getUser('width'), self.settings.getUser('height'))
+      if self.settings.getUser('blur') == 'activated':
+        helper.makeFullframe(temp, self.settings.getUser('width'), self.settings.getUser('height'))
       if self.colormatch.hasSensor():
         if not self.colormatch.adjust(temp, dest):
           logging.warning('Unable to adjust image to colormatch, using original')

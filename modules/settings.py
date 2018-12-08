@@ -52,6 +52,7 @@ class settings:
 			'width' : 1920,
 			'height' : 1080,
 			'depth' : 32,
+			'blur': 'deactivated'
 			'tvservice' : 'DMT 82 DVI',
 			'timezone' : '',
 			'interval' : 60,					# Delay in seconds between images (minimum)

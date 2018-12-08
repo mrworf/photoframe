@@ -61,6 +61,14 @@
 			<option value="sensor+schedule">use schedule and environment {{#if sensor}}{{else}}(no sensor){{/if}}</option>
 			{{/select}}
 		</select>
+		<br>
+		Image processing for portrait pictures
+		<select name="blur">
+			{{#select blur}}
+			<option value="deactivated">not be used</option>
+			<option value="activated">activated</option>
+			{{/select}}
+		</select>
 	</div>
 </div>
 <br>
@@ -188,6 +196,14 @@
 	});
 
 	$("select[name=powersave]").change(function() {
+		$.ajax({
+			url:"/setting/" + $(this).attr('name') + "/" + encodeURIComponent($(this).val()),
+			type:"PUT"
+		}).done(function(){
+		});
+	});
+
+	$("select[name=blur]").change(function() {
 		$.ajax({
 			url:"/setting/" + $(this).attr('name') + "/" + encodeURIComponent($(this).val()),
 			type:"PUT"
