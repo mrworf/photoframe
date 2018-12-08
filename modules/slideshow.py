@@ -214,7 +214,7 @@ class slideshow:
     if not os.path.exists(filename):
       # check if keyword is album
       url = 'https://photoslibrary.googleapis.com/v1/albums'
-      data = self.oauth.request(url)
+      data = self.oauth.request(url).json()
       albumid = None
       for i in range(len(data['albums'])):
         if data['albums'][i]['title'] == keyword:
@@ -222,11 +222,13 @@ class slideshow:
       
       # fallback to all pictures if album not available
       if albumid is not None:
+        logging.debug('Got album: %s' % keyword)
         params = {
           'albumId' : albumid,
           'pageSize' : self.settings.get('no_of_pic'),
         }
       else:
+        logging.debug('Couldn\'t get album: %s falling back to all images.' % keyword)
         params = {
           'pageSize' : self.settings.get('no_of_pic'),
           'filters': {
@@ -239,7 +241,7 @@ class slideshow:
         }
       # Request albums      
       url = 'https://photoslibrary.googleapis.com/v1/mediaItems:search'
-      logging.debug('Downloading image list for %s...' % keyword)
+      #logging.debug('Downloading image list for %s...' % keyword)
       data = self.oauth.request(url, params=params,post=True)
     
       if data.status_code != 200:
@@ -259,7 +261,7 @@ class slideshow:
       return None, filename
 
   def downloadImage(self, uri, dest):
-    logging.debug('Downloading %s...' % uri)
+    #logging.debug('Downloading %s...' % uri)
     filename, ext = os.path.splitext(dest)
     temp = "%s-org%s" % (filename, ext)
     if self.oauth.request(uri, destination=temp):

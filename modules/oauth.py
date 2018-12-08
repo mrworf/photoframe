@@ -55,22 +55,22 @@ class OAuth:
 				try:
 					auth = self.getSession()
 					if post:
-						result = auth.post(uri, params=params)
+						result = auth.post(uri, json=params)
 					else:
-						result = auth.get(uri, stream=stream, params=params)
+						result = auth.get(uri, json=params)
 					break
 				except TokenExpiredError as e:
 					auth = self.getSession(True)
 					if post:
-						result = auth.post(uri, params=params)
+						result = auth.post(uri, json=params)
 					else:
-						result = auth.get(uri, stream=stream, params=params)
+						result = auth.get(uri, json=params)
 					break
 			except:
 				logging.exception('Issues downloading')
 			time.sleep(tries * 10) # Back off 10, 20, ... depending on tries
 			tries += 1
-		logging.warning('%s' % result.text)
+		#logging.warning('%s' % result.text)
 		if tries == 5:
 			logging.error('Failed to download due to network issues')
 			return False
