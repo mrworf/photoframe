@@ -223,7 +223,7 @@ class slideshow:
       # Request albums
       # Picasa limits all results to the first 1000, so get them
       params = {
-        'albumID' : 'ACYy3Q-er0Z6-vsJ5TNhIBoDVCEMbkamrZjEDGb1nF1cuf9Tn0wn_twUytSYN5pc32zMej4KUrSk2wiryLLmmdaA-FWwcgMObg',
+        'albumId' : 'ACYy3Q-er0Z6-vsJ5TNhIBoDVCEMbkamrZjEDGb1nF1cuf9Tn0wn_twUytSYN5pc32zMej4KUrSk2wiryLLmmdaA-FWwcgMObg',
         'pageSize' : self.settings.get('no_of_pic'),
       }
       url = 'https://photoslibrary.googleapis.com/v1/mediaItems:search'
