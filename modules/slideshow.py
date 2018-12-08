@@ -189,7 +189,7 @@ class slideshow:
 
     
     title = ""
-    uri = entry['baseUrl']
+    uri = entry['baseUrl']+"=w"+self.settings.getUser("width")+"-h"+self.settings.getUser("height")
     timestamp = entry['mediaMetadata']['creationTime']
     mime = entry['mimeType']
 
