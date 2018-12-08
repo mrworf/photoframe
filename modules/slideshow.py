@@ -232,12 +232,12 @@ class slideshow:
         logging.debug('Got album: %s' % keyword)
         params = {
           'albumId' : albumid,
-          'pageSize' : self.settings.get('no_of_pic'),
+          'pageSize' : self.settings.get('picturecount'),
         }
       else:
         logging.debug('Couldn\'t get album: %s falling back to all images.' % keyword)
         params = {
-          'pageSize' : self.settings.get('no_of_pic'),
+          'pageSize' : self.settings.get('picturecount'),
           'filters': {
             'mediaTypeFilter': {
               'mediaTypes': [

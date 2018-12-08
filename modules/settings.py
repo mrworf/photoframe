@@ -55,7 +55,7 @@ class settings:
 			'tvservice' : 'DMT 82 DVI',
 			'timezone' : '',
 			'interval' : 60,					# Delay in seconds between images (minimum)
-			'no_of_pic' : 10,
+			'picturecount' : 100,
 			'display-off' : 22,				# What hour (24h) to disable display and sleep
 			'display-on' : 4,					# What hour (24h) to enable display and continue
 			'refresh-content' : 24,		# After how many hours we should force reload of image lists from server

@@ -15,7 +15,7 @@
  * along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
  */
 Validator = function() {
-	this.no_of_pic = function(input) {
+	this.picturecount = function(input) {
 		i = parseInt(input);
 		if(i<0)
 			i=10;
