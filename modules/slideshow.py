@@ -228,7 +228,7 @@ class slideshow:
       }
       url = 'https://photoslibrary.googleapis.com/v1/mediaItems:search'
       logging.debug('Downloading image list for %s...' % keyword)
-      data = self.oauth.request(url, params=params)
+      data = self.oauth.request(url, params=params,post=True)
     
       if data.status_code != 200:
         logging.warning('Requesting photo failed with status code %d (%s)', data.status_code, data.reason)
@@ -239,7 +239,7 @@ class slideshow:
     try:
       with open(filename) as f:
         images = json.load(f)
-      logging.debug('Loaded %d images into list' % len(images['feed']['entry']))
+      logging.debug('Loaded %d images into list' % len(images['mediaItems']))
       return images, filename
     except:
       logging.exception('Failed to load images')

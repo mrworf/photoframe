@@ -16,6 +16,7 @@
 import requests
 import logging
 import time
+import json
 from oauthlib.oauth2 import TokenExpiredError
 from requests_oauthlib import OAuth2Session
 
@@ -54,22 +55,22 @@ class OAuth:
 				try:
 					auth = self.getSession()
 					if post:
-						result = auth.post(uri, stream=stream, params=params)
-					else
+						result = auth.post(uri, params=params)
+					else:
 						result = auth.get(uri, stream=stream, params=params)
 					break
 				except TokenExpiredError as e:
 					auth = self.getSession(True)
 					if post:
-						result = auth.post(uri, stream=stream, params=params)
-					else
+						result = auth.post(uri, params=params)
+					else:
 						result = auth.get(uri, stream=stream, params=params)
 					break
 			except:
 				logging.exception('Issues downloading')
 			time.sleep(tries * 10) # Back off 10, 20, ... depending on tries
 			tries += 1
-
+		logging.warning('%s' % result.text)
 		if tries == 5:
 			logging.error('Failed to download due to network issues')
 			return False
@@ -95,7 +96,7 @@ class OAuth:
 		self.rid = self.getRedirectId()
 
 		auth = OAuth2Session(self.oauth['client_id'],
-							scope=['https://www.googleapis.com/auth/photos'],
+							scope=['https://www.googleapis.com/auth/photoslibrary.readonly'],
 							redirect_uri=self.ridURI,
 							state='%s-%s' % (self.rid, self.ip))
 		authorization_url, state = auth.authorization_url(self.oauth['auth_uri'],
@@ -107,7 +108,7 @@ class OAuth:
 
 	def complete(self, url):
 		auth = OAuth2Session(self.oauth['client_id'],
-		                     scope=['https://www.googleapis.com/auth/photos'],
+		                     scope=['https://www.googleapis.com/auth/photoslibrary.readonly'],
 		                     redirect_uri=self.ridURI,
 		                     state='%s-%s' % (self.rid, self.ip))
 
