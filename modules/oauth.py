@@ -45,7 +45,7 @@ class OAuth:
 		                         token_updater=self.cbSetToken)
 		return auth
 
-	def request(self, uri, destination=None, params=None):
+	def request(self, uri, destination=None, params=None, post=False):
 		result = None
 		stream = destination != None
 		tries = 0
@@ -53,11 +53,17 @@ class OAuth:
 			try:
 				try:
 					auth = self.getSession()
-					result = auth.get(uri, stream=stream, params=params)
+					if post:
+						result = auth.post(uri, stream=stream, params=params)
+					else
+						result = auth.get(uri, stream=stream, params=params)
 					break
 				except TokenExpiredError as e:
 					auth = self.getSession(True)
-					result = auth.get(uri, stream=stream, params=params)
+					if post:
+						result = auth.post(uri, stream=stream, params=params)
+					else
+						result = auth.get(uri, stream=stream, params=params)
 					break
 			except:
 				logging.exception('Issues downloading')
