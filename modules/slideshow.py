@@ -167,6 +167,7 @@ class slideshow:
     ext = ['jpg','png','dng','jpeg','gif','bmp']
     count = len(images['feed']['entry'])
 
+    entry = None
     i = random.SystemRandom().randint(0,count-1)
     while not memory.seenAll():
       proposed = images['feed']['entry'][i]['content']['src']
@@ -180,12 +181,13 @@ class slideshow:
           logging.debug('Image is thumbnail for videofile')
         else:
           logging.warning('Unsupported media: %s (video = %s)' % (entry['content']['type'], repr('gphoto$videostatus' in entry)))
+        entry = None
       else:
         i += 1
         if i == count:
           i = 0
 
-    if memory.seenAll():
+    if entry is None and memory.seenAll():
       logging.error('Failed to find any image, abort')
       return ('', '', '', 0)
 
