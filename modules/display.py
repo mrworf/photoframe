@@ -256,7 +256,7 @@ class display:
             subprocess.call(['/opt/vc/bin/tvservice', '-e', self.params], stderr=self.void, stdout=self.void)
           time.sleep(1)
           subprocess.call(['/bin/fbset', '-fb', self.getDevice(), '-depth', '8'], stderr=self.void)
-          subprocess.call(['/bin/fbset', '-fb', self.getDevice(), '-depth', str(self.depth), '-xres', str(self.pwidth), '-yres', str(self.pheight), '-vxres', str(self.pwidth), '-vyres', str(self.pheight)], stderr=self.void)
+          subprocess.call(['/bin/fbset', '-fb', self.getDevice(), '-depth', str(self.depth), '-xres', str(self.width), '-yres', str(self.height), '-vxres', str(self.width), '-vyres', str(self.height)], stderr=self.void)
         else:
           subprocess.call(['/usr/bin/vcgencmd', 'display_power', '1'], stderr=self.void)
     else:
