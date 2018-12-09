@@ -27,6 +27,8 @@ class emulator(Thread):
     self.daemon = True
     self.width = width
     self.height = height
+    self.xoffset = 0
+    self.yoffset = 0
     self.file = file
     self.start()
 
@@ -90,6 +92,8 @@ class display:
     self.pheight = self.height
 
     if self.rotated:
+      # Calculate offset for X, must be even dividable with 16
+      self.xoffset = 16 - (self.height % 16)
       self.width = self.pheight
       self.height = self.pwidth
 
@@ -212,6 +216,8 @@ class display:
       '-pointsize',
       '32',
       'label:%s' % message,
+      '-extent',
+      '%dx%d+%d+%d' % (self.width + self.xoffset, self.height + self.yoffset, self.xoffset, self.yoffset),
       '-depth',
       '8',
       '%s:-' % self.format
@@ -234,7 +240,7 @@ class display:
       '-gravity',
       'center',
       '-extent',
-      '%dx%d' % (self.width, self.height),
+      '%dx%d+%d+%d' % (self.width + self.xoffset, self.height + self.yoffset, self.xoffset, self.yoffset),
       '-depth',
       '8',
       '%s:-' % self.format
