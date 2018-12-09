@@ -27,8 +27,6 @@ class emulator(Thread):
     self.daemon = True
     self.width = width
     self.height = height
-    self.xoffset = 0
-    self.yoffset = 0
     self.file = file
     self.start()
 
@@ -61,6 +59,8 @@ class display:
     self.emulate = use_emulator
     self.emulator = None
     self.rotated = self.isRotated()
+    self.xoffset = 0
+    self.yoffset = 0
     if self.emulate:
       logging.info('Using framebuffer emulation')
 
@@ -126,7 +126,7 @@ class display:
               '-depth',
               '8',
               '-size',
-              '%dx%d' % (self.width, self.height),
+              '%dx%d' % (self.width+self.xoffset, self.height+self.yoffset),
               '%s:-' % (self.format),
               'jpg:-'
       ]
