@@ -37,12 +37,30 @@ class emulator(Thread):
       result = subprocess.check_output(args)
 
 class display:
+  def isRotated(self):
+    # TODO: This should be handled centrally
+    rotate = False
+    with open('/boot/config.txt', 'r') as f:
+      for line in f:
+        clean = line.strip()
+        if clean == '':
+          continue
+        if clean.startswith('display_rotate='):
+          if clean.endswith('1') or clean.endswith('3'):
+            rotate = True
+          else:
+            rotate = False
+    return rotate
+
   def __init__(self, use_emulator=False):
     self.void = open(os.devnull, 'wb')
     self.params = None
     self.special = None
     self.emulate = use_emulator
     self.emulator = None
+    self.rotated = self.isRotated()
+    self.xoffset = 0
+    self.yoffset = 0
     if self.emulate:
       logging.info('Using framebuffer emulation')
 
@@ -70,6 +88,15 @@ class display:
 
     self.width = result['width']
     self.height = result['height']
+    self.pwidth = self.width
+    self.pheight = self.height
+
+    if self.rotated:
+      # Calculate offset for X, must be even dividable with 16
+      self.xoffset = 16 - (self.height % 16)
+      self.width = self.pheight
+      self.height = self.pwidth
+
     self.depth = result['depth']
     self.reverse = result['reverse']
     self.params = result['tvservice']
@@ -99,7 +126,7 @@ class display:
               '-depth',
               '8',
               '-size',
-              '%dx%d' % (self.width, self.height),
+              '%dx%d' % (self.width+self.xoffset, self.height+self.yoffset),
               '%s:-' % (self.format),
               'jpg:-'
       ]
@@ -189,6 +216,8 @@ class display:
       '-pointsize',
       '32',
       'label:%s' % message,
+      '-extent',
+      '%dx%d+%d+%d' % (self.width + self.xoffset, self.height + self.yoffset, self.xoffset, self.yoffset),
       '-depth',
       '8',
       '%s:-' % self.format
@@ -211,7 +240,7 @@ class display:
       '-gravity',
       'center',
       '-extent',
-      '%dx%d' % (self.width, self.height),
+      '%dx%d+%d+%d' % (self.width + self.xoffset, self.height + self.yoffset, self.xoffset, self.yoffset),
       '-depth',
       '8',
       '%s:-' % self.format
