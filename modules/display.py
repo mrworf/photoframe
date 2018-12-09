@@ -37,12 +37,28 @@ class emulator(Thread):
       result = subprocess.check_output(args)
 
 class display:
+  def isRotated(self):
+    # TODO: This should be handled centrally
+    rotate = False
+    with open('/boot/config.txt', 'r') as f:
+      for line in f:
+        clean = line.strip()
+        if clean == '':
+          continue
+        if clean.startswith('display_rotate='):
+          if clean.endswith('1') or clean.endswith('3'):
+            rotate = True
+          else:
+            rotate = False
+    return rotate
+
   def __init__(self, use_emulator=False):
     self.void = open(os.devnull, 'wb')
     self.params = None
     self.special = None
     self.emulate = use_emulator
     self.emulator = None
+    self.rotated = self.isRotated()
     if self.emulate:
       logging.info('Using framebuffer emulation')
 
@@ -70,6 +86,13 @@ class display:
 
     self.width = result['width']
     self.height = result['height']
+    self.pwidth = self.width
+    self.pheight = self.height
+
+    if self.rotated:
+      self.width = self.pheight
+      self.height = self.pwidth
+
     self.depth = result['depth']
     self.reverse = result['reverse']
     self.params = result['tvservice']
@@ -233,7 +256,7 @@ class display:
             subprocess.call(['/opt/vc/bin/tvservice', '-e', self.params], stderr=self.void, stdout=self.void)
           time.sleep(1)
           subprocess.call(['/bin/fbset', '-fb', self.getDevice(), '-depth', '8'], stderr=self.void)
-          subprocess.call(['/bin/fbset', '-fb', self.getDevice(), '-depth', str(self.depth), '-xres', str(self.width), '-yres', str(self.height), '-vxres', str(self.width), '-vyres', str(self.height)], stderr=self.void)
+          subprocess.call(['/bin/fbset', '-fb', self.getDevice(), '-depth', str(self.depth), '-xres', str(self.pwidth), '-yres', str(self.pheight), '-vxres', str(self.pwidth), '-vyres', str(self.pheight)], stderr=self.void)
         else:
           subprocess.call(['/usr/bin/vcgencmd', 'display_power', '1'], stderr=self.void)
     else:
