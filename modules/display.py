@@ -93,7 +93,7 @@ class display:
 
     if self.rotated:
       # Calculate offset for X, must be even dividable with 16
-      self.xoffset = 16 - (self.height % 16)
+      self.xoffset = (16 - (self.height % 16)) % 16
       self.width = self.pheight
       self.height = self.pwidth
 
