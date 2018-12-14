@@ -20,8 +20,9 @@ from oauthlib.oauth2 import TokenExpiredError
 from requests_oauthlib import OAuth2Session
 
 class OAuth:
-	def __init__(self, ip, setToken, getToken):
+	def __init__(self, ip, setToken, getToken, scope):
 		self.ip = ip
+		self.scope = scope
 		self.oauth = None
 		self.cbGetToken = getToken
 		self.cbSetToken = setToken
@@ -89,7 +90,7 @@ class OAuth:
 		self.rid = self.getRedirectId()
 
 		auth = OAuth2Session(self.oauth['client_id'],
-							scope=['https://www.googleapis.com/auth/photos'],
+							scope=self.scope, # ['https://www.googleapis.com/auth/photos'],
 							redirect_uri=self.ridURI,
 							state='%s-%s' % (self.rid, self.ip))
 		authorization_url, state = auth.authorization_url(self.oauth['auth_uri'],
@@ -101,7 +102,7 @@ class OAuth:
 
 	def complete(self, url):
 		auth = OAuth2Session(self.oauth['client_id'],
-		                     scope=['https://www.googleapis.com/auth/photos'],
+		                     scope=self.scope, # ['https://www.googleapis.com/auth/photos'],
 		                     redirect_uri=self.ridURI,
 		                     state='%s-%s' % (self.rid, self.ip))
 

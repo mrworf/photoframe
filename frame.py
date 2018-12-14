@@ -476,7 +476,7 @@ while True:
   else:
     break
 
-# Once we have IP, show for 30s
+# Once we have IP, show for 10s
 cd = 10
 while (cd > 0):
 	display.message('Starting in %d seconds\n\nFrame configuration\n\nhttp://%s:7777' % (cd, settings.get('local-ip')))
@@ -490,7 +490,7 @@ def oauthSetToken(token):
   settings.set('oauth_token', token)
   settings.save()
 
-oauth = OAuth(settings.get('local-ip'), oauthSetToken, oauthGetToken)
+oauth = OAuth(settings.get('local-ip'), oauthSetToken, oauthGetToken, ['https://www.googleapis.com/auth/photos'])
 
 if os.path.exists(settings.CONFIGFOLDER + '/oauth.json'):
   try:
