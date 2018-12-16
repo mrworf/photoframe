@@ -19,6 +19,7 @@ import json
 import random
 
 from modules.oauth import OAuth
+from modules.remember import remember
 
 # This is the base implementation of a service. It provides all the
 # basic features like OAuth and Authentication as well as state and
@@ -62,6 +63,9 @@ class BaseService:
     self._DIR_MEMORY = os.path.join(self._DIR_BASE, 'memory')
     self._DIR_PRIVATE = os.path.join(self._DIR_BASE, 'private')
     self._FILE_STATE = os.path.join(self._DIR_BASE, 'state.json')
+
+    self._MEMORY = None
+    self._MEMORY_KEY = None
 
     self.loadState()
 
@@ -275,14 +279,41 @@ class BaseService:
             f.write(chunk)
     return result
 
+  def _fetchMemory(self, key):
+    if key is None:
+      key = ''
+    h =  self.hashString(key)
+    if self._MEMORY_KEY == h:
+      return
+    # Save work and swap
+    if self._MEMORY is not None and len(self._MEMORY) > 0:
+      with open(os.path.join(self._DIR_PRIVATE, '%s.json' % self._MEMORY_KEY), 'w') as f:
+        json.dump(self._MEMORY, f)
+    if os.path.exists(os.path.join(self._DIR_PRIVATE, '%s.json' % h)):
+      with open(os.path.join(self._DIR_PRIVATE, '%s.json' % h), 'r') as f:
+        self._MEMORY = json.load(f)
+    else:
+      self._MEMORY = []
+    self._MEMORY_KEY = h
+
   def memoryRemember(self, itemId, keywords=None):
-    pass
+    self._fetchMemory(keywords)
+    h = self.hashString(itemId)
+    if h in self._MEMORY:
+      return
+    self._MEMORY.append(h)
 
   def memorySeen(self, itemId, keywords=None):
-    return False
+    self._fetchMemory(keywords)
+    h = self.hashString(itemId)
+    return h in self._MEMORY
 
   def memoryForget(self, keywords=None):
-    pass
+    self._fetchMemory(keywords)
+    n = os.path.join(self._DIR_PRIVATE, '%s.json' % self._MEMORY_KEY)
+    if os.path.exists(n):
+      os.unlink(n)
+    self._MEMORY = []
 
   def getStoragePath(self):
     return self._DIR_PRIVATE

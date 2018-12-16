@@ -44,9 +44,6 @@ from modules.drivers import drivers
 
 from services.svc_picasaweb import PicasaWeb
 
-# Dynamically import all services we find
-
-
 parser = argparse.ArgumentParser(description="PhotoFrame - A RPi3 based digital photoframe", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--logfile', default=None, help="Log to file instead of stdout")
 parser.add_argument('--port', default=7777, type=int, help="Port to listen on")
