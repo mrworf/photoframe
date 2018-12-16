@@ -14,7 +14,11 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 import hashlib
-import OAuth from modules.oauth
+import os
+import json
+import random
+
+from modules.oauth import OAuth
 
 # This is the base implementation of a service. It provides all the
 # basic features like OAuth and Authentication as well as state and
@@ -36,37 +40,40 @@ class BaseService:
 
   STATE_READY = 999
 
-  def __init__(self, id, name, needAuth=False, needOAuth=False):
+  def __init__(self, configDir, id, name, needAuth=False, needOAuth=False):
     # MUST BE CALLED BY THE IMPLEMENTING CLASS!
     self._ID = id
     self._NAME = name
+    self._OAUTH = None
 
-    self._STATE = STATE_UNINITIALIZED
+    self._STATE = BaseService.STATE_UNINITIALIZED
     self._ERROR = None
 
-    self._STATE = [
+    self._STATE = {
       '_OAUTH_CONFIG' : None,
       '_OAUTH_CONTEXT' : None,
       '_AUTH_CONFIG' : None,
       '_KEYWORDS' : []
-    ]
+    }
     self._NEED_AUTH = needAuth
     self._NEED_OAUTH = needOAuth
 
-    self._DIR_BASE = self._prepareFolders()
+    self._DIR_BASE = self._prepareFolders(configDir)
     self._DIR_MEMORY = os.path.join(self._DIR_BASE, 'memory')
+    self._DIR_PRIVATE = os.path.join(self._DIR_BASE, 'private')
     self._FILE_STATE = os.path.join(self._DIR_BASE, 'state.json')
 
-  def _prepareFolders(self):
-    basedir = '/tmp/%s' % self._hash(self._ID)
+    self.loadState()
+
+  def _prepareFolders(self, configDir):
+    basedir = os.path.join(configDir, self.hashString(self._ID))
     if not os.path.exists(basedir):
       os.mkdir(basedir)
     if not os.path.exists(basedir + '/memory'):
       os.mkdir(basedir + '/memory')
+    if not os.path.exists(basedir + '/private'):
+      os.mkdir(basedir + '/private')
     return basedir
-
-  def _hash(self, text):
-    return hashlib.sha1(text).hexdigest()
 
   ###[ Used by service to do any kind of house keeping ]###########################
 
@@ -85,17 +92,17 @@ class BaseService:
   def updateState(self):
     # Determines what the user needs to do next to configure this service
     # if this doesn't return ready, caller must take appropiate action
+    if self._NEED_OAUTH and self._OAUTH is None:
+      self._OAUTH = OAuth(self._setOAuthToken, self._getOAuthToken, self.getOAuthScope())
+      if self._STATE['_OAUTH_CONFIG'] is not None:
+        self._OAUTH.setOAuth(self._STATE['_OAUTH_CONFIG'])
+
     if self._NEED_AUTH and not self.hasAuthentication():
-      return STATE_DO_AUTH
+      return BaseService.STATE_DO_AUTH
     if self._NEED_OAUTH and (not self.hasOAuthConfig or not self.hasOAuth()):
-      return STATE_DO_OAUTH
+      return BaseService.STATE_DO_OAUTH
 
-    return STATE_READY
-
-  def getError(self):
-    if self._STATE != STATE_ERROR:
-      return None
-    return self._ERROR
+    return BaseService.STATE_READY
 
   ###[ Allows loading/saving of service state ]###########################
 
@@ -133,23 +140,40 @@ class BaseService:
     # Provides OAuth config data for linking.
     # Without this information, OAuth cannot be done.
     # If config is invalid, returns False
+    self._STATE['_OAUTH_CONFIG'] = config
+    if self._OAUTH is not None:
+      self._OAUTH.setOAuth(self._STATE['_OAUTH_CONFIG'])
+    self.saveState()
+    return True
+
+  def helpOAuthConfig(self):
+    return 'Should explain what kind of content to provide'
 
   def hasOAuthConfig(self):
     # Returns true/false if we have a config for oauth
-    return False
+    return self._STATE['_OAUTH_CONFIG'] is not None
 
   def hasOAuth(self):
     # Tests if we have a functional OAuth link,
     # returns False if we need to set it up
+    return self._STATE['_OAUTH_CONTEXT'] is not None
 
   def startOAuth(self):
     # Returns a HTTP redirect to begin OAuth or None if
     # oauth isn't configured. Normally not overriden
-    pass
+    return self._OAUTH.initiate()
 
   def finishOAuth(self, url):
     # Called when OAuth sequence has completed
+    self._OAUTH.complete(url)
     self.saveState()
+
+  def _setOAuthToken(self, token):
+    self._STATE['_OAUTH_CONTEXT'] = token
+    self.saveState()
+
+  def _getOAuthToken(self):
+    return self._STATE['_OAUTH_CONTEXT']
 
   ###[ For services which require static auth ]###########################
 
@@ -176,7 +200,7 @@ class BaseService:
     # Returns a key/value map with:
     # "field" => [ "type" => "STR/INT", "name" => "Human readable", "description" => "Longer text" ]
     # Allowing UX to be dynamically created
-    return ['username' : ['type':'STR', 'name':'Username', 'description':'Username to use for login']]
+    return {'username' : {'type':'STR', 'name':'Username', 'description':'Username to use for login'}}
 
   ###[ Keyword management ]###########################
 
@@ -211,6 +235,9 @@ class BaseService:
   def helpKeywords(self):
     return 'Anything you\'d like, we try to find it'
 
+  def getRandomKeywordIndex(self):
+    return random.SystemRandom().randint(0,len(self._STATE['_KEYWORDS'])-1)
+
   ###[ Actual hard work ]###########################
 
   def prepareNextItem(self, destinationFile, supportedMimeTypes, displaySize):
@@ -222,20 +249,21 @@ class BaseService:
     # fields:
     #  "mimetype" : the filetype you downloaded, for example "image/jpeg"
     #  "error" : None or a human readable text string as to why you failed
+    #  "source" : Link to where the item came from or None if not provided
     #
     # NOTE! If you need to index anything before you can get the first item, this would
     # also be the place to do it.
-    result = ['mimetype' : None, 'error' : 'You haven\'t implemented this yet']
+    result = {'mimetype' : None, 'error' : 'You haven\'t implemented this yet', 'source':None}
     return result
 
   ###[ Helpers ]######################################
 
   def requestUrl(self, url, destination=None, params=None):
-    result = ['status':500, 'content' : None]
+    result = {'status':500, 'content' : None}
 
-    if self._oauth is not None:
+    if self._OAUTH is not None:
       # Use OAuth path
-      result = self.oauth.request(url, destination, params)
+      result = self._OAUTH.request(url, destination, params)
     else:
       r = requests.get(url, params=params)
       result['status'] = r.status_code
@@ -251,7 +279,14 @@ class BaseService:
     pass
 
   def memorySeen(self, itemId, keywords=None):
-    pass
+    return False
 
   def memoryForget(self, keywords=None):
     pass
+
+  def getStoragePath(self):
+    return self._DIR_PRIVATE
+
+  def hashString(self, text):
+    return hashlib.sha1(text).hexdigest()
+

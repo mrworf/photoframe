@@ -34,6 +34,9 @@ validateKeywords to do any validation it needs to a string before it's added to 
 Once a service is in use, it's responsible for providing content on-demand. This is done by overriding the prepareNextItem.
 This function shall return a key/value map with "mimetype" set to what you provided (for example, image/jpeg)
 and an error key which shall be None unless you failed, at which point it should contain a useful error message.
+There is a third key called "source" which can be set to an URL which would take the user to the source content, like for example
+a google photos link to the real photo. This is only visible from within the web UI and is there to help users understand why
+it showed up. If it cannot be provided, simply leave this key set to None or empty string.
 
 A service is required to automatically deciding which keywords to use (from user provided list) when preparing the next image.
 The selection of image should be random and preferably it remembers which it has shown before so it can avoid showing the same

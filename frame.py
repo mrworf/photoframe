@@ -42,6 +42,11 @@ from modules.slideshow import slideshow
 from modules.colormatch import colormatch
 from modules.drivers import drivers
 
+from services.svc_picasaweb import PicasaWeb
+
+# Dynamically import all services we find
+
+
 parser = argparse.ArgumentParser(description="PhotoFrame - A RPi3 based digital photoframe", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--logfile', default=None, help="Log to file instead of stdout")
 parser.add_argument('--port', default=7777, type=int, help="Port to listen on")
@@ -152,10 +157,10 @@ def show_error(e):
     issue = lines[-1]
     message = '''
     <html><head><title>Internal error</title></head><body style="font-family: Verdana"><h1>Uh oh, something went wrong...</h1>
-    Please go to <a href="https://github.com/mrworf/photoframe/issues">github</a> 
+    Please go to <a href="https://github.com/mrworf/photoframe/issues">github</a>
     and see if this is a known issue, if not, feel free to file a <a href="https://github.com/mrworf/photoframe/issues/new">new issue<a> with the
     following information:
-    <pre style="margin: 15pt; padding: 10pt; border: 1px solid; background-color: #eeeeee">'''  
+    <pre style="margin: 15pt; padding: 10pt; border: 1px solid; background-color: #eeeeee">'''
     for line in lines:
       message += line + '\n'
     message += '''</pre>
@@ -163,7 +168,7 @@ def show_error(e):
     </body>
     </html>
     '''
-  return message, code    
+  return message, code
 
 @app.route('/update/force', methods=['GET'])
 def force_update():
@@ -313,7 +318,7 @@ def cfg_reset():
   drivers.activate(None)
   # Delete configuration data
   if os.path.exists(settings.CONFIGFOLDER):
-    shutil.rmtree(settings.CONFIGFOLDER, True) 
+    shutil.rmtree(settings.CONFIGFOLDER, True)
   # Reboot
   subprocess.call(['/sbin/reboot'], stderr=void);
   return jsonify({'reset': True})
@@ -475,6 +480,39 @@ while True:
     time.sleep(10)
   else:
     break
+
+
+##############################
+
+svc_folder = os.path.join(settings.CONFIGFOLDER, 'services')
+if not os.path.exists(svc_folder):
+  os.mkdir(svc_folder)
+
+svc = PicasaWeb(svc_folder, 'deadbeef', 'PicasaWebInstance')
+
+# Find out if service is ready
+state = svc.updateState()
+if state == svc.STATE_DO_OAUTH:
+  print 'Need to do OAuth'
+  # For now, cheat and copy our data into it
+  with open(settings.CONFIGFOLDER + '/oauth.json') as f:
+    data = json.load(f)
+  if 'web' in data: # if someone added it via command-line
+    data = data['web']
+  print svc.setOAuthConfig(data)
+  print svc.startOAuth()
+elif state == svc.STATE_READY:
+  print "Service is ready, try fetching an image"
+  svc.addKeywords('henric andersson')
+  result = svc.prepareNextItem('/tmp/image', ['image/jpeg'], {'width':1920, 'height': 1080})
+  print result
+
+print state
+sys.exit(255)
+
+##############################
+
+
 
 # Once we have IP, show for 10s
 cd = 10

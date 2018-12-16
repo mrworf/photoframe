@@ -19,9 +19,11 @@ import time
 from oauthlib.oauth2 import TokenExpiredError
 from requests_oauthlib import OAuth2Session
 
+from modules.helper import helper
+
 class OAuth:
-	def __init__(self, ip, setToken, getToken, scope):
-		self.ip = ip
+	def __init__(self, setToken, getToken, scope):
+		self.ip = helper.getIP()
 		self.scope = scope
 		self.oauth = None
 		self.cbGetToken = getToken
@@ -70,17 +72,18 @@ class OAuth:
 			return False
 
 		if result is not None and destination is not None:
+			ret = {'status' : result.status_code, 'content' : None}
 			try:
 				with open(destination, 'wb') as handle:
 					for chunk in result.iter_content(chunk_size=512):
 						if chunk:  # filter out keep-alive new chunks
 							handle.write(chunk)
-				return True
 			except:
 				logging.exception('Failed to download %s' % uri)
-				return False
+				ret['status'] = 600
+			return ret
 		else:
-			return result
+			return {'status':result.status_code, 'content':result.content}
 
 	def getRedirectId(self):
 		r = requests.get('%s/?register' % self.ridURI)
