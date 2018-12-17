@@ -296,10 +296,10 @@ class BaseService:
       return
     # Save work and swap
     if self._MEMORY is not None and len(self._MEMORY) > 0:
-      with open(os.path.join(self._DIR_PRIVATE, '%s.json' % self._MEMORY_KEY), 'w') as f:
+      with open(os.path.join(self._DIR_MEMORY, '%s.json' % self._MEMORY_KEY), 'w') as f:
         json.dump(self._MEMORY, f)
-    if os.path.exists(os.path.join(self._DIR_PRIVATE, '%s.json' % h)):
-      with open(os.path.join(self._DIR_PRIVATE, '%s.json' % h), 'r') as f:
+    if os.path.exists(os.path.join(self._DIR_MEMORY, '%s.json' % h)):
+      with open(os.path.join(self._DIR_MEMORY, '%s.json' % h), 'r') as f:
         self._MEMORY = json.load(f)
     else:
       self._MEMORY = []
@@ -310,6 +310,7 @@ class BaseService:
     h = self.hashString(itemId)
     if h in self._MEMORY:
       return
+    print repr(self._MEMORY)
     self._MEMORY.append(h)
 
   def memorySeen(self, itemId, keywords=None):
@@ -319,7 +320,7 @@ class BaseService:
 
   def memoryForget(self, keywords=None):
     self._fetchMemory(keywords)
-    n = os.path.join(self._DIR_PRIVATE, '%s.json' % self._MEMORY_KEY)
+    n = os.path.join(self._DIR_MEMORY, '%s.json' % self._MEMORY_KEY)
     if os.path.exists(n):
       os.unlink(n)
     self._MEMORY = []

@@ -461,7 +461,7 @@ while True:
 
 
 # Once we have IP, show for 10s
-cd = 10
+cd = 0
 while (cd > 0):
 	display.message('Starting in %d seconds\n\nFrame configuration\n\nhttp://%s:7777' % (cd, settings.get('local-ip')))
 	cd -= 1
@@ -470,9 +470,10 @@ while (cd > 0):
 # Prep random
 random.seed(long(time.clock()))
 colormatch = colormatch(settings.get('colortemp-script'), 2700) # 2700K = Soft white, lowest we'll go
-slideshow = slideshow(display, settings, oauth, colormatch)
+slideshow = slideshow(display, settings, colormatch)
 timekeeper = timekeeper(display.enable, slideshow.start)
 slideshow.setQueryPower(timekeeper.getDisplayOn)
+slideshow.setServiceManager(services)
 
 timekeeper.setConfiguration(settings.getUser('display-on'), settings.getUser('display-off'))
 timekeeper.setAmbientSensitivity(settings.getUser('autooff-lux'), settings.getUser('autooff-time'))

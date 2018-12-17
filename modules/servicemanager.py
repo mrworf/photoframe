@@ -163,5 +163,12 @@ class ServiceManager:
     result = []
     for k in self._SERVICES:
       svc = self._SERVICES[k]
-      result.append({'name' : svc.getName(), 'service' : svc.SERVICE_NAME, 'id' : k, 'state' : self.getServiceState(k)})
+      result.append({'name' : svc['service'].getName(), 'service' : svc['service'].SERVICE_NAME, 'id' : k, 'state' : self.getServiceState(k)})
     return result
+
+  def servicePrepareNextItem(self, id, destinationFile, supportedMimeTypes, displaySize):
+    if id not in self._SERVICES:
+      return {'error' : 'Service not available', 'mime' : None, 'source' : None}
+
+    svc = self._SERVICES[id]['service']
+    return svc.prepareNextItem(destinationFile, supportedMimeTypes, displaySize)

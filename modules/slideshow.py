@@ -29,15 +29,15 @@ from modules.remember import remember
 from modules.helper import helper
 
 class slideshow:
-  def __init__(self, display, settings, oauth, colormatch):
+  def __init__(self, display, settings, colormatch):
     self.queryPowerFunc = None
     self.thread = None
     self.display = display
     self.settings = settings
-    self.oauth = oauth
     self.colormatch = colormatch
     self.imageCurrent = None
     self.imageMime = None
+    self.services = None
     self.void = open(os.devnull, 'wb')
 
   def getCurrentImage(self):
@@ -48,6 +48,9 @@ class slideshow:
       'temperature':self.colormatch.getTemperature(),
       'lux':self.colormatch.getLux()
       }
+
+  def setServiceManager(self, services):
+    self.services = services
 
   def setQueryPower(self, func):
     self.queryPowerFunc = func
@@ -66,87 +69,39 @@ class slideshow:
 
   def presentation(self):
     logging.info('Starting presentation')
-    seen = []
     delay = 0
+
     while True:
       # Avoid showing images if the display is off
       if self.queryPowerFunc is not None and self.queryPowerFunc() is False:
         logging.info("Display is off, exit quietly")
         break
 
-      imgs = cache = memory = None
-      index = self.settings.getKeyword()
-      tries = 20
+      # For now, just pick the first service
       time_process = time.time()
-      while tries > 0:
-        tries -= 1
-        if len(seen) == self.settings.countKeywords():
-          # We've viewed all images, reset
-          logging.info('All images we have keywords for have been seen, restart')
-          logging.info('Seen holds: %s', repr(seen))
-          logging.info('Settings.countKeywords() = %d', self.settings.countKeywords())
 
-          for saw in seen:
-            r = remember(saw, 0)
-            r.debug()
-            r.forget()
-          r = remember('/tmp/overallmemory.json', 0)
-          r.debug()
-          r.forget()
-          if self.settings.getUser('refresh-content') == 0:
-            logging.info('Make sure we refresh all images now')
-            for saw in seen:
-              os.remove(saw)
-          seen = []
+      services = self.services.getServices()
+      if len(services) > 0:
+        svc = services[0]['id']
 
-
-        keyword = self.settings.getKeyword(index)
-        imgs, cache = self.getImages(keyword)
-        if imgs is None:
-          # Try again!
-          continue
-
-        # If we've seen all images for this keyword, skip to next
-        if cache in seen:
-          index += 1
-          if index == self.settings.countKeywords():
-            index = 0
-          continue
-
-        memory = remember(cache, len(imgs['feed']['entry']))
-
-        if not imgs or memory.seenAll():
-          if not imgs:
-            logging.error('Failed to load image list for keyword %s' % keyword)
-          elif memory.seenAll():
-            seen.append(cache)
-            logging.debug('All images for keyword %s has been shown' % keyword)
-          continue
-
-        # Now, lets make sure we didn't see this before
-        uri, mime, title, ts = self.pickImage(imgs, memory)
-        if uri == '':
-          logging.warning('No image was returned from pickImage')
-          continue # Do another one (well, it means we exhausted available images for this keyword)
-
-        # Avoid having duplicated because of overlap from keywords
-        memory = remember('/tmp/overallmemory.json', 0)
-        if memory.seen(uri):
-          continue
+        filename = os.path.join(self.settings.get('tempfolder'), 'image')
+        result = self.services.servicePrepareNextItem(svc, filename, ['image/jpeg'], {'width' : self.settings.getUser('width'), 'height' : self.settings.getUser('height')})
+        if result['error'] is not None:
+          self.display.message(result['error'])
         else:
-          memory.saw(uri)
+          self.imageMime = result['mimetype']
+          self.imageCurrent = filename
 
-        ext = helper.getExtension(mime)
-        if ext is not None:
-          filename = os.path.join(self.settings.get('tempfolder'), 'image.%s' % ext)
-          if self.downloadImage(uri, filename):
-            self.imageCurrent = filename
-            self.imageMime = mime
-            break
-          else:
-            logging.warning('Failed to download image, trying another one')
-        else:
-          logging.warning('Mime type %s isn\'t supported' % mime)
+          helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'))
+          #if self.colormatch.hasSensor():
+          #  if not self.colormatch.adjust(temp, dest):
+          #    logging.warning('Unable to adjust image to colormatch, using original')
+          #    os.rename(temp, dest)
+          #  else:
+          #    os.remove(temp)
+          #else:
+      else:
+        self.display.message('No defined services')
 
       time_process = time.time() - time_process
 
@@ -154,122 +109,10 @@ class slideshow:
       # This should keep us fairly consistent
       if time_process < delay:
         time.sleep(delay - time_process)
-      if tries == 0:
-        self.display.message('Issues showing images\n\nCheck network and settings')
-      else:
+
+      if os.path.exists(self.imageCurrent):
         self.display.image(self.imageCurrent)
         os.remove(self.imageCurrent)
 
       delay = self.settings.getUser('interval')
     self.thread = None
-
-  def pickImage(self, images, memory):
-    ext = ['jpg','png','dng','jpeg','gif','bmp']
-    count = len(images['feed']['entry'])
-
-    entry = None
-    i = random.SystemRandom().randint(0,count-1)
-    while not memory.seenAll():
-      proposed = images['feed']['entry'][i]['content']['src']
-      if not memory.seen(proposed):
-        memory.saw(proposed)
-        entry = images['feed']['entry'][i]
-        # Make sure we don't get a video, unsupported for now (gif is usually bad too)
-        if 'image' in entry['content']['type'] and 'gphoto$videostatus' not in entry:
-          break
-        elif 'gphoto$videostatus' in entry:
-          logging.debug('Image is thumbnail for videofile')
-        else:
-          logging.warning('Unsupported media: %s (video = %s)' % (entry['content']['type'], repr('gphoto$videostatus' in entry)))
-        entry = None
-      else:
-        i += 1
-        if i == count:
-          i = 0
-
-    if entry is None and memory.seenAll():
-      logging.error('Failed to find any image, abort')
-      return ('', '', '', 0)
-
-    title = entry['title']['$t']
-    parts = title.lower().split('.')
-    if len(parts) > 0 and parts[len(parts)-1] in ext:
-      # Title isn't title, it's a filename
-      title = ""
-    uri = entry['content']['src']
-    timestamp = datetime.datetime.fromtimestamp((float)(entry['gphoto$timestamp']['$t']) / 1000)
-    mime = entry['content']['type']
-
-    # Due to google's unwillingness to return what I own, we need to hack the URI
-    uri = uri.replace('/s1600/', '/s%s/' % self.settings.getUser('width'), 1)
-
-    return (uri, mime, title, timestamp)
-
-  def getImages(self, keyword):
-    # Create filename from keyword
-    filename = hashlib.new('sha1')
-    filename.update(repr(keyword))
-    filename = filename.hexdigest() + ".json"
-    filename = os.path.join(self.settings.get('tempfolder'), filename)
-
-    if os.path.exists(filename) and self.settings.getUser('refresh-content') > 0: # Check age!
-      age = math.floor( (time.time() - os.path.getctime(filename)) / 3600)
-      if age >= self.settings.getUser('refresh-content'):
-        logging.debug('File too old, %dh > %dh, refreshing' % (age, self.settings.getUser('refresh-content')))
-        os.remove(filename)
-        # Make sure we don't remember since we're refreshing
-        memory = remember(filename, 0)
-        memory.forget()
-
-    if not os.path.exists(filename):
-      # Request albums
-      # Picasa limits all results to the first 1000, so get them
-      params = {
-        'kind' : 'photo',
-        'start-index' : 1,
-        'max-results' : 1000,
-        'alt' : 'json',
-        'access' : 'all',
-        'imgmax' : '1600u', # We will replace this with width of framebuffer in pick_image
-        # This is where we get cute, we pick from a list of keywords
-        'fields' : 'entry(title,content,gphoto:timestamp,gphoto:videostatus)' # No unnecessary stuff
-      }
-      if keyword != "":
-        params['q'] = keyword
-      url = 'https://picasaweb.google.com/data/feed/api/user/default'
-      logging.debug('Downloading image list for %s...' % keyword)
-      data = self.oauth.request(url, params=params)
-      if data.status_code != 200:
-        logging.warning('Requesting photo failed with status code %d (%s)', data.status_code, data.reason)
-        return None, filename
-      with open(filename, 'w') as f:
-        f.write(data.content)
-    images = None
-    try:
-      with open(filename) as f:
-        images = json.load(f)
-      logging.debug('Loaded %d images into list' % len(images['feed']['entry']))
-      return images, filename
-    except:
-      logging.exception('Failed to load images')
-      os.remove(filename)
-      return None, filename
-
-  def downloadImage(self, uri, dest):
-    logging.debug('Downloading %s...' % uri)
-    filename, ext = os.path.splitext(dest)
-    temp = "%s-org%s" % (filename, ext)
-    if self.oauth.request(uri, destination=temp):
-      helper.makeFullframe(temp, self.settings.getUser('width'), self.settings.getUser('height'))
-      if self.colormatch.hasSensor():
-        if not self.colormatch.adjust(temp, dest):
-          logging.warning('Unable to adjust image to colormatch, using original')
-          os.rename(temp, dest)
-        else:
-          os.remove(temp)
-      else:
-        os.rename(temp, dest)
-      return True
-    else:
-      return False
-
