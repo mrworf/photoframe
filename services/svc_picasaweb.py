@@ -21,9 +21,10 @@ import logging
 
 class PicasaWeb(BaseService):
   SERVICE_NAME = 'PicasaWeb'
+  SERVICE_ID = 1
 
   def __init__(self, configDir, id, name):
-    BaseService.__init__(self, configDir, id, name, needAuth=False, needOAuth=True)
+    BaseService.__init__(self, configDir, id, name, needConfig=False, needOAuth=True)
 
   def getOAuthScope(self):
     return ['https://www.googleapis.com/auth/photos']

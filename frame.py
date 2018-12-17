@@ -42,7 +42,7 @@ from modules.slideshow import slideshow
 from modules.colormatch import colormatch
 from modules.drivers import drivers
 
-from services.svc_picasaweb import PicasaWeb
+from modules.servicemanager import ServiceManager
 
 parser = argparse.ArgumentParser(description="PhotoFrame - A RPi3 based digital photoframe", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--logfile', default=None, help="Log to file instead of stdout")
@@ -106,8 +106,9 @@ class NoAuth:
 app = Flask(__name__, static_url_path='')
 app.config['UPLOAD_FOLDER'] = '/tmp/'
 user = None
-userfiles = ['/boot/http-auth.json', settings.CONFIGFOLDER + '/http-auth.json']
+services = None
 
+userfiles = ['/boot/http-auth.json', settings.CONFIGFOLDER + '/http-auth.json']
 for userfile in userfiles:
   if os.path.exists(userfile):
     logging.debug('Found "%s", loading the data' % userfile)
@@ -166,14 +167,6 @@ def show_error(e):
     </html>
     '''
   return message, code
-
-@app.route('/update/force', methods=['GET'])
-def force_update():
-  if os.path.exists('/root/photoframe/update.sh'):
-    p = subprocess.Popen('/bin/bash /root/photoframe/update.sh 2>&1 | logger -t forced_update', shell=True)
-    return 'Update in process', 200
-  else:
-    return 'Cannot find update tool', 404
 
 @app.route('/debug', methods=['GET'], defaults={'all' : False})
 @app.route('/debug/all', methods=['GET'], defaults={'all' : True})
@@ -284,53 +277,30 @@ def cfg_keywords():
     return jsonify({'status':result})
   abort(500)
 
-@app.route('/has/token')
-@app.route('/has/oauth')
+@app.route('/maintainence/<cmd>')
 @auth.login_required
-def cfg_hasthis():
-  result = False
-  if '/token' in request.path:
-    if settings.get('oauth_token') is not None:
-      result = True
-  elif '/oauth' in request.path:
-    result = oauth.hasOAuth()
-
-  return jsonify({'result' : result})
-
-@app.route('/oauth', methods=['POST'])
-@auth.login_required
-def cfg_oauth_info():
-  if request.json is None or 'web' not in request.json:
-    abort(500)
-  data = request.json['web']
-  oauth.setOAuth(data)
-  with open(settings.CONFIGFOLDER + '/oauth.json', 'wb') as f:
-    json.dump(data, f);
-  return jsonify({'result' : True})
-
-@app.route('/reset')
-@auth.login_required
-def cfg_reset():
-  # Remove driver if active
-  drivers.activate(None)
-  # Delete configuration data
-  if os.path.exists(settings.CONFIGFOLDER):
-    shutil.rmtree(settings.CONFIGFOLDER, True)
-  # Reboot
-  subprocess.call(['/sbin/reboot'], stderr=void);
-  return jsonify({'reset': True})
-
-@app.route('/reboot')
-@auth.login_required
-def cfg_reboot():
-  subprocess.call(['/sbin/reboot'], stderr=void);
-  return jsonify({'reboot' : True})
-
-@app.route('/shutdown')
-@auth.login_required
-def cfg_shutdown():
-  subprocess.call(['/sbin/poweroff'], stderr=void);
-  return jsonify({'shutdown': True})
+def cfg_reset(cmd):
+  if cmd == 'reset':
+    # Remove driver if active
+    drivers.activate(None)
+    # Delete configuration data
+    if os.path.exists(settings.CONFIGFOLDER):
+      shutil.rmtree(settings.CONFIGFOLDER, True)
+    # Reboot
+    subprocess.call(['/sbin/reboot'], stderr=void);
+    return jsonify({'reset': True})
+  elif cmd == 'reboot':
+    subprocess.call(['/sbin/reboot'], stderr=void);
+    return jsonify({'reboot' : True})
+  elif cmd == 'shutdown':
+    subprocess.call(['/sbin/poweroff'], stderr=void);
+    return jsonify({'shutdown': True})
+  elif cmd == 'update':
+    if os.path.exists('/root/photoframe/update.sh'):
+      p = subprocess.Popen('/bin/bash /root/photoframe/update.sh 2>&1 | logger -t forced_update', shell=True)
+      return 'Update in process', 200
+    else:
+      return 'Cannot find update tool', 404
 
 @app.route('/details/<about>')
 @auth.login_required
@@ -410,16 +380,24 @@ def upload(item):
     abort(retval['status'])
   abort(405)
 
-@app.route("/link")
+@app.route("/link/<service>")
 @auth.login_required
-def oauth_step1():
-  return redirect(oauth.initiate())
+def oauth_start(service):
+  url = services.handleOAuthStart(service)
+  if url is None:
+    abort(500)
+  else:
+    return redirect(url)
 
 @app.route("/callback", methods=["GET"])
 @auth.login_required
-def oauth_step3():
-  oauth.complete(request.url)
-  return redirect(url_for('.complete'))
+def oauth_callback():
+  # Figure out who should get this result...
+  if services.handleOAuthCallback(request):
+    # Request handled
+    return redirect('/')
+  else:
+    abort(500)
 
 @app.route("/complete", methods=['GET'])
 @auth.login_required
@@ -467,6 +445,9 @@ settings.save()
 # Force display to desired user setting
 display.enable(True, True)
 
+# Load services
+services = ServiceManager(settings)
+
 # Spin until we have internet, check every 10s
 while True:
   settings.set('local-ip', helper.getIP())
@@ -479,63 +460,12 @@ while True:
     break
 
 
-##############################
-
-svc_folder = os.path.join(settings.CONFIGFOLDER, 'services')
-if not os.path.exists(svc_folder):
-  os.mkdir(svc_folder)
-
-svc = PicasaWeb(svc_folder, 'deadbeef', 'PicasaWebInstance')
-
-# Find out if service is ready
-state = svc.updateState()
-if state == svc.STATE_DO_OAUTH:
-  print 'Need to do OAuth'
-  # For now, cheat and copy our data into it
-  with open(settings.CONFIGFOLDER + '/oauth.json') as f:
-    data = json.load(f)
-  if 'web' in data: # if someone added it via command-line
-    data = data['web']
-  print svc.setOAuthConfig(data)
-  print svc.startOAuth()
-elif state == svc.STATE_READY:
-  print "Service is ready, try fetching an image"
-  svc.addKeywords('henric andersson')
-  result = svc.prepareNextItem('/tmp/image', ['image/jpeg'], {'width':1920, 'height': 1080})
-  print result
-
-print state
-sys.exit(255)
-
-##############################
-
-
-
 # Once we have IP, show for 10s
 cd = 10
 while (cd > 0):
 	display.message('Starting in %d seconds\n\nFrame configuration\n\nhttp://%s:7777' % (cd, settings.get('local-ip')))
 	cd -= 1
 	time.sleep(1)
-
-def oauthGetToken():
-  return settings.get('oauth_token')
-
-def oauthSetToken(token):
-  settings.set('oauth_token', token)
-  settings.save()
-
-oauth = OAuth(settings.get('local-ip'), oauthSetToken, oauthGetToken, ['https://www.googleapis.com/auth/photos'])
-
-if os.path.exists(settings.CONFIGFOLDER + '/oauth.json'):
-  try:
-    with open(settings.CONFIGFOLDER + '/oauth.json') as f:
-      data = json.load(f)
-    if 'web' in data: # if someone added it via command-line
-      data = data['web']
-    oauth.setOAuth(data)
-  except:
-    logging.exception('OAuth file is corrupt, do not use')
 
 # Prep random
 random.seed(long(time.clock()))

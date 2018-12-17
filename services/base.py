@@ -17,9 +17,9 @@ import hashlib
 import os
 import json
 import random
+import logging
 
 from modules.oauth import OAuth
-from modules.remember import remember
 
 # This is the base implementation of a service. It provides all the
 # basic features like OAuth and Authentication as well as state and
@@ -36,12 +36,12 @@ class BaseService:
   STATE_ERROR = -1
   STATE_UNINITIALIZED = 0
 
-  STATE_DO_AUTH = 1
+  STATE_DO_CONFIG = 1
   STATE_DO_OAUTH = 2
 
   STATE_READY = 999
 
-  def __init__(self, configDir, id, name, needAuth=False, needOAuth=False):
+  def __init__(self, configDir, id, name, needConfig=False, needOAuth=False):
     # MUST BE CALLED BY THE IMPLEMENTING CLASS!
     self._ID = id
     self._NAME = name
@@ -53,10 +53,10 @@ class BaseService:
     self._STATE = {
       '_OAUTH_CONFIG' : None,
       '_OAUTH_CONTEXT' : None,
-      '_AUTH_CONFIG' : None,
+      '_CONFIG' : None,
       '_KEYWORDS' : []
     }
-    self._NEED_AUTH = needAuth
+    self._NEED_CONFIG = needConfig
     self._NEED_OAUTH = needOAuth
 
     self._DIR_BASE = self._prepareFolders(configDir)
@@ -70,7 +70,7 @@ class BaseService:
     self.loadState()
 
   def _prepareFolders(self, configDir):
-    basedir = os.path.join(configDir, self.hashString(self._ID))
+    basedir = os.path.join(configDir, self._ID)
     if not os.path.exists(basedir):
       os.mkdir(basedir)
     if not os.path.exists(basedir + '/memory'):
@@ -97,12 +97,12 @@ class BaseService:
     # Determines what the user needs to do next to configure this service
     # if this doesn't return ready, caller must take appropiate action
     if self._NEED_OAUTH and self._OAUTH is None:
-      self._OAUTH = OAuth(self._setOAuthToken, self._getOAuthToken, self.getOAuthScope())
+      self._OAUTH = OAuth(self._setOAuthToken, self._getOAuthToken, self.getOAuthScope(), self._ID)
       if self._STATE['_OAUTH_CONFIG'] is not None:
         self._OAUTH.setOAuth(self._STATE['_OAUTH_CONFIG'])
 
-    if self._NEED_AUTH and not self.hasAuthentication():
-      return BaseService.STATE_DO_AUTH
+    if self._NEED_CONFIG and not self.hasConfiguration():
+      return BaseService.STATE_DO_CONFIG
     if self._NEED_OAUTH and (not self.hasOAuthConfig or not self.hasOAuth()):
       return BaseService.STATE_DO_OAUTH
 
@@ -179,31 +179,40 @@ class BaseService:
   def _getOAuthToken(self):
     return self._STATE['_OAUTH_CONTEXT']
 
+  def migrateOAuthToken(self, token):
+    if self._STATE['_OAUTH_CONTEXT'] is not None:
+      logging.error('Cannot migrate token, already have one!')
+      return
+    logging.debug('Setting token to %s' % repr(token))
+    self._STATE['_OAUTH_CONTEXT'] = token
+    self.saveState()
+
   ###[ For services which require static auth ]###########################
 
-  def validateAuthentication(self, config):
+  def validateConfiguration(self, config):
     # Allow service to validate config, if correct, return None
     # If incorrect, return helpful error message.
     # config is a map with fields and their values
-    return 'Not overriden yet but auth is enabled'
+    return 'Not overriden yet but config is enabled'
 
-  def setAuthentication(self, config):
+  def setConfiguration(self, config):
     # Setup any needed authentication data for this
     # service.
-    self._STATE['_AUTH_CONFIG'] = config
+    self._STATE['_CONFIG'] = config
     self.saveState()
 
-  def getAuthentication(self):
-    return self._STATE['_AUTH_CONFIG']
+  def getConfiguration(self):
+    return self._STATE['_CONFIG']
 
-  def hasAuthentication(self):
+  def hasConfiguration(self):
     # Checks if it has auth data
-    return self._STATE['_AUTH_CONFIG'] != None
+    return self._STATE['_CONFIG'] != None
 
-  def getAuthenticationFields(self):
+  def getConfigurationFields(self):
     # Returns a key/value map with:
     # "field" => [ "type" => "STR/INT", "name" => "Human readable", "description" => "Longer text" ]
     # Allowing UX to be dynamically created
+    # Supported field types are: STR, INT, PW (password means it will obscure it on input)
     return {'username' : {'type':'STR', 'name':'Username', 'description':'Username to use for login'}}
 
   ###[ Keyword management ]###########################

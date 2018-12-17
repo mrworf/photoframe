@@ -22,7 +22,7 @@ from requests_oauthlib import OAuth2Session
 from modules.helper import helper
 
 class OAuth:
-	def __init__(self, setToken, getToken, scope):
+	def __init__(self, setToken, getToken, scope, extras=''):
 		self.ip = helper.getIP()
 		self.scope = scope
 		self.oauth = None
@@ -30,6 +30,7 @@ class OAuth:
 		self.cbSetToken = setToken
 		self.ridURI = 'https://photoframe.sensenet.nu'
 		self.state = None
+		self.extras = extras
 
 	def setOAuth(self, oauth):
 		self.oauth = oauth
@@ -95,7 +96,7 @@ class OAuth:
 		auth = OAuth2Session(self.oauth['client_id'],
 							scope=self.scope, # ['https://www.googleapis.com/auth/photos'],
 							redirect_uri=self.ridURI,
-							state='%s-%s' % (self.rid, self.ip))
+							state='%s-%s-%s' % (self.rid, self.ip, self.extras))
 		authorization_url, state = auth.authorization_url(self.oauth['auth_uri'],
 		                                                  access_type="offline",
 		                                                  prompt="consent")
@@ -107,7 +108,7 @@ class OAuth:
 		auth = OAuth2Session(self.oauth['client_id'],
 		                     scope=self.scope, # ['https://www.googleapis.com/auth/photos'],
 		                     redirect_uri=self.ridURI,
-		                     state='%s-%s' % (self.rid, self.ip))
+		                     state='%s-%s-%s' % (self.rid, self.ip, self.extras))
 
 		token = auth.fetch_token(self.oauth['token_uri'],
 		                         client_secret=self.oauth['client_secret'],
