@@ -93,13 +93,9 @@ class slideshow:
           self.imageCurrent = filename
 
           helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'))
-          #if self.colormatch.hasSensor():
-          #  if not self.colormatch.adjust(temp, dest):
-          #    logging.warning('Unable to adjust image to colormatch, using original')
-          #    os.rename(temp, dest)
-          #  else:
-          #    os.remove(temp)
-          #else:
+          if self.colormatch.hasSensor():
+            if not self.colormatch.adjust(temp, dest):
+              logging.warning('Unable to adjust image to colormatch, using original')
       else:
         self.display.message('No defined services')
 

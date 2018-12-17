@@ -62,7 +62,7 @@ class colormatch(Thread):
 	def setUpdateListener(self, listener):
 		self.listener = listener
 
-	def adjust(self, src, dst, temperature = None):
+	def adjust(self, filename, temperature = None):
 		if not self.allowAdjust or not self.hasScript:
 			return False
 
@@ -81,12 +81,16 @@ class colormatch(Thread):
 			logging.debug('Adjusting color temperature to %dK' % temperature)
 
 		try:
-			return subprocess.call([self.script, '-t', "%d" % temperature, src + '[0]', dst], stderr=self.void) == 0
+			result = subprocess.call([self.script, '-t', "%d" % temperature, filename + '[0]', filename + '.jpg'], stderr=self.void) == 0
+			if result:
+				os.unlink(filename)
+				os.rename(filename + '.jpg', filename)
+			return result
 		except:
 			logging.exception('Unable to run %s:', self.script)
 			return False
 
-	# The following function (_temperature_and_lux) is lifted from the 
+	# The following function (_temperature_and_lux) is lifted from the
 	# https://github.com/adafruit/Adafruit_CircuitPython_TCS34725 project and
 	# is under MIT license, this license ONLY applies to said function and no
 	# other part of this project.
