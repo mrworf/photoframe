@@ -419,6 +419,52 @@ def web_main(file):
 def web_template(file):
   return app.send_static_file('template/' + file)
 
+@app.route('/service/available', methods=['GET'], defaults={'id':None})
+@app.route('/service/list', methods=['GET'], defaults={'id':None})
+@app.route('/service/add', methods=['POST'], defaults={'id':None})
+@app.route('/service/remove', methods=['POST'], defaults={'id':None})
+@app.route('/service/rename', methods=['POST'], defaults={'id':None})
+@app.route('/service/link', methods=['POST'], defaults={'id':None})
+@app.route('/service/<id>/oauth', methods=['POST'])
+@app.route('/service/<id>/config', methods=['GET', 'POST'])
+@app.route('/service/<id>/config/fields', methods=['GET'])
+@auth.login_required
+def services_operations(id):
+  j = request.json
+  if '/available' in request.url:
+    return jsonify(services.listServices())
+  if '/list' in request.url:
+    return jsonify(services.getServices())
+  if '/add' in request.url and j is not None:
+    if 'name' in j and 'id' in j:
+      return jsonify({'id':services.addService(intval(j['id'], j['name']))})
+  if '/remove' in request.url and j is not None:
+    if 'id' in j:
+      services.deleteService(j['id'])
+      return 'Done', 200
+  if '/rename' in request.url and j is not None:
+    if 'name' in j and 'id' in j:
+      if services.renameService(j['id'], j['name']):
+        return 'Done', 200
+  if '/link' in request.url and j is not None:
+    if 'id' in j:
+      return redirect(services.handleOAuthStart(j['id']))
+  if '/oauth' in request.url:
+    # This one is special, this is a file upload of the JSON config data
+    # and since we don't need a physical file for it, we should just load
+    # the data. For now... ignore
+    pass
+  if request.url.endswith('/config/fields'):
+    return jsonify(services.getServiceConfigurationFields(id))
+  if request.url.endswith('/config'):
+    if request.method == 'POST' and j is not None and 'config' in j:
+      if services.setServiceConfiguration(id, j['config']):
+        return 'Configuration saved', 200
+    elif request.method == 'GET':
+      return jsonify(services.getServiceConfiguration(id))
+
+  abort(500)
+
 settings = settings()
 drivers = drivers()
 display = display(cmdline.emulatefb)

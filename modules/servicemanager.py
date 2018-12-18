@@ -22,7 +22,10 @@ import os
 import logging
 import json
 
+# Any added service here also needs corresponding
+# entry in _resolveService
 from services.svc_picasaweb import PicasaWeb
+from services.svc_googlephotos import GooglePhotos
 
 class ServiceManager:
   def __init__(self, settings):
@@ -48,7 +51,15 @@ class ServiceManager:
   def _resolveService(self, id):
     if PicasaWeb.SERVICE_ID == id:
       return 'PicasaWeb'
+    if GooglePhotos.SERVICE_ID == id:
+      return 'GooglePhotos'
     return None
+
+  def listServices(self):
+    result = []
+    result.append({'name' : PicasaWeb.SERVICE_NAME, 'id' : PicasaWeb.SERVICE_ID})
+    result.append({'name' : GooglePhotos.SERVICE_NAME, 'id' : GooglePhotos.SERVICE_ID})
+    return result;
 
   def _save(self):
     data = []
@@ -92,6 +103,14 @@ class ServiceManager:
     self._save()
     return genid
 
+  def renameService(self, id, newName):
+    if id not in self._SERVICES:
+      return False
+    self._SERVICES[id]['service'].setName(newName)
+    self._SERVICES[id]['name'] = newName
+    self._save()
+    return True
+
   def deleteService(self, id):
     if id not in self._SERVICES:
       return
@@ -117,6 +136,33 @@ class ServiceManager:
       return None
     svc = self._SERVICES[service]['service']
     return svc.startOAuth()
+
+  def getServiceConfigurationFields(self, service):
+    if service not in self._SERVICES:
+      return {}
+    svc = self._SERVICES[service]['service']
+    if not svc.hasConfiguration():
+      return {}
+    return svc.getConfigurationFields()
+
+  def getServiceConfiguration(self, service):
+    if service not in self._SERVICES:
+      return {}
+    svc = self._SERVICES[service]['service']
+    if not svc.hasConfiguration():
+      return {}
+    return svc.getConfiguration()
+
+  def setServiceConfiguration(self, service, config):
+    if service not in self._SERVICES:
+      return False
+    svc = self._SERVICES[service]['service']
+    if not svc.hasConfiguration():
+      return False
+    if not svc.validateConfiguration(config):
+      return False
+    svc.setConfiguration(config)
+    return True
 
   def getServiceState(self, id):
     if id not in self._SERVICES:
@@ -163,7 +209,7 @@ class ServiceManager:
     result = []
     for k in self._SERVICES:
       svc = self._SERVICES[k]
-      result.append({'name' : svc['service'].getName(), 'service' : svc['service'].SERVICE_NAME, 'id' : k, 'state' : self.getServiceState(k)})
+      result.append({'name' : svc['service'].getName(), 'service' : svc['service'].SERVICE_ID, 'id' : k, 'state' : self.getServiceState(k)})
     return result
 
   def servicePrepareNextItem(self, id, destinationFile, supportedMimeTypes, displaySize):

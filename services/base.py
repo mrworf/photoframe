@@ -130,6 +130,9 @@ class BaseService:
     # Retrieves the name of this instance
     return self._NAME
 
+  def setName(self, newName):
+    self._NAME = newName
+
   def getId(self):
     return self._ID
 
