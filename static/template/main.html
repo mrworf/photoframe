@@ -8,19 +8,19 @@
 		{{#if resolution.resolution}}
 		Resolution
 		<select name="tvservice">
-			{{#select tvservice}}
+			{{#select settings.tvservice}}
 			{{#each resolution.resolution}}
 				<option value="{{this.mode}} {{this.code}} HDMI">{{this.width}}x{{this.height}}{{this.scan}} ({{this.rate}}Hz)</option>
 			{{/each}}
 			{{/select}}
 		</select>
 		{{else}}
-			No display connected or detected 
+			No display connected or detected
 		{{/if}}
 		<br>
 		Select custom display driver
 		<select name="display-driver">
-			{{#select display-driver}}
+			{{#select settings.display-driver}}
 			<option value="none">Use HDMI only</option>
 			{{#each drivers}}
 				<option value="{{this}}">{{this}}</option>
@@ -31,7 +31,7 @@
 		<br>
 		Time zone
 		<select name="timezone">
-			{{#select timezone}}
+			{{#select settings.timezone}}
 			{{#each timezones}}
 				<option value="{{this}}">{{this}}</option>
 			{{/each}}
@@ -39,39 +39,30 @@
 		</select>
 		<br>
 		GPIO PIN to monitor for shutdown interrupts
-		<input value="{{shutdown-pin}}" type="text" class="small" name="shutdown-pin" data-validate="gpio" data-confirm="gpio">
+		<input value="{{settings.shutdown-pin}}" type="text" class="small" name="shutdown-pin" data-validate="gpio" data-confirm="gpio">
 		<br>
-		Turn on display at hour <input value="{{display-on}}" type="text" class="small aright" name="display-on" data-validate="time">
-		and off at hour <input value="{{display-off}}" type="text" class="small aright" name="display-off" data-validate="time"> (24h time)
+		Turn on display at hour <input value="{{settings.display-on}}" type="text" class="small aright" name="display-on" data-validate="time">
+		and off at hour <input value="{{settings.display-off}}" type="text" class="small aright" name="display-off" data-validate="time"> (24h time)
 		<br>
-		{{#if sensor}}
-		Auto off if ambient lux is below 
-		<input value="{{autooff-lux}}" type="text" class="medium" name="autooff-lux" data-validate="lux"> lux for 
-		<input value="{{autooff-time}}" type="text" class="small" name="autooff-time" data-validate="minutes"> minutes
+		Change every <input value="{{settings.interval}}" type="text" class="small" name="interval" data-validate="interval"> seconds<br>
+		<br>
+		{{#if settings.sensor}}
+		Auto off if ambient lux is below
+		<input value="{{settings.autooff-lux}}" type="text" class="medium" name="autooff-lux" data-validate="lux"> lux for
+		<input value="{{settings.autooff-time}}" type="text" class="small" name="autooff-time" data-validate="minutes"> minutes
 		<br>
 		Current ambient environment <span id="lux">-.--</span> lux and <span id="colortemp">----</span>K color temperature.
 		<br>
 		{{/if}}
-		Power saving measures should 
+		Power saving measures should
 		<select name="powersave">
-			{{#select powersave}}
+			{{#select settings.powersave}}
 			<option value="none">not be used</option>
 			<option value="schedule">use schedule</option>
-			<option value="sensor">use environment {{#if sensor}}{{else}}(no sensor){{/if}}</option>
-			<option value="sensor+schedule">use schedule and environment {{#if sensor}}{{else}}(no sensor){{/if}}</option>
+			<option value="sensor">use environment {{#if settings.sensor}}{{else}}(no sensor){{/if}}</option>
+			<option value="sensor+schedule">use schedule and environment {{#if settings.sensor}}{{else}}(no sensor){{/if}}</option>
 			{{/select}}
 		</select>
-	</div>
-</div>
-<br>
-<div>
-	<div>
-		Slideshow
-	</div>
-	<div>
-		Change every <input value="{{interval}}" type="text" class="small" name="interval" data-validate="interval"> seconds<br>
-		Refresh list of photos every <input value="{{refresh-content}}" type="text" class="small" name="refresh-content" data-validate="refresh"> hours<br>
-		<span style="font-size: 9pt" class="normal">(setting refresh to zero forces all images to be displayed before refreshing)</span>
 	</div>
 </div>
 <br>
@@ -80,180 +71,45 @@
 		System
 	</div>
 	<div>
-		<input type="button" id="reset" value="Factory Reset">
+		<input type="button" id="update" value="Force Update">
+		<div style="display: inline-block; width: 100px"></div>
 		<input type="button" id="reboot" value="Reboot">
 		<input type="button" id="shutdown" value="Power off">
-	</div>
-</div>
-<div>
-	<div>
-		Google Photos<br>
-		<span style="font-size: 9pt" class="normal">(<a href="/link">reauthorize</a>)</span>
-	</div>
-	<div>
-		<p class="nospace" id="keywords"></p>
-		<p class="nospace" style="display: flex">
-			<input type="text" id="keyword" style="flex: 2; text-align: left">
-			<input type="button" id="add" value="Add keywords">
-			<input type="button" id="test" value="Test keywords">
-		</p>
+		<div style="display: inline-block; width: 100px"></div>
+		<input type="button" id="reset" value="Factory Reset">
 	</div>
 </div>
 <br>
+<div>
 
-<script type="text/javascript">
-	// Refresh image every 30s
-	$('#driver').fileupload({
-        add: function (e, data) {
-        	$('#driver-button').prop('disabled', 'disabled');
-            data.submit();
-        },
-        done: function (e, data) {
-        	console.log(data);
-        	if (data.result['reboot']) {
-				if(confirm('In order to fully enable this change, you must reboot the photoframe. Do you wish to do this now?')) {
-					$.ajax({
-						url:"/reboot"
-					});
-					rebootWatch();
-				} else {
-	            	alert("Upload complete, refreshing drivers");
-	            	location.reload();
-				}
-    		} else {
-            	alert("Upload complete, refreshing drivers");
-            	location.reload();
-    		}
-        },
-        fail: function (e, data) {
-        	alert('Failed to upload the driver');
-        },
-        always: function(e, data) {
-        	$('#driver-button').prop('disabled', '');
-        }
-    });
+	{{#each service-defined}}
+	<div>
+		{{name}}<br>
+		{{#ifvalue state value="OAUTH" }}
+			<span style="font-size: 9pt" class="normal">(<a href="/service/{{id}}/link">Authorize</a>)</span>
+		{{/ifvalue}}
+		<span style="font-size: 9pt" class="normal">(<a href="/service/remove/{{id}}/link">Relink</a>)</span>
+	</div>
+	<div>
+		<p class="nospace" id="keywords">
+			{{#each keywords.keywords}}
+				<input class="delete" type="button" data-service="{{../id}}" data-index="{{@index}}" value="Delete">
+				<input class="search" data-key="{{encode this}}" type="button" value="Open">
+				{{#if this}}
+					{{this}}
+				{{else}}
+					&lt;empty - picks one of the last photos added&gt;
+				{{/if}}
+				<br>
+			{{/each}}
+		</p>
+		<p class="nospace" style="display: flex">
+			<input type="text" id="keyword" style="flex: 2; text-align: left">
+			<input type="button" id="add" data-service="{{id}}" value="Add keywords">
+		</p>
+	</div>
+	{{/each}}
+</div>
+<br>
 
-	$("#driver-button").click(function() {
-		$('#driver').trigger('click');
-	});
-
-	function rebootWatch() {
-		$(document.body).html('<h1>Rebooting</h1>')
-	}
-
-	function reloadScreen() {
-		$('#screen').attr('src', "/details/current?" + new Date().getTime())
-		setTimeout(reloadScreen, 30000);
-	}
-	reloadScreen();
-
-	function updateAmbient() {
-		$.ajax({
-			url:'/details/color'
-		}).done(function(data) {
-			if (data['temperature'] == null)
-				return;
-
-			$('#colortemp').text(data['temperature'].toFixed(0));
-			$('#lux').text(data['lux'].toFixed(2));
-			setTimeout(updateAmbient, 5000);
-		});
-	}
-	updateAmbient();
-
-	valid = new Validator();
-	confirmation = new Confirmation();
-
-	$("input[type='text']").change(function() {
-		if ($(this).attr('name') == undefined)
-			return;
-
-		confirmit = $(this).data('confirm');
-		if (confirmit && !eval('confirmation.' + confirmit + '()')) {
-			// Yeah, not pretty, but easier
-			document.location.reload();
-			return;
-		}
-		validate = $(this).data('validate');
-		if (validate) {
-			$(this).val(eval('valid.' + validate + '($(this).val());'));
-		}
-		console.log("/setting/" + $(this).attr('name') + "/" + $(this).val());
-		$.ajax({
-			url:"/setting/" + $(this).attr('name') + "/" + $(this).val(),
-			type:"PUT"
-		}).done(function(){
-		});
-	});
-
-	$("select[name=powersave]").change(function() {
-		$.ajax({
-			url:"/setting/" + $(this).attr('name') + "/" + encodeURIComponent($(this).val()),
-			type:"PUT"
-		}).done(function(){
-		});
-	});
-
-	$("select[name=tvservice]").change(function() {
-		$.ajax({
-			url:"/setting/tvservice/" + encodeURIComponent($(this).val()),
-			type:"PUT"
-		}).done(function(){
-		});
-	});
-
-	$("select[name=timezone]").change(function() {
-		$.ajax({
-			url:"/setting/timezone/" + encodeURIComponent($(this).val().replace('/', '+')),
-			type:"PUT"
-		}).done(function(){
-		});
-	});
-
-	$("select[name=display-driver]").change(function() {
-		$.ajax({
-			url:"/setting/display-driver/" + encodeURIComponent($(this).val()),
-			type:"PUT"
-		}).done(function(data){
-			if (data['status']) {
-				if(confirm('In order to fully enable this change, you must reboot the photoframe. Do you wish to do this now?')) {
-					$.ajax({
-						url:"/reboot"
-					});					
-					$(document.body).html('<h1>Rebooting</h1>')
-				}
-
-			}
-			console.log(data);
-		});
-	});
-
-	$("#reset").click(function() {
-		if (confirm("Are you sure? Link to photos will also be reset")) {
-			$.ajax({
-				url:"/reset"
-			}).done(function(){
-				location.reload();
-			});
-		}
-	});
-
-	$("#reboot").click(function() {
-		if (confirm("Are you sure you want to REBOOT?")) {
-			$.ajax({
-				url:"/reboot"
-			});
-			rebootWatch();
-		}
-	});
-
-	$("#shutdown").click(function() {
-		if (confirm("Are you sure you want to POWER OFF the frame?")) {
-			$.ajax({
-				url:"/shutdown"
-			});
-			$(document.body).html('<h1>Powering off</h1>')
-		}
-	});
-	populateKeywords();
-</script>
+<script type="text/javascript" src="/js/main.js"></script>

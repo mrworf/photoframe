@@ -240,8 +240,10 @@ class BaseService:
 
   def removeKeywords(self, index):
     if index < 0 or index > (len(self._STATE['_KEYWORDS'])-1):
+      logging.error('removeKeywords: Out of range %d' % index)
       return
     self._STATE['_KEYWORDS'].pop(index)
+    self.saveState()
 
   def needKeywords(self):
     # Some services don't have keywords. Override this to return false
@@ -252,6 +254,8 @@ class BaseService:
     return 'Anything you\'d like, we try to find it'
 
   def getRandomKeywordIndex(self):
+    if len(self._STATE['_KEYWORDS']) == 0:
+      return 0
     return random.SystemRandom().randint(0,len(self._STATE['_KEYWORDS'])-1)
 
   ###[ Actual hard work ]###########################
@@ -317,7 +321,6 @@ class BaseService:
     h = self.hashString(itemId)
     if h in self._MEMORY:
       return
-    print repr(self._MEMORY)
     self._MEMORY.append(h)
 
   def memorySeen(self, itemId, keywords=None):

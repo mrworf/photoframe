@@ -47,11 +47,19 @@ class PicasaWeb(BaseService):
 
   def fetchImage(self, destinationFile, supportedMimeTypes, displaySize):
     # First, pick which keyword to use
-    offset = self.getRandomKeywordIndex()
-    total = len(self.getKeywords())
+    keywordList = list(self.getKeywords())
+    offset = 0
+
+    # Make sure we always have a default
+    if len(keywordList) == 0:
+      keywordList.append('')
+    else:
+      offset = self.getRandomKeywordIndex()
+
+    total = len(keywordList)
     for i in range(0, total):
       index = (i + offset) % total
-      keyword = self.getKeywords()[index]
+      keyword = keywordList[index]
       images = self.getImagesFor(keyword)
       if images is None:
         continue

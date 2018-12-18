@@ -182,9 +182,11 @@ class ServiceManager:
 
   def removeServiceKeywords(self, service, index):
     if service not in self._SERVICES:
+      logging.error('removeServiceKeywords: No such service')
       return False
     svc = self._SERVICES[service]['service']
     if not svc.needKeywords():
+      logging.error('removeServiceKeywords: Does not use keywords')
       return False
     return svc.removeKeywords(index)
 
@@ -226,14 +228,20 @@ class ServiceManager:
         svc.addKeywords(keyword)
 
       # Blank out the old keywords since they were migrated
-      self._SETTINGS.set('keywords', '')
+      self._SETTINGS.delete('keywords')
       self._SETTINGS.save()
 
   def getServices(self):
     result = []
     for k in self._SERVICES:
       svc = self._SERVICES[k]
-      result.append({'name' : svc['service'].getName(), 'service' : svc['service'].SERVICE_ID, 'id' : k, 'state' : self.getServiceState(k)})
+      result.append({
+        'name' : svc['service'].getName(),
+        'service' : svc['service'].SERVICE_ID,
+        'id' : k,
+        'state' : self.getServiceState(k),
+        'useKeywords' : svc['service'].needKeywords()
+      })
     return result
 
   def servicePrepareNextItem(self, id, destinationFile, supportedMimeTypes, displaySize):

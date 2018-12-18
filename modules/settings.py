@@ -58,9 +58,6 @@ class settings:
 			'display-off' : 22,				# What hour (24h) to disable display and sleep
 			'display-on' : 4,					# What hour (24h) to enable display and continue
 			'refresh-content' : 24,		# After how many hours we should force reload of image lists from server
-			'keywords' : [						# Keywords for search (blank = latest 1000 images)
-				""
-			],
 			'autooff-lux' : 0.01,
 			'autooff-time' : 0,
 			'powersave' : '',
@@ -164,6 +161,9 @@ class settings:
 
 	def set(self, key, value):
 		self.settings[key] = self.convertToNative(value)
+
+	def delete(self, key):
+		del self.settings[key]
 
 	def get(self, key):
 		if key == 'colortemp-script':

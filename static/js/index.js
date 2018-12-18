@@ -123,22 +123,6 @@ function populateKeywords() {
 				$('#keywords').append(data["keywords"][entry]);
 			$('#keywords').append('<br>');
 		}
-		$("input[class='search']").click(function(){
-			window.open("https://photos.google.com/search/" + $(this).data('key'), "_blank");
-		});
-		$("input[class='delete']").click(function(){
-			if (confirm("Are you sure?")) {
-				$.ajax({
-					url:"/keywords/delete",
-					type:"POST",
-					data: JSON.stringify({ id: $(this).data('id') }),
-					contentType: "application/json; charset=utf-8",
-					dataType: "json"
-				}).done(function(data){
-					populateKeywords();
-				});
-			}
-		});
 	});
 
 	$('#test').click(function(){
@@ -149,118 +133,66 @@ function populateKeywords() {
 			window.open("https://photos.google.com/", "_blank");
 	});
 
-	$('#add').click(function(){
-		$.ajax({
-			url:"/keywords/add",
-			type:"POST",
-			data: JSON.stringify({ keywords: $('#keyword').val() }),
-			contentType: "application/json; charset=utf-8",
-			dataType: "json"
-		}).done(function(data){
-			if (data['status']) {
-				populateKeywords();
-				$('#keyword').val("");
-			}
-		});
-	});
 }
 
-function loadResolution(funcOk)
+var configData = [];
+var configOutstanding = 0;
+
+/**
+ * Loads JSON from server and places data in configData
+ * it also manages async behavior
+ */
+function loadConfigData(url, field, doneFunc)
 {
+	configOutstanding++;
 	$.ajax({
-		url:"/details/tvservice"
+		url: url
 	}).done(function(data) {
-		funcOk(data);
+		parts = field.split(',');
+		if (parts.length == 3)
+			configData[parts[0]][parts[1]][parts[2]] = data;
+		else if (parts.length == 2)
+			configData[parts[0]][parts[1]] = data;
+		else
+			configData[field] = data;
+		configOutstanding--;
+		if (configOutstanding == 0)
+			doneFunc();
+	}).fail(function(data) {
+		alert('Problems loading ' + url + ' from backend, please reload');
+		configOutstanding--;
+		if (configOutstanding == 0)
+			doneFunc();
 	});
 }
 
-function loadTimezone(funcOk)
-{
-	$.ajax({
-		url:"/details/timezone"
-	}).done(function(data) {
-		funcOk(data);
-	});
-}
-
-function loadDrivers(funcOk)
-{
-	$.ajax({
-		url:"/details/drivers"
-	}).done(function(data) {
-		funcOk(data);
-	});
-}
-
-function loadSensor(funcOk) {
-	$.ajax({
-		url:"/details/sensor"
-	}).done(function(data) {
-		funcOk(data);
-	});
-}
-
+/**
+ * Loads all relevant data into configData
+ * in an async manner.
+ */
 function loadSettings(funcOk)
 {
-	$.ajax({
-		url:"/setting"
-	}).done(function(data){
-		result = {}
-		for (key in data) {
-			if (key == 'keywords')
-				continue;
-			value = data[key];
-			result[key] = value;
+	funcTmp = function() {
+		configOutstanding++;
+		for (index in configData['service-defined']) {
+			entry = configData['service-defined'][index];
+			if (entry['useKeywords'])
+				loadConfigData("/keywords/" + entry['id'], "service-defined," + index + ",keywords", funcOk);
 		}
-		loadSensor(function(data) {
-			result['sensor'] = data['sensor'];
+		configOutstanding--;
+	}
 
-			loadResolution(function(data) {
-				result['resolution'] = data;
-				loadTimezone(function(data) {
-					result['timezones'] = data;
-					loadDrivers(function(data) {
-						result['drivers'] = data;
-						funcOk(result);
-					});
-				});
-			});
-		});
-	});
-}
+	configOutstanding++; // Protect against early finish
+	loadConfigData("/setting", "settings", funcTmp);
+	loadConfigData("/details/sensor", "sensor", funcTmp);
+	loadConfigData("/details/tvservice", "resolution", funcTmp);
+	loadConfigData("/details/timezone", "timezones", funcTmp);
+	loadConfigData("/details/drivers", "drivers", funcTmp);
+	loadConfigData("/details/version", "version", funcTmp);
 
-function checkOAuth(funcOk, funcErr) {
-	$.ajax({
-		url:"/has/oauth"
-	}).done(function(data){
-		if (data['result']) {
-			funcOk();
-		} else {
-			funcErr();
-		}
-	});
-}
-
-function checkLink(funcOk, funcErr) {
-	$.ajax({
-		url:"/has/token"
-	}).done(function(data){
-		if (data["result"]) {
-			funcOk();
-		} else
-			funcErr();
-	});
-}
-
-function getVersion(commit, date) {
-	$.ajax({
-		url:"/details/version"
-	}).done(function(data){
-		if (commit != null)
-			$(commit).text(data["commit"]);
-		if (date != null)
-			$(date).text(data["date"]);
-	});
+	loadConfigData("/service/available", 'service-available', funcTmp);
+	loadConfigData("/service/list", 'service-defined', funcTmp);
+	configOutstanding--;
 }
 
 TemplateEngine = function() {
@@ -268,6 +200,18 @@ TemplateEngine = function() {
 		var $el = $('<select />').html( options.fn(this) );
 		$el.find('[value="' + value + '"]').attr({'selected':'selected'});
 		return $el.html();
+	});
+
+	window.Handlebars.registerHelper('ifvalue', function(conditional, options) {
+		if (options.hash.value === conditional) {
+			return options.fn(this);
+		} else {
+			return options.inverse(this);
+		}
+	});
+
+	window.Handlebars.registerHelper('encode', function(value, options) {
+		return encodeURIComponent(value);
 	});
 
 	this.regTemplate = {}

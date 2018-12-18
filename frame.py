@@ -257,12 +257,13 @@ def cfg_keyvalue(key, value):
       return jsonify({key : settings.getUser(key)})
   abort(404)
 
-@app.route('/keywords/<id>', methods=['GET'])
-@app.route('/keywords/<id>/add', methods=['POST'])
-@app.route('/keywords/<id>/delete', methods=['POST'])
+@app.route('/keywords/<service>', methods=['GET'])
+@app.route('/keywords/<service>/add', methods=['POST'])
+@app.route('/keywords/<service>/delete', methods=['POST'])
 @auth.login_required
 def cfg_keywords(service):
   if request.method == 'GET':
+    logging.debug("Keywords: " + repr(services.getServiceKeywords(service)))
     return jsonify({'keywords' : services.getServiceKeywords(service)})
   elif request.method == 'POST' and request.json is not None:
     result = True
@@ -417,30 +418,26 @@ def web_main(file):
 def web_template(file):
   return app.send_static_file('template/' + file)
 
-@app.route('/service/available', methods=['GET'], defaults={'id':None})
-@app.route('/service/list', methods=['GET'], defaults={'id':None})
-@app.route('/service/add', methods=['POST'], defaults={'id':None})
-@app.route('/service/remove', methods=['POST'], defaults={'id':None})
-@app.route('/service/rename', methods=['POST'], defaults={'id':None})
-@app.route('/service/link', methods=['POST'], defaults={'id':None})
-@app.route('/service/<id>/oauth', methods=['POST'])
-@app.route('/service/<id>/config', methods=['GET', 'POST'])
-@app.route('/service/<id>/config/fields', methods=['GET'])
+@app.route('/service/<action>',       methods=['GET'],  defaults={'id':None})
+@app.route('/service/<id>/link', methods=['POST'], defaults={'action': None})
+@app.route('/service/<id>/oauth', methods=['POST'], defaults={'action': None})
+@app.route('/service/<id>/config', methods=['GET', 'POST'], defaults={'action': None})
+@app.route('/service/<id>/config/fields', methods=['GET'], defaults={'action': None})
 @auth.login_required
-def services_operations(id):
+def services_operations(action, id):
   j = request.json
-  if '/available' in request.url:
+  if action == 'available':
     return jsonify(services.listServices())
-  if '/list' in request.url:
+  if action == 'list':
     return jsonify(services.getServices())
-  if '/add' in request.url and j is not None:
+  if action == 'add' and j is not None:
     if 'name' in j and 'id' in j:
       return jsonify({'id':services.addService(intval(j['id'], j['name']))})
-  if '/remove' in request.url and j is not None:
+  if action == 'remove' and j is not None:
     if 'id' in j:
       services.deleteService(j['id'])
       return 'Done', 200
-  if '/rename' in request.url and j is not None:
+  if action == 'rename' and j is not None:
     if 'name' in j and 'id' in j:
       if services.renameService(j['id'], j['name']):
         return 'Done', 200
@@ -531,6 +528,6 @@ if __name__ == "__main__":
   os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
   app.secret_key = os.urandom(24)
   slideshow.start()
-  app.run(debug=False, port=cmdline.port, host=cmdline.listen )
+  app.run(debug=True, port=cmdline.port, host=cmdline.listen )
 
 sys.exit(0)
