@@ -257,22 +257,20 @@ def cfg_keyvalue(key, value):
       return jsonify({key : settings.getUser(key)})
   abort(404)
 
-@app.route('/keywords', methods=['GET'])
-@app.route('/keywords/add', methods=['POST'])
-@app.route('/keywords/delete', methods=['POST'])
+@app.route('/keywords/<id>', methods=['GET'])
+@app.route('/keywords/<id>/add', methods=['POST'])
+@app.route('/keywords/<id>/delete', methods=['POST'])
 @auth.login_required
-def cfg_keywords():
+def cfg_keywords(service):
   if request.method == 'GET':
-    return jsonify({'keywords' : settings.getUser('keywords')})
+    return jsonify({'keywords' : services.getServiceKeywords(service)})
   elif request.method == 'POST' and request.json is not None:
     result = True
     if 'id' not in request.json:
-      if settings.addKeyword(request.json['keywords']):
-        settings.save()
+      if not services.addServiceKeywords(service, request.json['keywords']):
+        result = False
     else:
-      if settings.removeKeyword(request.json['id']):
-        settings.save()
-      else:
+      if not services.removeServiceKeywords(service, request.json['id']):
         result = False
     return jsonify({'status':result})
   abort(500)

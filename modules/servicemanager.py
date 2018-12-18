@@ -164,6 +164,30 @@ class ServiceManager:
     svc.setConfiguration(config)
     return True
 
+  def getServiceKeywords(self, service):
+    if service not in self._SERVICES:
+      return None
+    svc = self._SERVICES[service]['service']
+    if not svc.needKeywords():
+      return None
+    return svc.getKeywords()
+
+  def addServiceKeywords(self, service, keywords):
+    if service not in self._SERVICES:
+      return False
+    svc = self._SERVICES[service]['service']
+    if not svc.needKeywords():
+      return False
+    return svc.addKeywords(keywords)
+
+  def removeServiceKeywords(self, service, index):
+    if service not in self._SERVICES:
+      return False
+    svc = self._SERVICES[service]['service']
+    if not svc.needKeywords():
+      return False
+    return svc.removeKeywords(index)
+
   def getServiceState(self, id):
     if id not in self._SERVICES:
       return None
