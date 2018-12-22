@@ -257,6 +257,11 @@ def cfg_keyvalue(key, value):
       return jsonify({key : settings.getUser(key)})
   abort(404)
 
+@app.route('/keywords/<service>/help', methods=['GET'])
+@auth.login_required
+def cfg_keywords_help(service):
+  return jsonify({'message' : services.helpServiceKeywords(service)})
+
 @app.route('/keywords/<service>', methods=['GET'])
 @app.route('/keywords/<service>/add', methods=['POST'])
 @app.route('/keywords/<service>/delete', methods=['POST'])

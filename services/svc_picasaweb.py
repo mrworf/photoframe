@@ -32,6 +32,9 @@ class PicasaWeb(BaseService):
   def helpOAuthConfig(self):
     return 'Please upload client.json from the Google API Console'
 
+  def helpKeywords(self):
+    return 'Name of people, location, colors, depiction, pretty much anything that Google Photo search accepts'
+
   def prepareNextItem(self, destinationFile, supportedMimeTypes, displaySize):
     result = self.fetchImage(destinationFile, supportedMimeTypes, displaySize)
     if result['error'] is not None:

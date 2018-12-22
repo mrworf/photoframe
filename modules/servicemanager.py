@@ -196,6 +196,14 @@ class ServiceManager:
       return False
     return svc.removeKeywords(index)
 
+  def helpServiceKeywords(self, service):
+    if service not in self._SERVICES:
+      return False
+    svc = self._SERVICES[service]['service']
+    if not svc.needKeywords():
+      return None
+    return svc.helpKeywords()
+
   def getServiceState(self, id):
     if id not in self._SERVICES:
       return None

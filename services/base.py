@@ -251,7 +251,7 @@ class BaseService:
     return True
 
   def helpKeywords(self):
-    return 'Anything you\'d like, we try to find it'
+    return 'Has not been defined'
 
   def getRandomKeywordIndex(self):
     if len(self._STATE['_KEYWORDS']) == 0:

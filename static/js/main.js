@@ -191,6 +191,17 @@ $('.keyword-add').click(function(){
   });
 });
 
+$('.keyword-help').click(function(){
+  $.ajax({
+    url:"/keywords/" + $(this).data('service') + "/help",
+    type:"GET",
+  }).done(function(data){
+    alert(data['message']);
+  });
+});
+
+
+
 $("#new-service").click(function() {
   var name = prompt('Please provide a nickname for ' + $('#new-service-type option:selected').text(), $('#new-service-type option:selected').text());
   name = name.trim();
