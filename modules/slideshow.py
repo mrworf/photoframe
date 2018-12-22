@@ -67,6 +67,7 @@ class slideshow:
   def presentation(self):
     logging.info('Starting presentation')
     delay = 0
+    useService = 0
 
     while True:
       # Avoid showing images if the display is off
@@ -79,7 +80,12 @@ class slideshow:
 
       services = self.services.getServices()
       if len(services) > 0:
-        svc = services[0]['id']
+        # Very simple round-robin
+        if useService > len(services):
+          useService = 0
+        svc = services[useService]['id']
+        useService += 1
+
 
         filename = os.path.join(self.settings.get('tempfolder'), 'image')
         result = self.services.servicePrepareNextItem(svc, filename, ['image/jpeg'], {'width' : self.settings.getUser('width'), 'height' : self.settings.getUser('height')})
@@ -103,7 +109,7 @@ class slideshow:
       if time_process < delay:
         time.sleep(delay - time_process)
 
-      if os.path.exists(self.imageCurrent):
+      if self.imageCurrent is not None and os.path.exists(self.imageCurrent):
         self.display.image(self.imageCurrent)
         os.remove(self.imageCurrent)
 

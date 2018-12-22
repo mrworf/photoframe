@@ -80,8 +80,9 @@
 	</div>
 </div>
 <br>
+{{#if service-defined}}
+{{#each service-defined}}
 <div>
-	{{#each service-defined}}
 	<div>
 		{{name}}<br>
 		{{#ifvalue state value="OAUTH" }}
@@ -94,8 +95,8 @@
 		{{#if keywords.keywords}}
 		<p class="nospace" id="keywords">
 			{{#each keywords.keywords}}
-				<input class="delete" type="button" data-service="{{../id}}" data-index="{{@index}}" value="Delete">
-				<input class="search" data-key="{{encode this}}" type="button" value="Open">
+				<input class="keyword-delete" type="button" data-service="{{../id}}" data-index="{{@index}}" value="Delete">
+				<input class="keyword-search" data-key="{{encode this}}" type="button" value="Open">
 				{{#if this}}
 					{{this}}
 				{{else}}
@@ -106,13 +107,14 @@
 		</p>
 		{{/if}}
 		<p class="nospace" style="display: flex">
-			<input type="text" id="keyword" style="flex: 2; text-align: left">
-			<input type="button" id="add" data-service="{{id}}" value="Add keywords">
+			<input type="text" class="keyword" style="flex: 2; text-align: left">
+			<input type="button" class="keyword-add" data-service="{{id}}" value="Add keywords">
 		</p>
 	</div>
-	{{/each}}
 </div>
-	<br>
+{{/each}}
+<br>
+{{/if}}
 <div>
 	<input type="button" id="new-service" value="Add photo provider">
 	<select id="new-service-type">

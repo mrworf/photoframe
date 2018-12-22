@@ -393,7 +393,6 @@ def oauth_callback():
 @app.route('/<file>')
 @auth.login_required
 def web_main(file):
-  logging.debug('Fetching file: ' + repr(file))
   if file is None:
     return app.send_static_file('index.html')
   else:
@@ -446,11 +445,11 @@ def services_operations(action):
   if action == 'remove' and j is not None:
     if 'id' in j:
       services.deleteService(j['id'])
-      return 'Done', 200
+      return jsonify({'status':'Done'})
   if action == 'rename' and j is not None:
     if 'name' in j and 'id' in j:
       if services.renameService(j['id'], j['name']):
-        return 'Done', 200
+        return jsonify({'status':'Done'})
   if request.url.endswith('/config/fields'):
     return jsonify(services.getServiceConfigurationFields(id))
   if request.url.endswith('/config'):

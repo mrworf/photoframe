@@ -162,10 +162,10 @@ $("#shutdown").click(function() {
   }
 });
 
-$("input[class='search']").click(function(){
+$("input[class='keyword-search']").click(function(){
   window.open("https://photos.google.com/search/" + $(this).data('key'), "_blank");
 });
-$("input[class='delete']").click(function(){
+$("input[class='keyword-delete']").click(function(){
   if (confirm("Are you sure?")) {
     $.ajax({
       url:"/keywords/" + $(this).data('service') + "/delete",
@@ -179,11 +179,11 @@ $("input[class='delete']").click(function(){
   }
 });
 
-$('#add').click(function(){
+$('.keyword-add').click(function(){
   $.ajax({
     url:"/keywords/" + $(this).data('service') + "/add",
     type:"POST",
-    data: JSON.stringify({ keywords: $(this).prev("input[type=text]").val() }),
+    data: JSON.stringify({ keywords: $(this).prev("input[class=keyword]").val() }),
     contentType: "application/json; charset=utf-8",
     dataType: "json"
   }).done(function(data){
@@ -238,6 +238,7 @@ $(".service-delete").click(function() {
       contentType: "application/json; charset=utf-8",
       dataType: "json"
     }).done(function(data){
+      console.log(data);
       location.reload();
     });
   }
