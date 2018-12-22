@@ -161,8 +161,10 @@ function loadConfigData(url, field, doneFunc)
 	}).fail(function(data) {
 		alert('Problems loading ' + url + ' from backend, please reload');
 		configOutstanding--;
-		if (configOutstanding == 0)
+		if (configOutstanding == 0) {
+			configOutstanding == -1; // Avoid double running (not 100% safe)
 			doneFunc();
+		}
 	});
 }
 
@@ -173,13 +175,17 @@ function loadConfigData(url, field, doneFunc)
 function loadSettings(funcOk)
 {
 	funcTmp = function() {
-		configOutstanding++;
-		for (index in configData['service-defined']) {
-			entry = configData['service-defined'][index];
-			if (entry['useKeywords'])
-				loadConfigData("/keywords/" + entry['id'], "service-defined," + index + ",keywords", funcOk);
+		if (configData['service-defined'].length != 0) {
+			configOutstanding++;
+			for (index in configData['service-defined']) {
+				entry = configData['service-defined'][index];
+				if (entry['useKeywords'])
+					loadConfigData("/keywords/" + entry['id'], "service-defined," + index + ",keywords", funcOk);
+			}
+			configOutstanding--;
 		}
-		configOutstanding--;
+		if (configOutstanding == 0)
+			funcOk();
 	}
 
 	configOutstanding++; // Protect against early finish

@@ -263,7 +263,6 @@ def cfg_keyvalue(key, value):
 @auth.login_required
 def cfg_keywords(service):
   if request.method == 'GET':
-    logging.debug("Keywords: " + repr(services.getServiceKeywords(service)))
     return jsonify({'keywords' : services.getServiceKeywords(service)})
   elif request.method == 'POST' and request.json is not None:
     result = True
@@ -379,35 +378,22 @@ def upload(item):
     abort(retval['status'])
   abort(405)
 
-@app.route("/link/<service>")
-@auth.login_required
-def oauth_start(service):
-  url = services.handleOAuthStart(service)
-  if url is None:
-    abort(500)
-  else:
-    return redirect(url)
-
 @app.route("/callback", methods=["GET"])
 @auth.login_required
 def oauth_callback():
   # Figure out who should get this result...
-  if services.handleOAuthCallback(request):
+  if services.oauthCallback(request):
     # Request handled
+    slideshow.start(True)
     return redirect('/')
   else:
     abort(500)
-
-@app.route("/complete", methods=['GET'])
-@auth.login_required
-def complete():
-  slideshow.start(True)
-  return redirect('/')
 
 @app.route('/', defaults={'file':None})
 @app.route('/<file>')
 @auth.login_required
 def web_main(file):
+  logging.debug('Fetching file: ' + repr(file))
   if file is None:
     return app.send_static_file('index.html')
   else:
@@ -418,13 +404,37 @@ def web_main(file):
 def web_template(file):
   return app.send_static_file('template/' + file)
 
-@app.route('/service/<action>',       methods=['GET'],  defaults={'id':None})
-@app.route('/service/<id>/link', methods=['POST'], defaults={'action': None})
-@app.route('/service/<id>/oauth', methods=['POST'], defaults={'action': None})
-@app.route('/service/<id>/config', methods=['GET', 'POST'], defaults={'action': None})
-@app.route('/service/<id>/config/fields', methods=['GET'], defaults={'action': None})
+#@app.route('/service/<id>/config', methods=['GET', 'POST'], defaults={'action': None})
+#@app.route('/service/<id>/config/fields', methods=['GET'], defaults={'action': None})
+
+@app.route('/service/<service>/oauth', methods=['POST'])
 @auth.login_required
-def services_operations(action, id):
+def servicees_oauth(service):
+  j = request.json
+  # This one is special, this is a file upload of the JSON config data
+  # and since we don't need a physical file for it, we should just load
+  # the data. For now... ignore
+  if 'filename' not in request.files:
+    logging.error('No file part')
+    abort(405)
+  file = request.files['filename']
+  data = json.load(file)
+  if 'web' in data:
+    data = data['web']
+  if 'redirect_uris' in data and 'https://photoframe.sensenet.nu' not in data['redirect_uris']:
+    return 'The redirect uri is not set to https://photoframe.sensenet.nu', 405
+  if not services.oauthConfig(service, data):
+    return 'Configuration was invalid', 405
+  return 'Configuration set', 200
+
+@app.route('/service/<service>/link', methods=['GET'])
+@auth.login_required
+def service_link(service):
+  return redirect(services.oauthStart(service))
+
+@app.route('/service/<action>',  methods=['GET', 'POST'])
+@auth.login_required
+def services_operations(action):
   j = request.json
   if action == 'available':
     return jsonify(services.listServices())
@@ -432,7 +442,7 @@ def services_operations(action, id):
     return jsonify(services.getServices())
   if action == 'add' and j is not None:
     if 'name' in j and 'id' in j:
-      return jsonify({'id':services.addService(intval(j['id'], j['name']))})
+      return jsonify({'id':services.addService(int(j['id']), j['name'])})
   if action == 'remove' and j is not None:
     if 'id' in j:
       services.deleteService(j['id'])
@@ -441,14 +451,6 @@ def services_operations(action, id):
     if 'name' in j and 'id' in j:
       if services.renameService(j['id'], j['name']):
         return 'Done', 200
-  if '/link' in request.url and j is not None:
-    if 'id' in j:
-      return redirect(services.handleOAuthStart(j['id']))
-  if '/oauth' in request.url:
-    # This one is special, this is a file upload of the JSON config data
-    # and since we don't need a physical file for it, we should just load
-    # the data. For now... ignore
-    pass
   if request.url.endswith('/config/fields'):
     return jsonify(services.getServiceConfigurationFields(id))
   if request.url.endswith('/config'):
@@ -528,6 +530,6 @@ if __name__ == "__main__":
   os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
   app.secret_key = os.urandom(24)
   slideshow.start()
-  app.run(debug=True, port=cmdline.port, host=cmdline.listen )
+  app.run(debug=False, port=cmdline.port, host=cmdline.listen )
 
 sys.exit(0)

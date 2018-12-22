@@ -59,10 +59,7 @@ class slideshow:
     if blank:
       self.display.clear()
 
-    if self.settings.get('oauth_token') is None:
-      self.display.message('Photoalbum isn\'t ready yet\n\nPlease direct your webbrowser to\n\nhttp://%s:7777/' % self.settings.get('local-ip'))
-      logging.info('You need to link your photoalbum first')
-    elif self.thread is None:
+    if self.thread is None:
       self.thread = threading.Thread(target=self.presentation)
       self.thread.daemon = True
       self.thread.start()
@@ -97,7 +94,7 @@ class slideshow:
             if not self.colormatch.adjust(temp, dest):
               logging.warning('Unable to adjust image to colormatch, using original')
       else:
-        self.display.message('No defined services')
+        self.display.message('Photoalbum isn\'t ready yet\n\nPlease direct your webbrowser to\n\nhttp://%s:7777/' % self.settings.get('local-ip'))
 
       time_process = time.time() - time_process
 

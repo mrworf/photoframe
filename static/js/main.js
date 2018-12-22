@@ -190,3 +190,55 @@ $('#add').click(function(){
     location.reload();
   });
 });
+
+$("#new-service").click(function() {
+  var name = prompt('Please provide a nickname for ' + $('#new-service-type option:selected').text(), $('#new-service-type option:selected').text());
+  name = name.trim();
+  if (name == '')
+    alert('Aborted');
+  else {
+    $.ajax({
+      url:"/service/add",
+      type:"POST",
+      data: JSON.stringify({ "name": name, "id": $('#new-service-type').val() }),
+      contentType: "application/json; charset=utf-8",
+      dataType: "json"
+    }).done(function(data){
+      location.reload();
+    });
+  }
+});
+
+$('.oauth-json').fileupload({
+  add: function (e, data) {
+    data.submit();
+  },
+  done: function (e, data) {
+    //console.log(data);
+    // Trigger linking
+    var service = $(this).next().data('service');
+    location = '/service/' + service + '/link';
+  },
+  fail: function (e, data) {
+    alert('Failed to upload the driver');
+  }
+});
+
+$(".service-oauth").click(function() {
+  alert("Please select JSON with client authentication data");
+  $(this).prev().trigger('click');
+});
+
+$(".service-delete").click(function() {
+  if (confirm("Are you sure?")) {
+    $.ajax({
+      url:"/service/remove",
+      type:"POST",
+      data: JSON.stringify({ "id": $(this).data('service') }),
+      contentType: "application/json; charset=utf-8",
+      dataType: "json"
+    }).done(function(data){
+      location.reload();
+    });
+  }
+});

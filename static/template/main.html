@@ -81,16 +81,17 @@
 </div>
 <br>
 <div>
-
 	{{#each service-defined}}
 	<div>
 		{{name}}<br>
 		{{#ifvalue state value="OAUTH" }}
-			<span style="font-size: 9pt" class="normal">(<a href="/service/{{id}}/link">Authorize</a>)</span>
+			<input style="position:absolute; top: -100px" type="file" data-url="service/{{id}}/oauth" data-service="{{id}}" class="oauth-json" name="filename">
+			<input type="button" data-service="{{id}}" class="service-oauth" value="Authorize">
 		{{/ifvalue}}
-		<span style="font-size: 9pt" class="normal">(<a href="/service/remove/{{id}}/link">Relink</a>)</span>
+		<input type="button" data-service="{{id}}" class="service-delete" value="Delete">
 	</div>
 	<div>
+		{{#if keywords.keywords}}
 		<p class="nospace" id="keywords">
 			{{#each keywords.keywords}}
 				<input class="delete" type="button" data-service="{{../id}}" data-index="{{@index}}" value="Delete">
@@ -103,6 +104,7 @@
 				<br>
 			{{/each}}
 		</p>
+		{{/if}}
 		<p class="nospace" style="display: flex">
 			<input type="text" id="keyword" style="flex: 2; text-align: left">
 			<input type="button" id="add" data-service="{{id}}" value="Add keywords">
@@ -110,6 +112,15 @@
 	</div>
 	{{/each}}
 </div>
+	<br>
+<div>
+	<input type="button" id="new-service" value="Add photo provider">
+	<select id="new-service-type">
+		{{#each service-available}}
+			<option value="{{this.id}}">{{this.name}}</option>
+		{{/each}}
+		</select>
+	</div>
 <br>
 
 <script type="text/javascript" src="/js/main.js"></script>

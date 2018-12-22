@@ -119,7 +119,7 @@ class ServiceManager:
     self._deletefolder(os.path.join(self._BASEDIR, id))
     self._save()
 
-  def handleOAuthCallback(self, request):
+  def oauthCallback(self, request):
     state = request.args.get('state').split('-')
     if len(state) < 3:
       logging.error('Invalid callback, need correct state to redirect to OAuth session')
@@ -131,7 +131,13 @@ class ServiceManager:
     svc.finishOAuth(request.url)
     return True
 
-  def handleOAuthStart(self, service):
+  def oauthConfig(self, service, data):
+    if service not in self._SERVICES:
+      return False
+    svc = self._SERVICES[service]['service']
+    return svc.setOAuthConfig(data)
+
+  def oauthStart(self, service):
     if service not in self._SERVICES:
       return None
     svc = self._SERVICES[service]['service']

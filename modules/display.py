@@ -28,7 +28,7 @@ class emulator(Thread):
     self.width = width
     self.height = height
     self.file = file
-    self.start()
+    #self.start()
 
   def run(self):
     while (True):
