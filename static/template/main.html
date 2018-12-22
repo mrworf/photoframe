@@ -85,13 +85,14 @@
 <div>
 	<div>
 		{{name}}<br>
+		<input type="button" data-service="{{id}}" class="service-delete" value="Delete">
+	</div>
+	<div>
 		{{#ifvalue state value="OAUTH" }}
 			<input style="position:absolute; top: -100px" type="file" data-url="service/{{id}}/oauth" data-service="{{id}}" class="oauth-json" name="filename">
 			<input type="button" data-service="{{id}}" class="service-oauth" value="Authorize">
 		{{/ifvalue}}
-		<input type="button" data-service="{{id}}" class="service-delete" value="Delete">
-	</div>
-	<div>
+		{{#ifvalue state value="READY" }}
 		{{#if keywords.keywords}}
 		<p class="nospace" id="keywords">
 			{{#each keywords.keywords}}
@@ -110,6 +111,7 @@
 			<input type="text" class="keyword" style="flex: 2; text-align: left">
 			<input type="button" class="keyword-add" data-service="{{id}}" value="Add keywords">
 		</p>
+		{{/ifvalue}}
 	</div>
 </div>
 {{/each}}

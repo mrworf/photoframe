@@ -220,7 +220,7 @@ $('.oauth-json').fileupload({
     location = '/service/' + service + '/link';
   },
   fail: function (e, data) {
-    alert('Failed to upload the driver');
+    alert('Failed to authorize due to:\n' + data.jqXHR.responseText);
   }
 });
 

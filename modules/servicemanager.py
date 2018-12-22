@@ -237,9 +237,11 @@ class ServiceManager:
       self._SETTINGS.delete('keywords')
       self._SETTINGS.save()
 
-  def getServices(self):
+  def getServices(self, readyOnly=False):
     result = []
     for k in self._SERVICES:
+      if readyOnly and self.getServiceState(k) != 'READY':
+        continue
       svc = self._SERVICES[k]
       result.append({
         'name' : svc['service'].getName(),

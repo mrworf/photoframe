@@ -78,14 +78,13 @@ class slideshow:
       # For now, just pick the first service
       time_process = time.time()
 
-      services = self.services.getServices()
+      services = self.services.getServices(readyOnly=True)
       if len(services) > 0:
         # Very simple round-robin
-        if useService > len(services):
+        if useService >= len(services):
           useService = 0
         svc = services[useService]['id']
         useService += 1
-
 
         filename = os.path.join(self.settings.get('tempfolder'), 'image')
         result = self.services.servicePrepareNextItem(svc, filename, ['image/jpeg'], {'width' : self.settings.getUser('width'), 'height' : self.settings.getUser('height')})
