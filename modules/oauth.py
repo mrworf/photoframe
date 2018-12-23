@@ -49,23 +49,23 @@ class OAuth:
 		                         token_updater=self.cbSetToken)
 		return auth
 
-	def request(self, uri, destination=None, params=None, usePost=False):
+	def request(self, uri, destination=None, params=None, data=None, usePost=False):
 		result = None
 		stream = destination != None
 		tries = 0
-		while tries < 5:
+		while tries < 1:
 			try:
 				try:
 					auth = self.getSession()
 					if usePost:
-						result = auth.post(uri, stream=stream, params=params)
+						result = auth.post(uri, stream=stream, params=params, json=data)
 					else:
 						result = auth.get(uri, stream=stream, params=params)
 					break
 				except TokenExpiredError as e:
 					auth = self.getSession(True)
 					if usePost:
-						result = auth.post(uri, stream=stream, params=params)
+						result = auth.post(uri, stream=stream, params=params, data=data)
 					else:
 						result = auth.get(uri, stream=stream, params=params)
 					break

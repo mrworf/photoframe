@@ -19,8 +19,6 @@ import os
 import json
 import logging
 
-############## THIS IS BY NO MEANS DONE, ONLY SCOPE IS CHANGED #########################
-
 class GooglePhotos(BaseService):
   SERVICE_NAME = 'GooglePhotos'
   SERVICE_ID = 2
@@ -33,6 +31,9 @@ class GooglePhotos(BaseService):
 
   def helpOAuthConfig(self):
     return 'Please upload client.json from the Google API Console'
+
+  def helpKeywords(self):
+    return 'Currently, each entry represents the name of an album (case-insensitive). If no entry is added or album cannot be found, the last 1000 images are used'
 
   def prepareNextItem(self, destinationFile, supportedMimeTypes, displaySize):
     result = self.fetchImage(destinationFile, supportedMimeTypes, displaySize)
@@ -49,69 +50,112 @@ class GooglePhotos(BaseService):
 
   def fetchImage(self, destinationFile, supportedMimeTypes, displaySize):
     # First, pick which keyword to use
-    offset = self.getRandomKeywordIndex()
-    total = len(self.getKeywords())
+    keywordList = list(self.getKeywords())
+    offset = 0
+
+    # Make sure we always have a default
+    if len(keywordList) == 0:
+      keywordList.append('')
+    else:
+      offset = self.getRandomKeywordIndex()
+
+    total = len(keywordList)
     for i in range(0, total):
       index = (i + offset) % total
-      keyword = self.getKeywords()[index]
+      keyword = keywordList[index]
       images = self.getImagesFor(keyword)
       if images is None:
         continue
 
-      mimeType, imageUrl = self.getUrlFromImages(supportedMimeTypes, displaySize['width'], images)
+      mimeType, imageUrl = self.getUrlFromImages(supportedMimeTypes, displaySize, images)
       if imageUrl is None:
         continue
       result = self.requestUrl(imageUrl, destination=destinationFile)
       if result['status'] == 200:
         return {'mimetype' : mimeType, 'error' : None, 'source':None}
-      return {'mimetype' : None, 'error' : 'Could not download images from Google Photos', 'source':None}
+    return {'mimetype' : None, 'error' : 'Could not download images from Google Photos', 'source':None}
 
-  def getUrlFromImages(self, types, width, images):
+  def getUrlFromImages(self, types, displaySize, images):
     # Next, pick an image
-    count = len(images['feed']['entry'])
+    count = len(images)
     offset = random.SystemRandom().randint(0,count-1)
     for i in range(0, count):
       index = (i + offset) % count
-      proposed = images['feed']['entry'][index]['content']['src']
+      proposed = images[index]['id']
       if self.memorySeen(proposed):
         continue
       self.memoryRemember(proposed)
 
-      entry = images['feed']['entry'][index]
+      entry = images[index]
       # Make sure we don't get a video, unsupported for now (gif is usually bad too)
-      if entry['content']['type'] in types and 'gphoto$videostatus' not in entry:
-        return entry['content']['type'], entry['content']['src'].replace('/s1600/', '/s%d/' % width, 1)
-      elif 'gphoto$videostatus' in entry:
-        logging.debug('Image is thumbnail for videofile')
+      if entry['mimeType'] in types:
+        return entry['mimeType'], entry['baseUrl'] + "=w" + str(displaySize['width']) + "-h" + str(displaySize['height'])
       else:
-        logging.warning('Unsupported media: %s (video = %s)' % (entry['content']['type'], repr('gphoto$videostatus' in entry)))
+        logging.warning('Unsupported media: %s' % (entry['mimeType']))
       entry = None
     return None, None
+
+  def translateKeywordToId(self, keyword):
+    keyword = keyword.upper().lower().strip()
+    albumid = None
+
+    # No point in wasting lookup time on blank
+    if keyword != '':
+      url = 'https://photoslibrary.googleapis.com/v1/albums'
+      data = self.requestUrl(url)
+      if data['status'] != 200:
+        return None
+      data = json.loads(data['content'])
+      for i in range(len(data['albums'])):
+        if 'title' in data['albums'][i] and data['albums'][i]['title'].upper().lower().strip() == keyword:
+          albumid = data['albums'][i]['id']
+          break
+
+      if albumid is None:
+        url = 'https://photoslibrary.googleapis.com/v1/sharedAlbums'
+        data = self.requestUrl(url)
+        if data['status'] != 200:
+          return None
+        data = json.loads(data['content'])
+        for i in range(len(data['sharedAlbums'])):
+          if 'title' in data['sharedAlbums'][i] and data['sharedAlbums'][i]['title'].upper().lower().strip() == keyword:
+            albumid = data['sharedAlbums'][i]['id']
+            break
+
+    params = {
+      'pageSize' : 100,
+      'filters': {
+        'mediaTypeFilter': {
+          'mediaTypes': [
+            'PHOTO'
+          ]
+        }
+      }
+    }
+
+    if albumid is not None:
+      params['albumId'] = albumid
+      del params['filters']
+
+    print repr(params)
+    return params
 
   def getImagesFor(self, keyword):
     images = None
     filename = os.path.join(self.getStoragePath(), self.hashString(keyword) + '.json')
     if not os.path.exists(filename):
-      # Request albums
-      # Picasa limits all results to the first 1000, so get them
-      params = {
-        'kind' : 'photo',
-        'start-index' : 1,
-        'max-results' : 1000,
-        'alt' : 'json',
-        'access' : 'all',
-        'imgmax' : '1600u', # We will replace this with width of framebuffer in pick_image
-        # This is where we get cute, we pick from a list of keywords
-        'fields' : 'entry(title,content,gphoto:timestamp,gphoto:videostatus)', # No unnecessary stuff
-        'q' : keyword
-      }
-      url = 'https://picasaweb.google.com/data/feed/api/user/default'
-      data = self.requestUrl(url, params=params)
+      # First time, translate keyword into albumid
+      params = self.translateKeywordToId(keyword)
+      url = 'https://photoslibrary.googleapis.com/v1/mediaItems:search'
+      data = self.requestUrl(url, data=params, usePost=True)
       if data['status'] != 200:
         logging.warning('Requesting photo failed with status code %d', data['status'])
+        logging.warning('More details: ' + repr(data['content']))
       else:
+        data = json.loads(data['content'])
+        print repr(data)
         with open(filename, 'w') as f:
-          f.write(data['content'])
+          json.dump(data['mediaItems'], f)
 
     # Now try loading
     if os.path.exists(filename):

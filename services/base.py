@@ -278,15 +278,16 @@ class BaseService:
 
   ###[ Helpers ]######################################
 
-  def requestUrl(self, url, destination=None, params=None, usePost=False):
+  def requestUrl(self, url, destination=None, params=None, data=None, usePost=False):
     result = {'status':500, 'content' : None}
 
     if self._OAUTH is not None:
       # Use OAuth path
+      logging.debug('Using OAuth path')
       result = self._OAUTH.request(url, destination, params, usePost=usePost)
     else:
       if usePost:
-        r = requests.post(url, params=params)
+        r = requests.post(url, params=params, json=data)
       else:
         r = requests.get(url, params=params)
 
