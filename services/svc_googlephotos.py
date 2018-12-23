@@ -89,7 +89,15 @@ class GooglePhotos(BaseService):
       entry = images[index]
       # Make sure we don't get a video, unsupported for now (gif is usually bad too)
       if entry['mimeType'] in types:
-        return entry['mimeType'], entry['baseUrl'] + "=w" + str(displaySize['width']) + "-h" + str(displaySize['height'])
+        # Calculate the size we need to avoid black borders
+        ow = float(entry['mediaMetadata']['width'])
+        oh = float(entry['mediaMetadata']['height'])
+        ar = ow/oh
+
+        width = int(float(displaySize['width']) / ar)
+        height = int(float(displaySize['height']) * ar)
+
+        return entry['mimeType'], entry['baseUrl'] + "=w" + str(width) + "-h" + str(height)
       else:
         logging.warning('Unsupported media: %s' % (entry['mimeType']))
       entry = None
