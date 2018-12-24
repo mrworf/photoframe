@@ -53,6 +53,7 @@ class OAuth:
 		result = None
 		stream = destination != None
 		tries = 0
+
 		while tries < 1:
 			try:
 				try:
@@ -65,7 +66,7 @@ class OAuth:
 				except TokenExpiredError as e:
 					auth = self.getSession(True)
 					if usePost:
-						result = auth.post(uri, stream=stream, params=params, data=data)
+						result = auth.post(uri, stream=stream, params=params, json=data)
 					else:
 						result = auth.get(uri, stream=stream, params=params)
 					break

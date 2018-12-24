@@ -29,6 +29,8 @@ from modules.remember import remember
 from modules.helper import helper
 
 class slideshow:
+  SHOWN_IP = False
+
   def __init__(self, display, settings, colormatch):
     self.queryPowerFunc = None
     self.thread = None
@@ -65,6 +67,16 @@ class slideshow:
       self.thread.start()
 
   def presentation(self):
+
+    if not slideshow.SHOWN_IP:
+      slideshow.SHOWN_IP = True
+      # Once we have IP, show for 10s
+      cd = 10
+      while (cd > 0):
+        self.display.message('Starting in %d seconds\n\nFrame configuration\n\nhttp://%s:7777' % (cd, self.settings.get('local-ip')))
+        cd -= 1
+        time.sleep(1)
+
     logging.info('Starting presentation')
     delay = 0
     useService = 0
@@ -84,12 +96,11 @@ class slideshow:
         if useService >= len(services):
           useService = 0
         svc = services[useService]['id']
-        useService += 1
 
         filename = os.path.join(self.settings.get('tempfolder'), 'image')
         result = self.services.servicePrepareNextItem(svc, filename, ['image/jpeg'], {'width' : self.settings.getUser('width'), 'height' : self.settings.getUser('height')})
         if result['error'] is not None:
-          self.display.message(result['error'])
+          self.display.message('%s failed:\n\n%s' % (services[useService]['name'], result['error']))
         else:
           self.imageMime = result['mimetype']
           self.imageCurrent = filename
@@ -98,8 +109,9 @@ class slideshow:
           if self.colormatch.hasSensor():
             if not self.colormatch.adjust(temp, dest):
               logging.warning('Unable to adjust image to colormatch, using original')
+        useService += 1
       else:
-        self.display.message('Photoalbum isn\'t ready yet\n\nPlease direct your webbrowser to\n\nhttp://%s:7777/' % self.settings.get('local-ip'))
+        self.display.message('Photoframe isn\'t ready yet\n\nPlease direct your webbrowser to\n\nhttp://%s:7777/\n\nand add one or more photo providers' % self.settings.get('local-ip'))
 
       time_process = time.time() - time_process
 

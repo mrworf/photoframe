@@ -33,7 +33,20 @@ class GooglePhotos(BaseService):
     return 'Please upload client.json from the Google API Console'
 
   def helpKeywords(self):
-    return 'Currently, each entry represents the name of an album (case-insensitive). If no entry is added or album cannot be found, the last 1000 images are used'
+    return 'Currently, each entry represents the name of an album (case-insensitive). If you want the latest photos, simply write "latest" as album'
+
+  def removeKeywords(self, index):
+    # Override since we need to delete our private data
+    keys = self.getKeywords()
+    if index < 0 or index >= len(keys):
+      return
+
+    filename = os.path.join(self.getStoragePath(), self.hashString(keys[index]) + '.json')
+    if os.path.exists(filename):
+      os.unlink(filename)
+
+    BaseService.removeKeywords(self, index)
+
 
   def prepareNextItem(self, destinationFile, supportedMimeTypes, displaySize):
     result = self.fetchImage(destinationFile, supportedMimeTypes, displaySize)
@@ -73,7 +86,7 @@ class GooglePhotos(BaseService):
       result = self.requestUrl(imageUrl, destination=destinationFile)
       if result['status'] == 200:
         return {'mimetype' : mimeType, 'error' : None, 'source':None}
-    return {'mimetype' : None, 'error' : 'Could not download images from Google Photos', 'source':None}
+    return {'mimetype' : None, 'error' : 'No images could be found,\nCheck spelling or make sure you have added albums', 'source':None}
 
   def getUrlFromImages(self, types, displaySize, images):
     # Next, pick an image
@@ -107,14 +120,18 @@ class GooglePhotos(BaseService):
     keyword = keyword.upper().lower().strip()
     albumid = None
 
-    # No point in wasting lookup time on blank
-    if keyword != '':
+    if keyword == '':
+      return None
+
+    if keyword != 'latest':
       url = 'https://photoslibrary.googleapis.com/v1/albums'
       data = self.requestUrl(url)
+      #print repr(data)
       if data['status'] != 200:
         return None
       data = json.loads(data['content'])
       for i in range(len(data['albums'])):
+        print "Album: " + data['albums'][i]['title']
         if 'title' in data['albums'][i] and data['albums'][i]['title'].upper().lower().strip() == keyword:
           albumid = data['albums'][i]['id']
           break
@@ -131,7 +148,7 @@ class GooglePhotos(BaseService):
             break
 
     params = {
-      'pageSize' : 100,
+      'pageSize' : 100, # 100 is API max
       'filters': {
         'mediaTypeFilter': {
           'mediaTypes': [
@@ -144,26 +161,41 @@ class GooglePhotos(BaseService):
     if albumid is not None:
       params['albumId'] = albumid
       del params['filters']
-
-    print repr(params)
     return params
 
   def getImagesFor(self, keyword):
     images = None
     filename = os.path.join(self.getStoragePath(), self.hashString(keyword) + '.json')
+    result = []
     if not os.path.exists(filename):
       # First time, translate keyword into albumid
       params = self.translateKeywordToId(keyword)
+      if params is None:
+        return None
+
       url = 'https://photoslibrary.googleapis.com/v1/mediaItems:search'
-      data = self.requestUrl(url, data=params, usePost=True)
-      if data['status'] != 200:
-        logging.warning('Requesting photo failed with status code %d', data['status'])
-        logging.warning('More details: ' + repr(data['content']))
-      else:
-        data = json.loads(data['content'])
-        print repr(data)
-        with open(filename, 'w') as f:
-          json.dump(data['mediaItems'], f)
+      maxItems = 1000 # Should be configurable
+
+      while len(result) < maxItems:
+        data = self.requestUrl(url, data=params, usePost=True)
+        if data['status'] != 200:
+          logging.warning('Requesting photo failed with status code %d', data['status'])
+          logging.warning('More details: ' + repr(data['content']))
+          break
+        else:
+          data = json.loads(data['content'])
+          logging.debug('Got %d entries, adding it to existing %d entries', len(data['mediaItems']), len(result))
+          result += data['mediaItems']
+          if 'nextPageToken' not in data:
+            break
+          params['pageToken'] = data['nextPageToken']
+          logging.debug('Fetching another result-set for this keyword')
+
+    if len(result) > 0:
+      with open(filename, 'w') as f:
+        json.dump(result, f)
+    else:
+      logging.error('No result returned!')
 
     # Now try loading
     if os.path.exists(filename):

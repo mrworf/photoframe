@@ -506,14 +506,6 @@ while True:
   else:
     break
 
-
-# Once we have IP, show for 10s
-cd = 0
-while (cd > 0):
-	display.message('Starting in %d seconds\n\nFrame configuration\n\nhttp://%s:7777' % (cd, settings.get('local-ip')))
-	cd -= 1
-	time.sleep(1)
-
 # Prep random
 random.seed(long(time.clock()))
 colormatch = colormatch(settings.get('colortemp-script'), 2700) # 2700K = Soft white, lowest we'll go

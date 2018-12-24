@@ -283,8 +283,7 @@ class BaseService:
 
     if self._OAUTH is not None:
       # Use OAuth path
-      logging.debug('Using OAuth path')
-      result = self._OAUTH.request(url, destination, params, usePost=usePost)
+      result = self._OAUTH.request(url, destination, params, data=data, usePost=usePost)
     else:
       if usePost:
         r = requests.post(url, params=params, json=data)
