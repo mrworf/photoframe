@@ -280,7 +280,7 @@ def cfg_keywords(service):
     return jsonify({'status':result})
   abort(500)
 
-@app.route('/maintainence/<cmd>')
+@app.route('/maintenance/<cmd>')
 @auth.login_required
 def cfg_reset(cmd):
   if cmd == 'reset':
