@@ -86,7 +86,20 @@ class GooglePhotos(BaseService):
       result = self.requestUrl(imageUrl, destination=destinationFile)
       if result['status'] == 200:
         return {'mimetype' : mimeType, 'error' : None, 'source':None}
-    return {'mimetype' : None, 'error' : 'No images could be found,\nCheck spelling or make sure you have added albums', 'source':None}
+
+    # Don't assume spelling by default, make sure API is enabled first!
+    if not self.isGooglePhotosEnabled():
+      return {'mimetype' : None, 'error' : '"Photos Library API" is not enabled on\nhttps://console.developers.google.com\n\nCheck the Photoframe Wiki for details', 'source':None}
+    else:
+      return {'mimetype' : None, 'error' : 'No images could be found,\nCheck spelling or make sure you have added albums', 'source':None}
+
+  def isGooglePhotosEnabled(self):
+    url = 'https://photoslibrary.googleapis.com/v1/albums'
+    data = self.requestUrl(url, params={'pageSize':1})
+    '''
+{\n  "error": {\n    "code": 403,\n    "message": "Photos Library API has not been used in project 742138104895 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/photoslibrary.googleapis.com/overview?project=742138104895 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.",\n    "status": "PERMISSION_DENIED",\n    "details": [\n      {\n        "@type": "type.googleapis.com/google.rpc.Help",\n        "links": [\n          {\n            "description": "Google developers console API activation",\n            "url": "https://console.developers.google.com/apis/api/photoslibrary.googleapis.com/overview?project=742138104895"\n          }\n        ]\n      }\n    ]\n  }\n}\n'
+    '''
+    return not (data['status'] == 403 and 'Enable it by visiting' in data['content'])
 
   def getUrlFromImages(self, types, displaySize, images):
     # Next, pick an image
@@ -126,7 +139,6 @@ class GooglePhotos(BaseService):
     if keyword != 'latest':
       url = 'https://photoslibrary.googleapis.com/v1/albums'
       data = self.requestUrl(url)
-      #print repr(data)
       if data['status'] != 200:
         return None
       data = json.loads(data['content'])
@@ -161,6 +173,13 @@ class GooglePhotos(BaseService):
     if albumid is not None:
       params['albumId'] = albumid
       del params['filters']
+    else:
+      # We need to see if we have API access at all
+      url = 'https://photoslibrary.googleapis.com/v1/albums'
+      data = self.requestUrl(url, params={'pageSize':1})
+      if data['status'] != 200:
+        return None
+
     return params
 
   def getImagesFor(self, keyword):
