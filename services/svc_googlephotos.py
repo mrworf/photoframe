@@ -209,11 +209,11 @@ class GooglePhotos(BaseService):
           params['pageToken'] = data['nextPageToken']
           logging.debug('Fetching another result-set for this keyword')
 
-    if len(result) > 0:
-      with open(filename, 'w') as f:
-        json.dump(result, f)
-    else:
-      logging.error('No result returned!')
+      if len(result) > 0:
+        with open(filename, 'w') as f:
+          json.dump(result, f)
+      else:
+        logging.error('No result returned for keyword "%s"!', keyword)
 
     # Now try loading
     if os.path.exists(filename):
