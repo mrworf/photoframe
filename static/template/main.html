@@ -35,7 +35,7 @@
 		Turn on display at hour <input value="{{settings.display-on}}" type="text" class="small aright" name="display-on" data-validate="time">
 		and off at hour <input value="{{settings.display-off}}" type="text" class="small aright" name="display-off" data-validate="time"> (24h time)
 		<br>
-		{{#if settings.sensor}}
+		{{#if sensor.sensor}}
 		Auto off if ambient lux is below
 		<input value="{{settings.autooff-lux}}" type="text" class="medium" name="autooff-lux" data-validate="lux"> lux for
 		<input value="{{settings.autooff-time}}" type="text" class="small" name="autooff-time" data-validate="minutes"> minutes
@@ -48,8 +48,8 @@
 			{{#select settings.powersave}}
 			<option value="none">not be used</option>
 			<option value="schedule">use schedule</option>
-			<option value="sensor">use environment {{#if settings.sensor}}{{else}}(no sensor){{/if}}</option>
-			<option value="sensor+schedule">use schedule and environment {{#if settings.sensor}}{{else}}(no sensor){{/if}}</option>
+			<option value="sensor">use environment {{#if sensor.sensor}}{{else}}(no sensor){{/if}}</option>
+			<option value="sensor+schedule">use schedule and environment {{#if sensor.sensor}}{{else}}(no sensor){{/if}}</option>
 			{{/select}}
 		</select>
 		<hr>
