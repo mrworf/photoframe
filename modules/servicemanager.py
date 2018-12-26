@@ -256,7 +256,8 @@ class ServiceManager:
         'service' : svc['service'].SERVICE_ID,
         'id' : k,
         'state' : self.getServiceState(k),
-        'useKeywords' : svc['service'].needKeywords()
+        'useKeywords' : svc['service'].needKeywords(),
+        'message' : svc['service'].getMessage()
       })
     return result
 

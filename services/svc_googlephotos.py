@@ -143,7 +143,6 @@ class GooglePhotos(BaseService):
         return None
       data = json.loads(data['content'])
       for i in range(len(data['albums'])):
-        print "Album: " + data['albums'][i]['title']
         if 'title' in data['albums'][i] and data['albums'][i]['title'].upper().lower().strip() == keyword:
           albumid = data['albums'][i]['id']
           break

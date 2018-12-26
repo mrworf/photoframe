@@ -28,23 +28,12 @@
 			{{/select}}
 		</select>
 		<input style="position:absolute; top: -100px" type="file" data-url="upload/driver" id="driver" name="filename"><button id="driver-button">Upload new driver</button>
-		<br>
-		Time zone
-		<select name="timezone">
-			{{#select settings.timezone}}
-			{{#each timezones}}
-				<option value="{{this}}">{{this}}</option>
-			{{/each}}
-			{{/select}}
-		</select>
-		<br>
+		<hr>
 		GPIO PIN to monitor for shutdown interrupts
 		<input value="{{settings.shutdown-pin}}" type="text" class="small" name="shutdown-pin" data-validate="gpio" data-confirm="gpio">
 		<br>
 		Turn on display at hour <input value="{{settings.display-on}}" type="text" class="small aright" name="display-on" data-validate="time">
 		and off at hour <input value="{{settings.display-off}}" type="text" class="small aright" name="display-off" data-validate="time"> (24h time)
-		<br>
-		Change every <input value="{{settings.interval}}" type="text" class="small" name="interval" data-validate="interval"> seconds<br>
 		<br>
 		{{#if settings.sensor}}
 		Auto off if ambient lux is below
@@ -61,6 +50,17 @@
 			<option value="schedule">use schedule</option>
 			<option value="sensor">use environment {{#if settings.sensor}}{{else}}(no sensor){{/if}}</option>
 			<option value="sensor+schedule">use schedule and environment {{#if settings.sensor}}{{else}}(no sensor){{/if}}</option>
+			{{/select}}
+		</select>
+		<hr>
+		Change every <input value="{{settings.interval}}" type="text" class="small" name="interval" data-validate="interval"> seconds
+		<br>
+		Time zone
+		<select name="timezone">
+			{{#select settings.timezone}}
+			{{#each timezones}}
+				<option value="{{this}}">{{this}}</option>
+			{{/each}}
 			{{/select}}
 		</select>
 	</div>
@@ -83,14 +83,20 @@
 {{#if service-defined}}
 {{#each service-defined}}
 <div>
-	<div>
+	<div style="text-align: center">
 		{{name}}<br>
-		<input type="button" data-service="{{id}}" class="service-delete" value="Delete">
+		<input type="button" data-service="{{id}}" class="service-delete" value="Delete" style="width: 100%">
 	</div>
 	<div>
+		{{#if message}}
+		<p style="margin: 1pt; color: red; font-weight: bold">
+			{{message}}
+		</p>
+		{{/if}}
 		{{#ifvalue state value="OAUTH" }}
 			<input style="position:absolute; top: -100px" type="file" data-url="service/{{id}}/oauth" data-service="{{id}}" class="oauth-json" name="filename">
 			<input type="button" data-service="{{id}}" class="service-oauth" value="Authorize">
+			For details on how to create an authorization, please see <a href="https://github.com/mrworf/photoframe/wiki/How-to-create-an-authorization-file" target="_blank">the wiki</a>
 		{{/ifvalue}}
 		{{#ifvalue state value="READY" }}
 		{{#if keywords.keywords}}

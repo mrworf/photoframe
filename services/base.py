@@ -136,6 +136,11 @@ class BaseService:
   def getId(self):
     return self._ID
 
+  def getMessage(self):
+    # override this if you wish to show a message associated with
+    # the provider's instance. Return None to hide
+    return None
+
   ###[ All the OAuth functionality ]###########################
 
   def getOAuthScope(self):
@@ -299,6 +304,14 @@ class BaseService:
             f.write(chunk)
     return result
 
+  def getStoragePath(self):
+    return self._DIR_PRIVATE
+
+  def hashString(self, text):
+    return hashlib.sha1(text).hexdigest()
+
+  ###[ Memory management ]=======================================================
+
   def _fetchMemory(self, key):
     if key is None:
       key = ''
@@ -340,9 +353,4 @@ class BaseService:
       os.unlink(n)
     self._MEMORY = []
 
-  def getStoragePath(self):
-    return self._DIR_PRIVATE
-
-  def hashString(self, text):
-    return hashlib.sha1(text).hexdigest()
 
