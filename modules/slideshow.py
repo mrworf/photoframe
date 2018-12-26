@@ -76,6 +76,8 @@ class slideshow:
         self.display.message('Starting in %d seconds\n\nFrame configuration\n\nhttp://%s:7777' % (cd, self.settings.get('local-ip')))
         cd -= 1
         time.sleep(1)
+      self.display.clear()
+
 
     logging.info('Starting presentation')
     delay = 0
@@ -107,7 +109,7 @@ class slideshow:
 
           helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'))
           if self.colormatch.hasSensor():
-            if not self.colormatch.adjust(temp, dest):
+            if not self.colormatch.adjust(filename):
               logging.warning('Unable to adjust image to colormatch, using original')
         useService += 1
       else:
