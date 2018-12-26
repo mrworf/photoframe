@@ -163,7 +163,8 @@ class settings:
 		self.settings[key] = self.convertToNative(value)
 
 	def delete(self, key):
-		del self.settings[key]
+		if key in self.settings:
+			del self.settings[key]
 
 	def get(self, key):
 		if key == 'colortemp-script':
