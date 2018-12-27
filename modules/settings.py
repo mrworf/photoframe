@@ -162,9 +162,13 @@ class settings:
 	def set(self, key, value):
 		self.settings[key] = self.convertToNative(value)
 
-	def delete(self, key):
-		if key in self.settings:
-			del self.settings[key]
+	def delete(self, key, userField=False):
+		if userField:
+			if key in self.settings['cfg']:
+				del self.settings['cfg'][key]
+		else:
+			if key in self.settings:
+				del self.settings[key]
 
 	def get(self, key):
 		if key == 'colortemp-script':
