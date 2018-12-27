@@ -62,14 +62,16 @@ class OAuth:
 						result = auth.post(uri, stream=stream, params=params, json=data)
 					else:
 						result = auth.get(uri, stream=stream, params=params)
-					break
+					if result is not None:
+						break
 				except TokenExpiredError as e:
 					auth = self.getSession(True)
 					if usePost:
 						result = auth.post(uri, stream=stream, params=params, json=data)
 					else:
 						result = auth.get(uri, stream=stream, params=params)
-					break
+					if result is not None:
+						break
 			except:
 				logging.exception('Issues downloading')
 			time.sleep(tries * 10) # Back off 10, 20, ... depending on tries
@@ -91,7 +93,10 @@ class OAuth:
 				ret['status'] = 600
 			return ret
 		else:
-			return {'status':result.status_code, 'content':result.content}
+			if result is None:
+				return {'status':500, 'content':'Unable to download URL using OAuth'}
+			else:
+				return {'status':result.status_code, 'content':result.content}
 
 	def getRedirectId(self):
 		r = requests.get('%s/?register' % self.ridURI)
