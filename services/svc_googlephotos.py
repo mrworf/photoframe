@@ -120,7 +120,7 @@ class GooglePhotos(BaseService):
         oh = float(entry['mediaMetadata']['height'])
         ar = ow/oh
 
-        if ow > oh:
+        if ow > displaySize['width']:
           width = displaySize['width']
           height = int(float(displaySize['width']) / ar)
         else:

@@ -83,7 +83,7 @@ class helper:
 
 		# Calculate actual size of image based on display
 		ar = (float)(width) / (float)(height)
-		if width > height:
+		if width > displayWidth:
 			adjWidth = displayWidth
 			adjHeight = int(float(displayWidth) / ar)
 		else:
