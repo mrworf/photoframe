@@ -90,7 +90,9 @@
 	<div>
 		{{#if message}}
 		<p style="margin: 1pt; color: red; font-weight: bold">
+			{{#if messageLink}}<a href="{{messageLink}}" target="_blank">{{/if}}
 			{{message}}
+			{{#if messageLink}}</a>{{/if}}
 		</p>
 		{{/if}}
 		{{#ifvalue state value="OAUTH" }}
