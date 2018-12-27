@@ -243,6 +243,7 @@ class ServiceManager:
 
       # Blank out the old keywords since they were migrated
       self._SETTINGS.delete('keywords')
+      self._SETTINGS.delete('keywords', userField=True)
       self._SETTINGS.save()
 
   def getServices(self, readyOnly=False):
@@ -257,7 +258,8 @@ class ServiceManager:
         'id' : k,
         'state' : self.getServiceState(k),
         'useKeywords' : svc['service'].needKeywords(),
-        'message' : svc['service'].getMessage()
+        'message' : svc['service'].getMessage(),
+        'messageLink' : svc['service'].getMessageLink()
       })
     return result
 

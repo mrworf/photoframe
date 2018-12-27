@@ -38,6 +38,9 @@ class PicasaWeb(BaseService):
   def getMessage(self):
     return 'This provider will cease to function January 1st, 2019. Please use GooglePhotos. For more details, see photoframe wiki'
 
+  def getMessageLink(self):
+    return 'https://github.com/mrworf/photoframe/wiki/PicasaWeb-API-ceases-to-work-January-1st,-2019'
+
   def prepareNextItem(self, destinationFile, supportedMimeTypes, displaySize):
     result = self.fetchImage(destinationFile, supportedMimeTypes, displaySize)
     if result['error'] is not None:

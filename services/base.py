@@ -141,6 +141,9 @@ class BaseService:
     # the provider's instance. Return None to hide
     return None
 
+  def getMessageLink(self):
+    return None
+
   ###[ All the OAuth functionality ]###########################
 
   def getOAuthScope(self):
