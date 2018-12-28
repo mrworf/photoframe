@@ -1,4 +1,6 @@
 language: bash
+before_install:
+ - sudo apt-get update
 install:
 - sudo apt-get install quilt parted realpath qemu-user-static debootstrap zerofree
   pxz zip dosfstools bsdtar libcap2-bin grep rsync xz-utils
