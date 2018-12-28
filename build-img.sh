@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export PHOTOFRAME_SRC="$(pwd)/*"
+export PHOTOFRAME_SRC="$(pwd)"
 
 if [ -d pi-gen ]; then
   sudo rm -rf pi-gen
