@@ -44,9 +44,14 @@ class GooglePhotos(BaseService):
     filename = os.path.join(self.getStoragePath(), self.hashString(keys[index]) + '.json')
     if os.path.exists(filename):
       os.unlink(filename)
-
     BaseService.removeKeywords(self, index)
 
+  def addKeywords(self, keyword):
+    keyword = keyword.strip()
+    # Remove quotes around keyword
+    if keyword[0] == '"' and keyword[-1] == '"':
+      keyword = keyword[1:-1]
+    BaseService.addKeywords(self, keyword)
 
   def prepareNextItem(self, destinationFile, supportedMimeTypes, displaySize):
     result = self.fetchImage(destinationFile, supportedMimeTypes, displaySize)

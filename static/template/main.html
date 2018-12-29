@@ -108,17 +108,15 @@
 				<input class="keyword-search" data-key="{{encode this}}" type="button" value="Open">
 				{{#if this}}
 					{{this}}
-				{{else}}
-					&lt;empty - picks one of the last photos added&gt;
 				{{/if}}
 				<br>
 			{{/each}}
 		</p>
 		{{/if}}
 		<p class="nospace" style="display: flex">
+			<input type="button" class="keyword-help" data-service="{{id}}" value="Help">
 			<input type="text" class="keyword" style="flex: 2; text-align: left">
 			<input type="button" class="keyword-add" data-service="{{id}}" value="Add">
-			<input type="button" class="keyword-help" data-service="{{id}}" value="Help">
 		</p>
 		{{/ifvalue}}
 	</div>

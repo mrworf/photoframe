@@ -237,7 +237,8 @@ class BaseService:
   def addKeywords(self, keywords):
     # This is how the user will configure it, this adds a new set of keywords to this
     # service module. DO NOT OVERRIDE OR USE THIS TO DO PROCESSING
-    if not self.needKeywords():
+    keywords = keywords.strip()
+    if not self.needKeywords() or keywords == '':
       return
     self._STATE['_KEYWORDS'].append(keywords)
     self.saveState()
