@@ -35,11 +35,26 @@ class PicasaWeb(BaseService):
   def helpKeywords(self):
     return 'Name of people, location, colors, depiction, pretty much anything that Google Photo search accepts'
 
-  def getMessage(self):
-    return 'This provider will cease to function January 1st, 2019. Please use GooglePhotos. For more details, see photoframe wiki'
+  def getMessages(self):
+    msgs = BaseService.getMessages(self)
+    msgs.append(
+      {
+        'level': 'WARNING',
+        'message' : 'This provider will cease to function January 1st, 2019. Please use GooglePhotos. For more details, see photoframe wiki',
+        'link': 'https://github.com/mrworf/photoframe/wiki/PicasaWeb-API-ceases-to-work-January-1st,-2019'
+      }
+    )
+    return msgs
 
-  def getMessageLink(self):
-    return 'https://github.com/mrworf/photoframe/wiki/PicasaWeb-API-ceases-to-work-January-1st,-2019'
+  def hasKeywordSourceUrl(self):
+    return True
+
+  def getKeywordSourceUrl(self, index):
+    keys = self.getKeywords()
+    if index < 0 or index >= len(keys):
+      return 'Out of range, index = %d' % index
+    keywords = keys[index]
+    return 'https://photos.google.com/search/' + keywords
 
   def prepareNextItem(self, destinationFile, supportedMimeTypes, displaySize):
     result = self.fetchImage(destinationFile, supportedMimeTypes, displaySize)
@@ -79,7 +94,7 @@ class PicasaWeb(BaseService):
       result = self.requestUrl(imageUrl, destination=destinationFile)
       if result['status'] == 200:
         return {'mimetype' : mimeType, 'error' : None, 'source':None}
-      return {'mimetype' : None, 'error' : 'Could not download images from Google Photos', 'source':None}
+    return {'mimetype' : None, 'error' : 'Could not download images from Google Photos', 'source':None}
 
   def getUrlFromImages(self, types, width, images):
     # Next, pick an image

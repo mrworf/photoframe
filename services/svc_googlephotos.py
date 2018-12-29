@@ -35,23 +35,58 @@ class GooglePhotos(BaseService):
   def helpKeywords(self):
     return 'Currently, each entry represents the name of an album (case-insensitive). If you want the latest photos, simply write "latest" as album'
 
+  def hasKeywordSourceUrl(self):
+    return True
+
+  def getKeywordSourceUrl(self, index):
+    keys = self.getKeywords()
+    if index < 0 or index >= len(keys):
+      return 'Out of range, index = %d' % index
+    keywords = keys[index]
+    extras = self.getExtras()
+    if keywords not in extras:
+      return 'No such keyword'
+    return extras[keywords]['sourceUrl']
+
   def removeKeywords(self, index):
     # Override since we need to delete our private data
     keys = self.getKeywords()
     if index < 0 or index >= len(keys):
       return
-
-    filename = os.path.join(self.getStoragePath(), self.hashString(keys[index]) + '.json')
+    keywords = keys[index]
+    filename = os.path.join(self.getStoragePath(), self.hashString(keywords) + '.json')
     if os.path.exists(filename):
       os.unlink(filename)
     BaseService.removeKeywords(self, index)
+    # Remove any extras
+    extras = self.getExtras()
+    if extras is not None and keywords in extras:
+      del extras[keywords]
+      self.setExtras(extras)
 
-  def addKeywords(self, keyword):
-    keyword = keyword.strip()
+  def validateKeywords(self, keywords):
     # Remove quotes around keyword
-    if keyword[0] == '"' and keyword[-1] == '"':
-      keyword = keyword[1:-1]
-    BaseService.addKeywords(self, keyword)
+    if keywords[0] == '"' and keywords[-1] == '"':
+      keywords = keywords[1:-1]
+    return {'error':None, 'keywords':keywords}
+
+  def addKeywords(self, keywords):
+    result = BaseService.addKeywords(self, keywords)
+    if result['error'] is None:
+      # No error in input, result album now
+      if result['keywords'] != 'latest':
+        albumId = self.translateKeywordToId(result['keywords'])
+        if albumId is None:
+          result['error'] = 'No such album "%s"' % result['keywords']
+          # Delete the newly added keyword
+          self.removeKeywords(len(self.getKeywords())-1)
+        else:
+          extras = self.getExtras()
+          if extras is None:
+            extras = {}
+          extras[result['keywords']] = albumId
+          self.setExtras(extras)
+    return result
 
   def prepareNextItem(self, destinationFile, supportedMimeTypes, displaySize):
     result = self.fetchImage(destinationFile, supportedMimeTypes, displaySize)
@@ -138,14 +173,11 @@ class GooglePhotos(BaseService):
       entry = None
     return None, None
 
-  def translateKeywordToId(self, keyword):
-    keyword = keyword.upper().lower().strip()
-    albumid = None
+  def getQueryForKeyword(self, keyword):
     result = None
-
-    if keyword == '':
-      logging.error('Cannot use blank album name')
-      return None
+    extras = self.getExtras()
+    if extras is None:
+      extras = {}
 
     if keyword == 'latest':
       logging.debug('Use latest 1000 images')
@@ -159,57 +191,67 @@ class GooglePhotos(BaseService):
           }
         }
       }
-    else:
-      logging.debug('Query Google Photos for album named "%s"', keyword)
-      url = 'https://photoslibrary.googleapis.com/v1/albums'
-      params={}
+    elif keyword in extras:
+      result = {
+        'pageSize' : 100, # 100 is API max
+        'albumId' : extras[keyword]['albumId']
+      }
+    return result
+
+  def translateKeywordToId(self, keyword):
+    keyword = keyword.upper().lower().strip()
+    albumid = None
+    source = None
+
+    if keyword == '':
+      logging.error('Cannot use blank album name')
+      return None
+
+    if keyword == 'latest':
+      return None
+
+    logging.debug('Query Google Photos for album named "%s"', keyword)
+    url = 'https://photoslibrary.googleapis.com/v1/albums'
+    params={}
+    while True:
+      data = self.requestUrl(url, params=params)
+      if data['status'] != 200:
+        return None
+      data = json.loads(data['content'])
+      for i in range(len(data['albums'])):
+        if 'title' in data['albums'][i] and data['albums'][i]['title'].upper().lower().strip() == keyword:
+          logging.debug('Found album: ' + repr(data['albums'][i]))
+          albumid = data['albums'][i]['id']
+          source = data['albums'][i]['productUrl']
+          break
+      if albumid is None and 'pageToken' in data:
+        logging.info('Another page of albums available')
+        params['nextPageToken'] = data['pageToken']
+        continue
+      break
+
+    if albumid is None:
+      url = 'https://photoslibrary.googleapis.com/v1/sharedAlbums'
+      params = {}
       while True:
         data = self.requestUrl(url, params=params)
         if data['status'] != 200:
           return None
         data = json.loads(data['content'])
-        for i in range(len(data['albums'])):
-          if 'title' in data['albums'][i] and data['albums'][i]['title'].upper().lower().strip() == keyword:
-            albumid = data['albums'][i]['id']
+        for i in range(len(data['sharedAlbums'])):
+          if 'title' in data['sharedAlbums'][i] and data['sharedAlbums'][i]['title'].upper().lower().strip() == keyword:
+            albumid = data['sharedAlbums'][i]['id']
+            source = data['albums'][i]['productUrl']
             break
         if albumid is None and 'pageToken' in data:
-          logging.info('Another page of albums available')
+          logging.info('Another page of shared albums available')
           params['nextPageToken'] = data['pageToken']
           continue
         break
 
-      if albumid is None:
-        url = 'https://photoslibrary.googleapis.com/v1/sharedAlbums'
-        params = {}
-        while True:
-          data = self.requestUrl(url, params=params)
-          if data['status'] != 200:
-            return None
-          data = json.loads(data['content'])
-          for i in range(len(data['sharedAlbums'])):
-            if 'title' in data['sharedAlbums'][i] and data['sharedAlbums'][i]['title'].upper().lower().strip() == keyword:
-              albumid = data['sharedAlbums'][i]['id']
-              break
-          if albumid is None and 'pageToken' in data:
-            logging.info('Another page of shared albums available')
-            params['nextPageToken'] = data['pageToken']
-            continue
-          break
-
-      if albumid is not None:
-        result = {
-          'pageSize' : 100, # 100 is API max
-          'albumId' : albumid
-        }
-
-    if result is None:
-      # We need to see if we have API access at all
-      url = 'https://photoslibrary.googleapis.com/v1/albums'
-      data = self.requestUrl(url, params={'pageSize':1})
-      if data['status'] != 200:
-        return None
-
-    return result
+    if albumid is None:
+      return None
+    return {'albumId': albumid, 'sourceUrl' : source}
 
   def getImagesFor(self, keyword):
     images = None
@@ -217,9 +259,9 @@ class GooglePhotos(BaseService):
     result = []
     if not os.path.exists(filename):
       # First time, translate keyword into albumid
-      params = self.translateKeywordToId(keyword)
+      params = self.getQueryForKeyword(keyword)
       if params is None:
-        logging.info('Unable to translate the keyword "%s"', keyword)
+        logging.error('Unable to create query the keyword "%s"', keyword)
         return None
 
       url = 'https://photoslibrary.googleapis.com/v1/mediaItems:search'
