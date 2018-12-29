@@ -42,6 +42,8 @@ from modules.slideshow import slideshow
 from modules.colormatch import colormatch
 from modules.drivers import drivers
 
+from modules.servicemanager import ServiceManager
+
 parser = argparse.ArgumentParser(description="PhotoFrame - A RPi3 based digital photoframe", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--logfile', default=None, help="Log to file instead of stdout")
 parser.add_argument('--port', default=7777, type=int, help="Port to listen on")
@@ -104,8 +106,9 @@ class NoAuth:
 app = Flask(__name__, static_url_path='')
 app.config['UPLOAD_FOLDER'] = '/tmp/'
 user = None
-userfiles = ['/boot/http-auth.json', settings.CONFIGFOLDER + '/http-auth.json']
+services = None
 
+userfiles = ['/boot/http-auth.json', settings.CONFIGFOLDER + '/http-auth.json']
 for userfile in userfiles:
   if os.path.exists(userfile):
     logging.debug('Found "%s", loading the data' % userfile)
@@ -152,10 +155,10 @@ def show_error(e):
     issue = lines[-1]
     message = '''
     <html><head><title>Internal error</title></head><body style="font-family: Verdana"><h1>Uh oh, something went wrong...</h1>
-    Please go to <a href="https://github.com/mrworf/photoframe/issues">github</a> 
+    Please go to <a href="https://github.com/mrworf/photoframe/issues">github</a>
     and see if this is a known issue, if not, feel free to file a <a href="https://github.com/mrworf/photoframe/issues/new">new issue<a> with the
     following information:
-    <pre style="margin: 15pt; padding: 10pt; border: 1px solid; background-color: #eeeeee">'''  
+    <pre style="margin: 15pt; padding: 10pt; border: 1px solid; background-color: #eeeeee">'''
     for line in lines:
       message += line + '\n'
     message += '''</pre>
@@ -163,15 +166,7 @@ def show_error(e):
     </body>
     </html>
     '''
-  return message, code    
-
-@app.route('/update/force', methods=['GET'])
-def force_update():
-  if os.path.exists('/root/photoframe/update.sh'):
-    p = subprocess.Popen('/bin/bash /root/photoframe/update.sh 2>&1 | logger -t forced_update', shell=True)
-    return 'Update in process', 200
-  else:
-    return 'Cannot find update tool', 404
+  return message, code
 
 @app.route('/debug', methods=['GET'], defaults={'all' : False})
 @app.route('/debug/all', methods=['GET'], defaults={'all' : True})
@@ -262,73 +257,53 @@ def cfg_keyvalue(key, value):
       return jsonify({key : settings.getUser(key)})
   abort(404)
 
-@app.route('/keywords', methods=['GET'])
-@app.route('/keywords/add', methods=['POST'])
-@app.route('/keywords/delete', methods=['POST'])
+@app.route('/keywords/<service>/help', methods=['GET'])
 @auth.login_required
-def cfg_keywords():
+def cfg_keywords_help(service):
+  return jsonify({'message' : services.helpServiceKeywords(service)})
+
+@app.route('/keywords/<service>', methods=['GET'])
+@app.route('/keywords/<service>/add', methods=['POST'])
+@app.route('/keywords/<service>/delete', methods=['POST'])
+@auth.login_required
+def cfg_keywords(service):
   if request.method == 'GET':
-    return jsonify({'keywords' : settings.getUser('keywords')})
+    return jsonify({'keywords' : services.getServiceKeywords(service)})
   elif request.method == 'POST' and request.json is not None:
     result = True
     if 'id' not in request.json:
-      if settings.addKeyword(request.json['keywords']):
-        settings.save()
+      if not services.addServiceKeywords(service, request.json['keywords']):
+        result = False
     else:
-      if settings.removeKeyword(request.json['id']):
-        settings.save()
-      else:
+      if not services.removeServiceKeywords(service, request.json['id']):
         result = False
     return jsonify({'status':result})
   abort(500)
 
-@app.route('/has/token')
-@app.route('/has/oauth')
+@app.route('/maintenance/<cmd>')
 @auth.login_required
-def cfg_hasthis():
-  result = False
-  if '/token' in request.path:
-    if settings.get('oauth_token') is not None:
-      result = True
-  elif '/oauth' in request.path:
-    result = oauth.hasOAuth()
-
-  return jsonify({'result' : result})
-
-@app.route('/oauth', methods=['POST'])
-@auth.login_required
-def cfg_oauth_info():
-  if request.json is None or 'web' not in request.json:
-    abort(500)
-  data = request.json['web']
-  oauth.setOAuth(data)
-  with open(settings.CONFIGFOLDER + '/oauth.json', 'wb') as f:
-    json.dump(data, f);
-  return jsonify({'result' : True})
-
-@app.route('/reset')
-@auth.login_required
-def cfg_reset():
-  # Remove driver if active
-  drivers.activate(None)
-  # Delete configuration data
-  if os.path.exists(settings.CONFIGFOLDER):
-    shutil.rmtree(settings.CONFIGFOLDER, True) 
-  # Reboot
-  subprocess.call(['/sbin/reboot'], stderr=void);
-  return jsonify({'reset': True})
-
-@app.route('/reboot')
-@auth.login_required
-def cfg_reboot():
-  subprocess.call(['/sbin/reboot'], stderr=void);
-  return jsonify({'reboot' : True})
-
-@app.route('/shutdown')
-@auth.login_required
-def cfg_shutdown():
-  subprocess.call(['/sbin/poweroff'], stderr=void);
-  return jsonify({'shutdown': True})
+def cfg_reset(cmd):
+  if cmd == 'reset':
+    # Remove driver if active
+    drivers.activate(None)
+    # Delete configuration data
+    if os.path.exists(settings.CONFIGFOLDER):
+      shutil.rmtree(settings.CONFIGFOLDER, True)
+    # Reboot
+    subprocess.call(['/sbin/reboot'], stderr=void);
+    return jsonify({'reset': True})
+  elif cmd == 'reboot':
+    subprocess.call(['/sbin/reboot'], stderr=void);
+    return jsonify({'reboot' : True})
+  elif cmd == 'shutdown':
+    subprocess.call(['/sbin/poweroff'], stderr=void);
+    return jsonify({'shutdown': True})
+  elif cmd == 'update':
+    if os.path.exists('/root/photoframe/update.sh'):
+      p = subprocess.Popen('/bin/bash /root/photoframe/update.sh 2>&1 | logger -t forced_update', shell=True)
+      return 'Update in process', 200
+    else:
+      return 'Cannot find update tool', 404
 
 @app.route('/details/<about>')
 @auth.login_required
@@ -408,22 +383,16 @@ def upload(item):
     abort(retval['status'])
   abort(405)
 
-@app.route("/link")
-@auth.login_required
-def oauth_step1():
-  return redirect(oauth.initiate())
-
 @app.route("/callback", methods=["GET"])
 @auth.login_required
-def oauth_step3():
-  oauth.complete(request.url)
-  return redirect(url_for('.complete'))
-
-@app.route("/complete", methods=['GET'])
-@auth.login_required
-def complete():
-  slideshow.start(True)
-  return redirect('/')
+def oauth_callback():
+  # Figure out who should get this result...
+  if services.oauthCallback(request):
+    # Request handled
+    slideshow.start(True)
+    return redirect('/')
+  else:
+    abort(500)
 
 @app.route('/', defaults={'file':None})
 @app.route('/<file>')
@@ -438,6 +407,64 @@ def web_main(file):
 @auth.login_required
 def web_template(file):
   return app.send_static_file('template/' + file)
+
+#@app.route('/service/<id>/config', methods=['GET', 'POST'], defaults={'action': None})
+#@app.route('/service/<id>/config/fields', methods=['GET'], defaults={'action': None})
+
+@app.route('/service/<service>/oauth', methods=['POST'])
+@auth.login_required
+def servicees_oauth(service):
+  j = request.json
+  # This one is special, this is a file upload of the JSON config data
+  # and since we don't need a physical file for it, we should just load
+  # the data. For now... ignore
+  if 'filename' not in request.files:
+    logging.error('No file part')
+    abort(405)
+  file = request.files['filename']
+  data = json.load(file)
+  if 'web' in data:
+    data = data['web']
+  if 'redirect_uris' in data and 'https://photoframe.sensenet.nu' not in data['redirect_uris']:
+    return 'The redirect uri is not set to https://photoframe.sensenet.nu', 405
+  if not services.oauthConfig(service, data):
+    return 'Configuration was invalid', 405
+  return 'Configuration set', 200
+
+@app.route('/service/<service>/link', methods=['GET'])
+@auth.login_required
+def service_link(service):
+  return redirect(services.oauthStart(service))
+
+@app.route('/service/<action>',  methods=['GET', 'POST'])
+@auth.login_required
+def services_operations(action):
+  j = request.json
+  if action == 'available':
+    return jsonify(services.listServices())
+  if action == 'list':
+    return jsonify(services.getServices())
+  if action == 'add' and j is not None:
+    if 'name' in j and 'id' in j:
+      return jsonify({'id':services.addService(int(j['id']), j['name'])})
+  if action == 'remove' and j is not None:
+    if 'id' in j:
+      services.deleteService(j['id'])
+      return jsonify({'status':'Done'})
+  if action == 'rename' and j is not None:
+    if 'name' in j and 'id' in j:
+      if services.renameService(j['id'], j['name']):
+        return jsonify({'status':'Done'})
+  if request.url.endswith('/config/fields'):
+    return jsonify(services.getServiceConfigurationFields(id))
+  if request.url.endswith('/config'):
+    if request.method == 'POST' and j is not None and 'config' in j:
+      if services.setServiceConfiguration(id, j['config']):
+        return 'Configuration saved', 200
+    elif request.method == 'GET':
+      return jsonify(services.getServiceConfiguration(id))
+
+  abort(500)
 
 settings = settings()
 drivers = drivers()
@@ -465,6 +492,9 @@ settings.save()
 # Force display to desired user setting
 display.enable(True, True)
 
+# Load services
+services = ServiceManager(settings)
+
 # Spin until we have internet, check every 10s
 while True:
   settings.set('local-ip', helper.getIP())
@@ -476,38 +506,13 @@ while True:
   else:
     break
 
-# Once we have IP, show for 30s
-cd = 10
-while (cd > 0):
-	display.message('Starting in %d seconds\n\nFrame configuration\n\nhttp://%s:7777' % (cd, settings.get('local-ip')))
-	cd -= 1
-	time.sleep(1)
-
-def oauthGetToken():
-  return settings.get('oauth_token')
-
-def oauthSetToken(token):
-  settings.set('oauth_token', token)
-  settings.save()
-
-oauth = OAuth(settings.get('local-ip'), oauthSetToken, oauthGetToken)
-
-if os.path.exists(settings.CONFIGFOLDER + '/oauth.json'):
-  try:
-    with open(settings.CONFIGFOLDER + '/oauth.json') as f:
-      data = json.load(f)
-    if 'web' in data: # if someone added it via command-line
-      data = data['web']
-    oauth.setOAuth(data)
-  except:
-    logging.exception('OAuth file is corrupt, do not use')
-
 # Prep random
 random.seed(long(time.clock()))
 colormatch = colormatch(settings.get('colortemp-script'), 2700) # 2700K = Soft white, lowest we'll go
-slideshow = slideshow(display, settings, oauth, colormatch)
+slideshow = slideshow(display, settings, colormatch)
 timekeeper = timekeeper(display.enable, slideshow.start)
 slideshow.setQueryPower(timekeeper.getDisplayOn)
+slideshow.setServiceManager(services)
 
 timekeeper.setConfiguration(settings.getUser('display-on'), settings.getUser('display-off'))
 timekeeper.setAmbientSensitivity(settings.getUser('autooff-lux'), settings.getUser('autooff-time'))

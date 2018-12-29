@@ -7,6 +7,10 @@
 		<script type="text/javascript" src="js/jquery.iframe-transport.js"></script>
 		<script type="text/javascript" src="js/jquery.fileupload.js"></script>
 		<script type="text/javascript" src="js/index.js"></script>
+
+  	<link rel="stylesheet" href="css/jquery-ui.min.css">
+  	<script src="js/jquery-ui.min.js"></script>
+
 		<link rel="stylesheet" type="text/css" href="css/index.css">
 	</head>
 	<body>
@@ -17,26 +21,12 @@
 			var templates = new TemplateEngine();
 			templates.load([
 				'main.html',
-				'link.html',
-				'oauth.html'
 			], function(){
 				// Initiate the webpage
-				checkOAuth(
-					function(){
-						checkLink(
-							function(){
-								loadSettings(function(data){
-									$('body').append(templates.get('main.html')(data));
-								});
-							}, function() {
-								$('body').append(templates.get('link.html')());
-							}
-						)
-					},
-					function(){
-						$('body').append(templates.get('oauth.html')());
-					}
-				);
+				loadSettings(function(data)
+				{
+					$('body').append(templates.get('main.html')(configData));
+				});
 			});
 		});
 		</script>

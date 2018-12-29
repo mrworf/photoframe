@@ -19,14 +19,18 @@ import time
 from oauthlib.oauth2 import TokenExpiredError
 from requests_oauthlib import OAuth2Session
 
+from modules.helper import helper
+
 class OAuth:
-	def __init__(self, ip, setToken, getToken):
-		self.ip = ip
+	def __init__(self, setToken, getToken, scope, extras=''):
+		self.ip = helper.getIP()
+		self.scope = scope
 		self.oauth = None
 		self.cbGetToken = getToken
 		self.cbSetToken = setToken
 		self.ridURI = 'https://photoframe.sensenet.nu'
 		self.state = None
+		self.extras = extras
 
 	def setOAuth(self, oauth):
 		self.oauth = oauth
@@ -45,20 +49,29 @@ class OAuth:
 		                         token_updater=self.cbSetToken)
 		return auth
 
-	def request(self, uri, destination=None, params=None):
+	def request(self, uri, destination=None, params=None, data=None, usePost=False):
 		result = None
 		stream = destination != None
 		tries = 0
-		while tries < 5:
+
+		while tries < 1:
 			try:
 				try:
 					auth = self.getSession()
-					result = auth.get(uri, stream=stream, params=params)
-					break
+					if usePost:
+						result = auth.post(uri, stream=stream, params=params, json=data)
+					else:
+						result = auth.get(uri, stream=stream, params=params)
+					if result is not None:
+						break
 				except TokenExpiredError as e:
 					auth = self.getSession(True)
-					result = auth.get(uri, stream=stream, params=params)
-					break
+					if usePost:
+						result = auth.post(uri, stream=stream, params=params, json=data)
+					else:
+						result = auth.get(uri, stream=stream, params=params)
+					if result is not None:
+						break
 			except:
 				logging.exception('Issues downloading')
 			time.sleep(tries * 10) # Back off 10, 20, ... depending on tries
@@ -69,17 +82,21 @@ class OAuth:
 			return False
 
 		if result is not None and destination is not None:
+			ret = {'status' : result.status_code, 'content' : None}
 			try:
 				with open(destination, 'wb') as handle:
 					for chunk in result.iter_content(chunk_size=512):
 						if chunk:  # filter out keep-alive new chunks
 							handle.write(chunk)
-				return True
 			except:
 				logging.exception('Failed to download %s' % uri)
-				return False
+				ret['status'] = 600
+			return ret
 		else:
-			return result
+			if result is None:
+				return {'status':500, 'content':'Unable to download URL using OAuth'}
+			else:
+				return {'status':result.status_code, 'content':result.content}
 
 	def getRedirectId(self):
 		r = requests.get('%s/?register' % self.ridURI)
@@ -89,9 +106,9 @@ class OAuth:
 		self.rid = self.getRedirectId()
 
 		auth = OAuth2Session(self.oauth['client_id'],
-							scope=['https://www.googleapis.com/auth/photos'],
+							scope=self.scope, # ['https://www.googleapis.com/auth/photos'],
 							redirect_uri=self.ridURI,
-							state='%s-%s' % (self.rid, self.ip))
+							state='%s-%s-%s' % (self.rid, self.ip, self.extras))
 		authorization_url, state = auth.authorization_url(self.oauth['auth_uri'],
 		                                                  access_type="offline",
 		                                                  prompt="consent")
@@ -101,9 +118,9 @@ class OAuth:
 
 	def complete(self, url):
 		auth = OAuth2Session(self.oauth['client_id'],
-		                     scope=['https://www.googleapis.com/auth/photos'],
+		                     scope=self.scope, # ['https://www.googleapis.com/auth/photos'],
 		                     redirect_uri=self.ridURI,
-		                     state='%s-%s' % (self.rid, self.ip))
+		                     state='%s-%s-%s' % (self.rid, self.ip, self.extras))
 
 		token = auth.fetch_token(self.oauth['token_uri'],
 		                         client_secret=self.oauth['client_secret'],

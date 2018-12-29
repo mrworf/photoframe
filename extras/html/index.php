@@ -32,7 +32,7 @@ if (isset($_GET["register"])) {
         print($id);
 } else if (isset($_GET["state"]) && strlen($_GET["state"]) > 1) {
         $params = explode("-", $_GET["state"]);
-        if (count($params) != 2) {
+        if (count($params) < 2) {
                 http_response_code(404);
                 die("No such redirect 1");
         }
