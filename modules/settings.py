@@ -64,6 +64,7 @@ class settings:
 			'shutdown-pin' : 26,
 			'display-driver' : 'none',
 			'display-special' : None,
+			'imagesizing' : 'blur',
 		}
 
 	def load(self):
