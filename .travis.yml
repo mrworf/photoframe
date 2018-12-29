@@ -19,3 +19,5 @@ deploy:
   draft: true
   on:
     repo: mrworf/photoframe
+    all_branches: true
+    condition: $OFFICIAL = yes
