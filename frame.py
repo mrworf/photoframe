@@ -415,9 +415,6 @@ def web_main(file):
 def web_template(file):
   return app.send_static_file('template/' + file)
 
-#@app.route('/service/<id>/config', methods=['GET', 'POST'], defaults={'action': None})
-#@app.route('/service/<id>/config/fields', methods=['GET'], defaults={'action': None})
-
 @app.route('/service/<service>/oauth', methods=['POST'])
 @auth.login_required
 def servicees_oauth(service):

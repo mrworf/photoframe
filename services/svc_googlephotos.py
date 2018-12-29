@@ -120,18 +120,18 @@ class GooglePhotos(BaseService):
       if images is None:
         continue
 
-      mimeType, imageUrl = self.getUrlFromImages(supportedMimeTypes, displaySize, images)
+      mimeType, imageUrl, sourceUrl = self.getUrlFromImages(supportedMimeTypes, displaySize, images)
       if imageUrl is None:
         continue
       result = self.requestUrl(imageUrl, destination=destinationFile)
       if result['status'] == 200:
-        return {'mimetype' : mimeType, 'error' : None, 'source':None}
+        return {'mimetype' : mimeType, 'error' : None, 'source': sourceUrl}
 
     # Don't assume spelling by default, make sure API is enabled first!
     if not self.isGooglePhotosEnabled():
-      return {'mimetype' : None, 'error' : '"Photos Library API" is not enabled on\nhttps://console.developers.google.com\n\nCheck the Photoframe Wiki for details', 'source':None}
+      return {'mimetype' : None, 'error' : '"Photos Library API" is not enabled on\nhttps://console.developers.google.com\n\nCheck the Photoframe Wiki for details', 'source': None}
     else:
-      return {'mimetype' : None, 'error' : 'No images could be found,\nCheck spelling or make sure you have added albums', 'source':None}
+      return {'mimetype' : None, 'error' : 'No images could be found,\nCheck spelling or make sure you have added albums', 'source': None}
 
   def isGooglePhotosEnabled(self):
     url = 'https://photoslibrary.googleapis.com/v1/albums'
@@ -167,11 +167,11 @@ class GooglePhotos(BaseService):
           width = int(float(displaySize['height']) * ar)
           height = displaySize['height']
 
-        return entry['mimeType'], entry['baseUrl'] + "=w" + str(width) + "-h" + str(height)
+        return entry['mimeType'], entry['baseUrl'] + "=w" + str(width) + "-h" + str(height), entry['productUrl']
       else:
         logging.warning('Unsupported media: %s' % (entry['mimeType']))
       entry = None
-    return None, None
+    return None, None, None
 
   def getQueryForKeyword(self, keyword):
     result = None

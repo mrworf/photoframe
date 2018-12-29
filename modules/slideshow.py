@@ -111,6 +111,8 @@ class slideshow:
             helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'))
           elif self.settings.getUser('imagesizing') == 'zoom':
             helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'), zoomOnly=True)
+          elif self.settings.getUser('imagesizing') == 'auto':
+            helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'), autoChoose=True)
           if self.colormatch.hasSensor():
             if not self.colormatch.adjust(filename):
               logging.warning('Unable to adjust image to colormatch, using original')
