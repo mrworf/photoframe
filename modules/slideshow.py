@@ -107,7 +107,10 @@ class slideshow:
           self.imageMime = result['mimetype']
           self.imageCurrent = filename
 
-          helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'))
+          if self.settings.getUser('imagesizing') == 'blur':
+            helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'))
+          elif self.settings.getUser('imagesizing') == 'zoom':
+            helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'), zoomOnly=True)
           if self.colormatch.hasSensor():
             if not self.colormatch.adjust(filename):
               logging.warning('Unable to adjust image to colormatch, using original')

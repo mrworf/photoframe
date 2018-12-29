@@ -58,7 +58,7 @@ class helper:
 		return None
 
 	@staticmethod
-	def makeFullframe(filename, displayWidth, displayHeight):
+	def makeFullframe(filename, displayWidth, displayHeight, zoomOnly=True):
 		name, ext = os.path.splitext(filename)
 		filename_temp = "%s-frame%s" % (name, ext)
 
@@ -115,42 +115,56 @@ class helper:
 		cmd = None
 		try:
 			# Time to process
-			cmd = [
-				'convert',
-				filename + '[0]',
-				'-resize',
-				'%sx%s^' % (displayWidth, displayHeight),
-				'-gravity',
-				'center',
-				'-crop',
-				'%sx%s+0+0' % (displayWidth, displayHeight),
-				'+repage',
-				'-blur',
-				'0x12',
-				'-brightness-contrast',
-				'-20x0',
-				'(',
-				filename + '[0]',
-				'-bordercolor',
-				'black',
-				'-border',
-				border,
-				'-bordercolor',
-				'black',
-				'-border',
-				spacing,
-				'-resize',
-				'%sx%s' % (displayWidth, displayHeight),
-				'-background',
-				'transparent',
-				'-gravity',
-				'center',
-				'-extent',
-				'%sx%s' % (displayWidth, displayHeight),
-				')',
-				'-composite',
-				filename_temp
-			]
+			if zoomOnly:
+				cmd = [
+					'convert',
+					filename + '[0]',
+					'-resize',
+					'%sx%s^' % (displayWidth, displayHeight),
+					'-gravity',
+					'center',
+					'-crop',
+					'%sx%s+0+0' % (displayWidth, displayHeight),
+					'+repage',
+					filename_temp
+				]
+			else:
+				cmd = [
+					'convert',
+					filename + '[0]',
+					'-resize',
+					'%sx%s^' % (displayWidth, displayHeight),
+					'-gravity',
+					'center',
+					'-crop',
+					'%sx%s+0+0' % (displayWidth, displayHeight),
+					'+repage',
+					'-blur',
+					'0x12',
+					'-brightness-contrast',
+					'-20x0',
+					'(',
+					filename + '[0]',
+					'-bordercolor',
+					'black',
+					'-border',
+					border,
+					'-bordercolor',
+					'black',
+					'-border',
+					spacing,
+					'-resize',
+					'%sx%s' % (displayWidth, displayHeight),
+					'-background',
+					'transparent',
+					'-gravity',
+					'center',
+					'-extent',
+					'%sx%s' % (displayWidth, displayHeight),
+					')',
+					'-composite',
+					filename_temp
+				]
 		except:
 			logging.exception('Error building command line')
 			logging.debug('Filename: ' + repr(filename))

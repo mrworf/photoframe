@@ -63,6 +63,15 @@
 			{{/each}}
 			{{/select}}
 		</select>
+		<br>
+		How to handle images which don't fill the screen
+		<select name="imagesizing">
+			{{#select settings.imagesizing}}
+			<option value="none">Do nothing</option>
+			<option value="blur">Show blurred image</option>
+			<option value="zoom">Zoom to fill</option>
+			{{/select}}
+		</select>
 	</div>
 </div>
 <br>

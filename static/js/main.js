@@ -90,6 +90,14 @@ $("select[name=powersave]").change(function() {
   });
 });
 
+$("select[name=imagesizing]").change(function() {
+  $.ajax({
+    url:"/setting/" + $(this).attr('name') + "/" + encodeURIComponent($(this).val()),
+    type:"PUT"
+  }).done(function(){
+  });
+});
+
 $("select[name=tvservice]").change(function() {
   $.ajax({
     url:"/setting/tvservice/" + encodeURIComponent($(this).val()),
