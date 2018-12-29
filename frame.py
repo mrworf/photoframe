@@ -265,19 +265,26 @@ def cfg_keywords_help(service):
 @app.route('/keywords/<service>', methods=['GET'])
 @app.route('/keywords/<service>/add', methods=['POST'])
 @app.route('/keywords/<service>/delete', methods=['POST'])
+@app.route('/keywords/<service>/source/<int:index>', methods=['GET'])
 @auth.login_required
-def cfg_keywords(service):
+def cfg_keywords(service, index=None):
   if request.method == 'GET':
-    return jsonify({'keywords' : services.getServiceKeywords(service)})
+    if 'source' in request.url:
+      return redirect(services.sourceServiceKeywords(service, index))
+    else:
+      return jsonify({'keywords' : services.getServiceKeywords(service)})
   elif request.method == 'POST' and request.json is not None:
     result = True
     if 'id' not in request.json:
-      if not services.addServiceKeywords(service, request.json['keywords']):
-        result = False
+      result = services.addServiceKeywords(service, request.json['keywords'])
+      if result['error'] is not None:
+        result['status'] = False
+      else:
+        result['status'] = True
     else:
       if not services.removeServiceKeywords(service, request.json['id']):
-        result = False
-    return jsonify({'status':result})
+        result = {'status':False, 'error' : 'Unable to remove service'}
+    return jsonify(result)
   abort(500)
 
 @app.route('/maintenance/<cmd>')

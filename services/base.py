@@ -18,6 +18,7 @@ import os
 import json
 import random
 import logging
+import requests
 
 from modules.oauth import OAuth
 
@@ -54,7 +55,8 @@ class BaseService:
       '_OAUTH_CONFIG' : None,
       '_OAUTH_CONTEXT' : None,
       '_CONFIG' : None,
-      '_KEYWORDS' : []
+      '_KEYWORDS' : [],
+      '_EXTRAS' : None
     }
     self._NEED_CONFIG = needConfig
     self._NEED_OAUTH = needOAuth
@@ -115,7 +117,7 @@ class BaseService:
     # Normally you don't override this
     if os.path.exists(self._FILE_STATE):
       with open(self._FILE_STATE, 'r') as f:
-        self._STATE = json.load(f)
+        self._STATE.update( json.load(f) )
 
   def saveState(self):
     # Stores the state data under the unique ID for
@@ -136,13 +138,19 @@ class BaseService:
   def getId(self):
     return self._ID
 
-  def getMessage(self):
+  def getMessages(self):
     # override this if you wish to show a message associated with
     # the provider's instance. Return None to hide
-    return None
-
-  def getMessageLink(self):
-    return None
+    # FOrmat: [{'level' : 'INFO', 'message' : None, 'link' : None}]
+    if self.needKeywords() and len(self.getKeywords()) == 0:
+      return [
+        {
+          'level': 'INFO',
+          'message' : 'Please add one or more items in order to show photos from this provider (see help button)',
+          'link': None
+        }
+      ]
+    return []
 
   ###[ All the OAuth functionality ]###########################
 
@@ -228,23 +236,37 @@ class BaseService:
 
   ###[ Keyword management ]###########################
 
-  def validateKeywords(self, keywords):
-    # Allows a service to validate the provided keywords
-    # if they are OK, it should return None, if not, it should return helpful error message
-    # This call should return asap
-    return None
+  def validateKeyword(self, keywords):
+    return {'error':None, 'keywords': keywords}
 
   def addKeywords(self, keywords):
     # This is how the user will configure it, this adds a new set of keywords to this
-    # service module. DO NOT OVERRIDE OR USE THIS TO DO PROCESSING
+    # service module. Return none on success, string with error on failure
+    keywords = keywords.strip()
+
     if not self.needKeywords():
-      return
-    self._STATE['_KEYWORDS'].append(keywords)
-    self.saveState()
+      return {'error' : 'Doesn\'t use keywords', 'keywords' : keywords}
+    if keywords == '':
+      return {'error' : 'Keyword string cannot be empty', 'kewords' : keywords}
+
+    tst = self.validateKeyword(keywords)
+    if tst['error'] is None:
+      keywords = tst['keywords']
+      self._STATE['_KEYWORDS'].append(keywords)
+      self.saveState()
+    return tst
 
   def getKeywords(self):
     # Returns an array of all keywords
     return self._STATE['_KEYWORDS']
+
+  def getKeywordSourceUrl(self, index):
+    # Override to provide a source link
+    return None
+
+  def hasKeywordSourceUrl(self):
+    # Override to provide source url support
+    return False
 
   def removeKeywords(self, index):
     if index < 0 or index > (len(self._STATE['_KEYWORDS'])-1):
@@ -265,6 +287,20 @@ class BaseService:
     if len(self._STATE['_KEYWORDS']) == 0:
       return 0
     return random.SystemRandom().randint(0,len(self._STATE['_KEYWORDS'])-1)
+
+  def getKeywordLink(self, index):
+    if index < 0 or index > (len(self._STATE['_KEYWORDS'])-1):
+      logging.error('removeKeywords: Out of range %d' % index)
+      return
+
+  ###[ Extras - Allows easy access to config ]#################
+
+  def getExtras(self):
+    return self._STATE['_EXTRAS']
+
+  def setExtras(self, data):
+    self._STATE['_EXTRAS'] = data
+    self.saveState()
 
   ###[ Actual hard work ]###########################
 

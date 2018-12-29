@@ -163,7 +163,7 @@ $("#shutdown").click(function() {
 });
 
 $("input[class='keyword-search']").click(function(){
-  window.open("https://photos.google.com/search/" + $(this).data('key'), "_blank");
+  window.open("/keywords/" + $(this).data('service') + '/source/' + $(this).data('index'), "_blank");
 });
 $("input[class='keyword-delete']").click(function(){
   if (confirm("Are you sure?")) {
@@ -180,6 +180,7 @@ $("input[class='keyword-delete']").click(function(){
 });
 
 $('.keyword-add').click(function(){
+  $('#busy').show();
   $.ajax({
     url:"/keywords/" + $(this).data('service') + "/add",
     type:"POST",
@@ -187,7 +188,12 @@ $('.keyword-add').click(function(){
     contentType: "application/json; charset=utf-8",
     dataType: "json"
   }).done(function(data){
-    location.reload();
+    $('#busy').hide();
+    if (!data.status) {
+      alert('Failed to add keyword:\n\n' + data.error);
+    } else {
+      location.reload();
+    }
   });
 });
 

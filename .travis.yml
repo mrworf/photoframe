@@ -9,6 +9,7 @@ script: "./build-img.sh"
 after_success:
 - cd pi-gen/deploy
 - sudo mv "$(ls *.zip)" photoframe.zip
+- cd ../..
 deploy:
   provider: releases
   api_key:
@@ -18,3 +19,5 @@ deploy:
   draft: true
   on:
     repo: mrworf/photoframe
+    all_branches: true
+    condition: $OFFICIAL = yes

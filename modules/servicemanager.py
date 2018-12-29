@@ -180,10 +180,10 @@ class ServiceManager:
 
   def addServiceKeywords(self, service, keywords):
     if service not in self._SERVICES:
-      return False
+      return {'error' : 'No such service'}
     svc = self._SERVICES[service]['service']
     if not svc.needKeywords():
-      return False
+      return {'error' : 'Service does not use keywords'}
     return svc.addKeywords(keywords)
 
   def removeServiceKeywords(self, service, index):
@@ -195,6 +195,15 @@ class ServiceManager:
       logging.error('removeServiceKeywords: Does not use keywords')
       return False
     return svc.removeKeywords(index)
+
+  def sourceServiceKeywords(self, service, index):
+    if service not in self._SERVICES:
+      return None
+    svc = self._SERVICES[service]['service']
+    if not svc.hasKeywordSourceUrl():
+      logging.error('Service does not support sourceUrl')
+      return None
+    return svc.getKeywordSourceUrl(index)
 
   def helpServiceKeywords(self, service):
     if service not in self._SERVICES:
@@ -258,8 +267,8 @@ class ServiceManager:
         'id' : k,
         'state' : self.getServiceState(k),
         'useKeywords' : svc['service'].needKeywords(),
-        'message' : svc['service'].getMessage(),
-        'messageLink' : svc['service'].getMessageLink()
+        'hasSourceUrl' : svc['service'].hasKeywordSourceUrl(),
+        'messages' : svc['service'].getMessages(),
       })
     return result
 

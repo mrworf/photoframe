@@ -1,6 +1,6 @@
 <h1><a href="https://github.com/mrworf/photoframe">PhotoFrame Configuration</a></h1>
-<img alt="On screen now" title="Realtime view, updates every 30s" src="/details/current" id="screen">
-<div>
+<img class="thumbnail" alt="On screen now" title="Realtime view, updates every 30s" src="/details/current" id="screen">
+<div class="settings">
 	<div>
 		Options
 	</div>
@@ -66,7 +66,7 @@
 	</div>
 </div>
 <br>
-<div>
+<div class="settings">
 	<div>
 		System
 	</div>
@@ -82,19 +82,20 @@
 <br>
 {{#if service-defined}}
 {{#each service-defined}}
-<div>
+<div  class="settings">
 	<div style="text-align: center">
 		{{name}}<br>
 		<input type="button" data-service="{{id}}" class="service-delete" value="Delete" style="width: 100%">
 	</div>
 	<div>
-		{{#if message}}
-		<p style="margin: 1pt; color: red; font-weight: bold">
-			{{#if messageLink}}<a href="{{messageLink}}" target="_blank">{{/if}}
+		{{#each messages}}
+		<p class="message {{level}}">
+			&nbsp;
+			{{#if link}}<a class="{{level}}" href="{{link}}" target="_blank">{{/if}}
 			{{message}}
-			{{#if messageLink}}</a>{{/if}}
+			{{#if link}}</a>{{/if}}
 		</p>
-		{{/if}}
+		{{/each}}
 		{{#ifvalue state value="OAUTH" }}
 			<input style="position:absolute; top: -100px" type="file" data-url="service/{{id}}/oauth" data-service="{{id}}" class="oauth-json" name="filename">
 			<input type="button" data-service="{{id}}" class="service-oauth" value="Authorize">
@@ -105,20 +106,20 @@
 		<p class="nospace" id="keywords">
 			{{#each keywords.keywords}}
 				<input class="keyword-delete" type="button" data-service="{{../id}}" data-index="{{@index}}" value="Delete">
-				<input class="keyword-search" data-key="{{encode this}}" type="button" value="Open">
+				{{#if ../hasSourceUrl}}
+					<input class="keyword-search" data-service="{{../id}}" data-index="{{@index}}" type="button" value="Open">
+				{{/if}}
 				{{#if this}}
 					{{this}}
-				{{else}}
-					&lt;empty - picks one of the last photos added&gt;
 				{{/if}}
 				<br>
 			{{/each}}
 		</p>
 		{{/if}}
 		<p class="nospace" style="display: flex">
+			<input type="button" class="keyword-help" data-service="{{id}}" value="Help">
 			<input type="text" class="keyword" style="flex: 2; text-align: left">
 			<input type="button" class="keyword-add" data-service="{{id}}" value="Add">
-			<input type="button" class="keyword-help" data-service="{{id}}" value="Help">
 		</p>
 		{{/ifvalue}}
 	</div>
@@ -135,5 +136,9 @@
 		</select>
 	</div>
 <br>
-
+<div class="busy" style="display: none" id="busy">
+	<div>
+		<img src="/img/busy.gif">
+	</div>
+</div>
 <script type="text/javascript" src="/js/main.js"></script>
