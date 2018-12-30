@@ -70,6 +70,7 @@ class BaseService:
     self._MEMORY_KEY = None
 
     self.loadState()
+    self.preSetup()
 
   def _prepareFolders(self, configDir):
     basedir = os.path.join(configDir, self._ID)
@@ -102,6 +103,7 @@ class BaseService:
       self._OAUTH = OAuth(self._setOAuthToken, self._getOAuthToken, self.getOAuthScope(), self._ID)
       if self._STATE['_OAUTH_CONFIG'] is not None:
         self._OAUTH.setOAuth(self._STATE['_OAUTH_CONFIG'])
+        self.postSetup()
 
     if self._NEED_CONFIG and not self.hasConfiguration():
       return BaseService.STATE_DO_CONFIG
@@ -166,6 +168,8 @@ class BaseService:
     self._STATE['_OAUTH_CONFIG'] = config
     if self._OAUTH is not None:
       self._OAUTH.setOAuth(self._STATE['_OAUTH_CONFIG'])
+      self.postSetup()
+
     self.saveState()
     return True
 

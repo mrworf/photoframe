@@ -38,6 +38,23 @@ class GooglePhotos(BaseService):
   def hasKeywordSourceUrl(self):
     return True
 
+  def postSetup(self):
+    extras = self.getExtras()
+    keywords = self.getKeywords()
+
+    if extras is None and keywords is not None and len(keywords) > 0:
+      logging.info('Migrating to new format with preresolved album ids')
+      extras = {}
+      for key in keywords:
+        if key.lower() == 'latest':
+          continue
+        albumId = self.translateKeywordToId(key)
+        if albumId is None:
+          logging.error('Existing keyword cannot be resolved')
+        else:
+          extras[key] = albumId
+      self.setExtras(extras)
+
   def getKeywordSourceUrl(self, index):
     keys = self.getKeywords()
     if index < 0 or index >= len(keys):
