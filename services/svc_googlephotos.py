@@ -164,7 +164,7 @@ class GooglePhotos(BaseService):
     offset = random.SystemRandom().randint(0,count-1)
     for i in range(0, count):
       index = (i + offset) % count
-      proposed = images[index]['id']
+      proposed = images[index]['baseUrl']
       if self.memorySeen(proposed):
         continue
       self.memoryRemember(proposed)
