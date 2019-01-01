@@ -55,36 +55,7 @@ The default username/password for the web page is `photoframe` and `password`. T
 
 Flash image to SDcard, edit `wifi-config.txt` and boot the RPi3 with the SDcard and follow instructions. Username and password is above this paragraph.
 
-## It keeps asking for OAuth2.0 data?
-
-You have to tell photoframe about OAuth2.0 secrets.
-
-First step, login to your google API console (you have this by default if you have a google photos account). You'll find the console
-at https://console.developers.google.com/apis/dashboard
-
-Next, you're going to create a new project, you can call it whatever you want, for this example, I'm using `Photo Frame`.
-
-Once created, we're going to click on `Credentials` in the menu on the left. After it loads, click `Create credentials` and select
-`OAuth client id`. This leads to a new screen where it will ask you to create a consent screen, so click the button to get that started.
-
-Next, you're going to fill out the form. All but two fields are optional, so it's an easy thing to do.
-
-Email Address: `<Your email>` (usually prefilled with your google email)
-
-Product name shown to users: `Photo Frame`
-
-Hit `save` and it will take you to a screen where you choose what kind of application you're making. It's important you choose `Web Application`.
-Doing so opens up a couple of extra fields. First, change the name from `Web Client 1` to something better (for example `Photo Frame`). You also need
-to fill out `Authorized redirect URIs`.
-
-Please add `https://photoframe.sensenet.nu` to this list and then press `Create`
-
-This action will open a box with client ID and secret. Don't worry about it, just click `OK`. On the new screen, you'll find your newly created client id.
-On the line with the name of your app, there will be a download button at the right-most side.
-
-Click it, and it downloads a JSON file. It is the contents of this file which needs to be copy-n-paste:ed into the box you see in photoframe.
-
-Once you've copy-n-paste:ed this and submit it to photoframe, it will unlock the main settings and allow you to perform the google photos link, configure parameters, etc.
+Once inside the web interface, select `GooglePhotos` from dropdown list in bottom-left corner and press `Add photo service`.
 
 # color temperature?
 
