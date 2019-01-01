@@ -82,6 +82,13 @@ class slideshow:
     logging.info('Starting presentation')
     delay = 0
     useService = 0
+    supportedFormats = [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/bmp'
+      # HEIF to be added once I get ImageMagick running with support
+    ]
 
     while True:
       # Avoid showing images if the display is off
@@ -100,7 +107,7 @@ class slideshow:
         svc = services[useService]['id']
 
         filename = os.path.join(self.settings.get('tempfolder'), 'image')
-        result = self.services.servicePrepareNextItem(svc, filename, ['image/jpeg'], {'width' : self.settings.getUser('width'), 'height' : self.settings.getUser('height')})
+        result = self.services.servicePrepareNextItem(svc, filename, supportedFormats, {'width' : self.settings.getUser('width'), 'height' : self.settings.getUser('height')})
         if result['error'] is not None:
           self.display.message('%s failed:\n\n%s' % (services[useService]['name'], result['error']))
         else:
