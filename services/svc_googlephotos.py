@@ -91,7 +91,7 @@ class GooglePhotos(BaseService):
     result = BaseService.addKeywords(self, keywords)
     if result['error'] is None:
       # No error in input, result album now
-      if result['keywords'] != 'latest':
+      if result['keywords'].upper().lower().strip() != 'latest':
         albumId = self.translateKeywordToId(result['keywords'])
         if albumId is None:
           result['error'] = 'No such album "%s"' % result['keywords']
@@ -192,6 +192,7 @@ class GooglePhotos(BaseService):
 
   def getQueryForKeyword(self, keyword):
     result = None
+    keyword = keyword.upper().lower().strip()
     extras = self.getExtras()
     if extras is None:
       extras = {}
