@@ -54,6 +54,19 @@ class GooglePhotos(BaseService):
         else:
           extras[key] = albumId
       self.setExtras(extras)
+    else:
+      # Make sure all keywords are LOWER CASE (which is why I wrote it all in upper case :))
+      extras_old = self.getExtras()
+      extras = {}
+
+      for k in extras_old:
+        kk = k.upper().lower().strip()
+        if len(extras) > 0 or kk != k:
+          extras[kk] = extras_old[k]
+
+      if len(extras) > 0:
+        logging.debug('Had to translate non-lower-case keywords due to bug, should be a one-time thing')
+        self.setExtras(extras)
 
   def getKeywordSourceUrl(self, index):
     keys = self.getKeywords()
@@ -85,14 +98,21 @@ class GooglePhotos(BaseService):
     # Remove quotes around keyword
     if keywords[0] == '"' and keywords[-1] == '"':
       keywords = keywords[1:-1]
+
+    # Quick check, don't allow duplicates!
+    k = keywords.upper().lower().strip()
+    if k in self.getExtras():
+      logging.error('Album was already in list')
+      return {'error':'Album already in list', 'keywords' : keywords}
     return {'error':None, 'keywords':keywords}
 
   def addKeywords(self, keywords):
     result = BaseService.addKeywords(self, keywords)
     if result['error'] is None:
       # No error in input, result album now
-      if result['keywords'].upper().lower().strip() != 'latest':
-        albumId = self.translateKeywordToId(result['keywords'])
+      k = result['keywords'].upper().lower().strip()
+      if k != 'latest':
+        albumId = self.translateKeywordToId(k)
         if albumId is None:
           result['error'] = 'No such album "%s"' % result['keywords']
           # Delete the newly added keyword
@@ -101,7 +121,7 @@ class GooglePhotos(BaseService):
           extras = self.getExtras()
           if extras is None:
             extras = {}
-          extras[result['keywords']] = albumId
+          extras[k] = albumId
           self.setExtras(extras)
     return result
 
