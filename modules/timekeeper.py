@@ -93,7 +93,7 @@ class timekeeper(Thread):
 
 	def evaluatePower(self):
 		# Either source can turn off display but scheduleOff takes priority on power on
-		# NOTE! Schedule and sensor can be overriden 
+		# NOTE! Schedule and sensor can be overriden
 		if not self.standby and ((not self.ignoreSchedule and self.scheduleOff) or (not self.ignoreSensor and self.ambientOff)):
 			self.standby = True
 			self.cbPower(False)
@@ -106,14 +106,25 @@ class timekeeper(Thread):
 		while True:
 			time.sleep(60) # every minute
 
-			if self.hourOn is not None and self.hourOff is not None:
-				previously = self.scheduleOff
-				hour = int(time.strftime('%H'))
-				if hour >= self.hourOff:
-					self.scheduleOff = True
-				elif hour >= self.hourOn:
-					self.scheduleOff = False
+			scheduleOff = False
 
-				if self.scheduleOff != previously:
+			if self.hourOn is not None and self.hourOff is not None:
+				if self.hourOn > self.hourOff:
+					stateBegin = self.hourOff
+					stateEnd = self.hourOn
+					stateMode = True
+				else:
+					stateBegin = self.hourOn
+					stateEnd = self.hourOff
+					stateMode = False
+
+				previouslyOff = self.scheduleOff
+				hour = int(time.strftime('%H'))
+				if hour >= stateBegin and hour < stateEnd:
+					self.scheduleOff = stateMode
+				else:
+					self.scheduleOff = not stateMode
+
+				if self.scheduleOff != previouslyOff:
 					logging.debug('Schedule has triggered change in power %s' % repr(self.scheduleOff))
 					self.evaluatePower()
