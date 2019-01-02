@@ -67,6 +67,7 @@ class slideshow:
       self.thread.start()
 
   def presentation(self):
+    self.services.getServices(readyOnly=True)
 
     if not slideshow.SHOWN_IP:
       slideshow.SHOWN_IP = True
