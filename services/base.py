@@ -240,7 +240,7 @@ class BaseService:
 
   ###[ Keyword management ]###########################
 
-  def validateKeyword(self, keywords):
+  def validateKeywords(self, keywords):
     return {'error':None, 'keywords': keywords}
 
   def addKeywords(self, keywords):
@@ -253,7 +253,7 @@ class BaseService:
     if keywords == '':
       return {'error' : 'Keyword string cannot be empty', 'kewords' : keywords}
 
-    tst = self.validateKeyword(keywords)
+    tst = self.validateKeywords(keywords)
     if tst['error'] is None:
       keywords = tst['keywords']
       self._STATE['_KEYWORDS'].append(keywords)
