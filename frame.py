@@ -401,10 +401,10 @@ def upload(item):
 @auth.login_required
 def oauth_callback():
   # Figure out who should get this result...
+  old = services.hasReadyServices()
   if services.oauthCallback(request):
     # Request handled
-    #slideshow.start(True)
-    if services.hasReadyServices():
+    if old != services.hasReadyServices():
       slideshow.trigger()
     return redirect('/')
   else:
@@ -466,10 +466,8 @@ def services_operations(action):
       return jsonify({'id':svcid})
   if action == 'remove' and j is not None:
     if 'id' in j:
-      old = services.hasReadyServices()
       services.deleteService(j['id'])
-      if old != services.hasReadyServices():
-        slideshow.trigger()
+      slideshow.trigger() # Always trigger since we don't know who was on-screen
       return jsonify({'status':'Done'})
   if action == 'rename' and j is not None:
     if 'name' in j and 'id' in j:
