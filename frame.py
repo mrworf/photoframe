@@ -276,14 +276,21 @@ def cfg_keywords(service, index=None):
   elif request.method == 'POST' and request.json is not None:
     result = True
     if 'id' not in request.json:
+      hadKeywords = services.hasKeywords()
       result = services.addServiceKeywords(service, request.json['keywords'])
       if result['error'] is not None:
         result['status'] = False
       else:
         result['status'] = True
+        if hadKeywords != services.hasKeywords():
+          # Make slideshow show the change immediately, we have keywords
+          slideshow.trigger()
     else:
       if not services.removeServiceKeywords(service, request.json['id']):
-        result = {'status':False, 'error' : 'Unable to remove service'}
+        result = {'status':False, 'error' : 'Unable to remove keyword'}
+      else:
+        # Trigger slideshow, we have removed some keywords
+        slideshow.trigger()
     return jsonify(result)
   abort(500)
 
@@ -396,7 +403,9 @@ def oauth_callback():
   # Figure out who should get this result...
   if services.oauthCallback(request):
     # Request handled
-    slideshow.start(True)
+    #slideshow.start(True)
+    if services.hasReadyServices():
+      slideshow.trigger()
     return redirect('/')
   else:
     abort(500)
@@ -417,7 +426,7 @@ def web_template(file):
 
 @app.route('/service/<service>/oauth', methods=['POST'])
 @auth.login_required
-def servicees_oauth(service):
+def services_oauth(service):
   j = request.json
   # This one is special, this is a file upload of the JSON config data
   # and since we don't need a physical file for it, we should just load
@@ -450,10 +459,17 @@ def services_operations(action):
     return jsonify(services.getServices())
   if action == 'add' and j is not None:
     if 'name' in j and 'id' in j:
-      return jsonify({'id':services.addService(int(j['id']), j['name'])})
+      old = services.hasReadyServices()
+      svcid = services.addService(int(j['id']), j['name'])
+      if old != services.hasReadyServices():
+        slideshow.trigger()
+      return jsonify({'id':svcid})
   if action == 'remove' and j is not None:
     if 'id' in j:
+      old = services.hasReadyServices()
       services.deleteService(j['id'])
+      if old != services.hasReadyServices():
+        slideshow.trigger()
       return jsonify({'status':'Done'})
   if action == 'rename' and j is not None:
     if 'name' in j and 'id' in j:

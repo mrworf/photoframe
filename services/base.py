@@ -275,9 +275,10 @@ class BaseService:
   def removeKeywords(self, index):
     if index < 0 or index > (len(self._STATE['_KEYWORDS'])-1):
       logging.error('removeKeywords: Out of range %d' % index)
-      return
+      return False
     self._STATE['_KEYWORDS'].pop(index)
     self.saveState()
+    return True
 
   def needKeywords(self):
     # Some services don't have keywords. Override this to return false

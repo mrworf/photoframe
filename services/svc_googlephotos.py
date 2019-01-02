@@ -100,12 +100,15 @@ class GooglePhotos(BaseService):
     filename = os.path.join(self.getStoragePath(), self.hashString(keywords) + '.json')
     if os.path.exists(filename):
       os.unlink(filename)
-    BaseService.removeKeywords(self, index)
-    # Remove any extras
-    extras = self.getExtras()
-    if keywords in extras:
-      del extras[keywords]
-      self.setExtras(extras)
+    if BaseService.removeKeywords(self, index):
+      # Remove any extras
+      extras = self.getExtras()
+      if keywords in extras:
+        del extras[keywords]
+        self.setExtras(extras)
+      return True
+    else:
+      return False
 
   def validateKeywords(self, keywords):
     # Remove quotes around keyword
