@@ -271,6 +271,7 @@ class display:
 
   def clear(self):
     if self.emulate:
+      self.message('')
       return
     with open(self.getDevice(), 'wb') as f:
       subprocess.call(['cat' , '/dev/zero'], stdout=f, stderr=self.void)

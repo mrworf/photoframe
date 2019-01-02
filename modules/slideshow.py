@@ -150,6 +150,7 @@ class slideshow:
             os.remove(self.imageCurrent)
             self.imageCurrent = None
             imageOnScreen = False
+            self.display.clear()
 
       if self.imageCurrent is not None and os.path.exists(self.imageCurrent):
         self.display.image(self.imageCurrent)
