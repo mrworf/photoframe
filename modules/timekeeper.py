@@ -45,6 +45,7 @@ class timekeeper(Thread):
 
 	def setPowermode(self, mode):
 		if mode == '' or mode == 'none':
+			mode = 'none'
 			self.ignoreSensor = True
 			self.ignoreSchedule = True
 		elif mode == 'sensor':
@@ -56,7 +57,7 @@ class timekeeper(Thread):
 		elif mode == 'sensor+schedule':
 			self.ignoreSensor = False
 			self.ignoreSchedule = False
-		logging.debug('Powermode changed to ' + mode)
+		logging.debug('Powermode changed to ' + repr(mode))
 		self.luxLow = None
 		self.luxHigh = None
 		self.ambientOff = False
