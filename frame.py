@@ -341,7 +341,12 @@ def cfg_details(about):
   elif about == 'version':
     output = subprocess.check_output(['git', 'log', '-n1'], stderr=void)
     lines = output.split('\n')
-    return jsonify({'date':lines[2][5:].strip(),'commit':lines[0][7:].strip()})
+    infoDate = lines[2][5:].strip()
+    infoCommit = lines[0][7:].strip()
+    output = subprocess.check_output(['git', 'status'], stderr=void)
+    lines = output.split('\n')
+    infoBranch = lines[0][10:].strip()
+    return jsonify({'date':infoDate, 'commit':infoCommit, 'branch': infoBranch})
   elif about == 'color':
     return jsonify(slideshow.getColorInformation())
   elif about == 'sensor':
