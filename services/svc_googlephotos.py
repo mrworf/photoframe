@@ -263,42 +263,46 @@ class GooglePhotos(BaseService):
 
     logging.debug('Query Google Photos for album named "%s"', keyword)
     url = 'https://photoslibrary.googleapis.com/v1/albums'
-    params={}
+    params={'pageSize':50} #50 is api max
     while True:
       data = self.requestUrl(url, params=params)
       if data['status'] != 200:
         return None
       data = json.loads(data['content'])
       for i in range(len(data['albums'])):
+        if 'title' in data['albums'][i]:
+          logging.debug('Album: %s' % data['albums'][i]['title'])
         if 'title' in data['albums'][i] and data['albums'][i]['title'].upper().lower().strip() == keyword:
           logging.debug('Found album: ' + repr(data['albums'][i]))
           albumname = data['albums'][i]['title']
           albumid = data['albums'][i]['id']
           source = data['albums'][i]['productUrl']
           break
-      if albumid is None and 'pageToken' in data:
+      if albumid is None and 'nextPageToken' in data:
         logging.info('Another page of albums available')
-        params['nextPageToken'] = data['pageToken']
+        params['pageToken'] = data['nextPageToken']
         continue
       break
 
     if albumid is None:
       url = 'https://photoslibrary.googleapis.com/v1/sharedAlbums'
-      params = {}
+      params = {'pageSize':50}#50 is api max
       while True:
         data = self.requestUrl(url, params=params)
         if data['status'] != 200:
           return None
         data = json.loads(data['content'])
         for i in range(len(data['sharedAlbums'])):
+          if 'title' in data['sharedAlbums'][i]:
+            logging.debug('Shared Album: %s' % data['sharedAlbums'][i]['title'])
           if 'title' in data['sharedAlbums'][i] and data['sharedAlbums'][i]['title'].upper().lower().strip() == keyword:
             albumname = data['sharedAlbums'][i]['title']
             albumid = data['sharedAlbums'][i]['id']
             source = data['sharedAlbums'][i]['productUrl']
             break
-        if albumid is None and 'pageToken' in data:
+        if albumid is None and 'nextPageToken' in data:
           logging.info('Another page of shared albums available')
-          params['nextPageToken'] = data['pageToken']
+          params['pageToken'] = data['nextPageToken']
           continue
         break
 
