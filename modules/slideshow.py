@@ -41,6 +41,7 @@ class slideshow:
     self.imageMime = None
     self.services = None
     self.void = open(os.devnull, 'wb')
+    self.delayer = threading.Event()
 
   def getCurrentImage(self):
     return self.imageCurrent, self.imageMime
@@ -66,7 +67,12 @@ class slideshow:
       self.thread.daemon = True
       self.thread.start()
 
+  def trigger(self):
+    logging.debug('Causing immediate showing of image')
+    self.delayer.set()
+
   def presentation(self):
+    self.services.getServices(readyOnly=True)
 
     if not slideshow.SHOWN_IP:
       slideshow.SHOWN_IP = True
@@ -90,6 +96,8 @@ class slideshow:
       # HEIF to be added once I get ImageMagick running with support
     ]
 
+    self.delayer.clear()
+    imageOnScreen = False
     while True:
       # Avoid showing images if the display is off
       if self.queryPowerFunc is not None and self.queryPowerFunc() is False:
@@ -131,12 +139,23 @@ class slideshow:
 
       # Delay before we show the image (but take processing into account)
       # This should keep us fairly consistent
-      if time_process < delay:
-        time.sleep(delay - time_process)
+      if time_process < delay and (imageOnScreen or self.imageCurrent is None):
+        triggered = self.delayer.wait(delay - time_process)
+        self.delayer.clear()
+        if triggered:
+          logging.info('Change of configuration, flush data and restart')
+          # We need to expunge any pending image now
+          # so we get fresh data to show the user
+          if self.imageCurrent:
+            os.remove(self.imageCurrent)
+            self.imageCurrent = None
+            imageOnScreen = False
+            self.display.clear()
 
       if self.imageCurrent is not None and os.path.exists(self.imageCurrent):
         self.display.image(self.imageCurrent)
         os.remove(self.imageCurrent)
+        imageOnScreen = True
 
       delay = self.settings.getUser('interval')
     self.thread = None

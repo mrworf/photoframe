@@ -33,7 +33,6 @@ class emulator(Thread):
   def run(self):
     while (True):
       args = ['/usr/bin/fim', '--autowindow', '-qc', 'while(1){pread "convert -size %dx%d -depth 8 rgba:%s -resize 50%% png:-" ;reload;sleep 1;}' % (self.width, self.height, self.file)]
-      logging.debug('Cmdline: ' + ' '.join(args))
       result = subprocess.check_output(args)
 
 class display:
@@ -176,14 +175,10 @@ class display:
       device = '/tmp/fb.bin'
       self.depth = 32
 
-    logging.debug(' '.join(arguments))
-
     if self.depth in [24, 32]:
-      logging.debug('Sending image directly to framebuffer')
       with open(device, 'wb') as f:
         ret = subprocess.call(arguments, stdout=f, stderr=self.void)
     elif self.depth == 16: # Typically RGB565
-      logging.debug('Sending image via RGB565 conversion to framebuffer')
       # For some odd reason, cannot pipe the output directly to the framebuffer, use temp file
       with open(device, 'wb') as fb:
         src = subprocess.Popen(arguments, stdout=subprocess.PIPE, stderr=self.void)
@@ -276,6 +271,7 @@ class display:
 
   def clear(self):
     if self.emulate:
+      self.message('')
       return
     with open(self.getDevice(), 'wb') as f:
       subprocess.call(['cat' , '/dev/zero'], stdout=f, stderr=self.void)

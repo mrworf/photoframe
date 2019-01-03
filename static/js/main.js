@@ -133,17 +133,28 @@ $("select[name=display-driver]").change(function() {
 });
 
 $("#update").click(function() {
-  if (confirm("Are you sure? This will reboot the frame")) {
-    $.ajax({
-      url:"/maintenance/update"
-    }).done(function(){
-      location.reload();
-    });
-  }
+  $.ajax({
+    url:"/details/version"
+  }).done(function(data) {
+    console.log(data);
+    var msg = "Are you sure?\n\nThis will force the photoframe to look for a new version and reboot.\n\nNote! Even if no new version is found, photoframe will still reboot.";
+    /* NOT VERY USEFUL YET
+    msg += "\n\nCurrent version information:\n";
+    msg += 'Commit ' + data.commit + '(' + data.branch + ')\n';
+    msg += 'Dated ' + data.date;
+    */
+    if (confirm(msg)) {
+      $.ajax({
+        url:"/maintenance/update"
+      }).done(function(){
+        location.reload();
+      });
+    }
+  });
 });
 
 $("#reset").click(function() {
-  if (confirm("Are you sure? Link to photos will also be reset")) {
+  if (confirm("Are you sure?\n\nThis will remove any and all changes to the photoframe and it will behave as if you just installed it. Once you accept, you cannot undo and will have to reconfigure the photoframe again.\n\nNote! This will cause the photoframe to reboot")) {
     $.ajax({
       url:"/maintenance/reset"
     }).done(function(){

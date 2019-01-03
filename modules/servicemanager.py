@@ -278,3 +278,20 @@ class ServiceManager:
 
     svc = self._SERVICES[id]['service']
     return svc.prepareNextItem(destinationFile, supportedMimeTypes, displaySize)
+
+  def hasKeywords(self):
+    # Check any and all services to see if any is ready and if they have keywords
+    for k in self._SERVICES:
+      if self.getServiceState(k) != 'READY':
+        continue
+      words = self.getServiceKeywords(k)
+      if words is not None and len(words) > 0:
+        return True
+    return False
+
+  def hasReadyServices(self):
+    for k in self._SERVICES:
+      if self.getServiceState(k) != 'READY':
+        continue
+      return True
+    return False
