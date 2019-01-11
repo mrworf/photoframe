@@ -352,7 +352,7 @@ class BaseService:
     return self._DIR_PRIVATE
 
   def hashString(self, text):
-    return hashlib.sha1(text).hexdigest()
+    return hashlib.sha1(text.encode('ascii', 'ignore')).hexdigest()
 
   ###[ Memory management ]=======================================================
 
