@@ -168,32 +168,46 @@ def show_error(e):
     '''
   return message, code
 
-@app.route('/debug', methods=['GET'], defaults={'all' : False})
-@app.route('/debug/all', methods=['GET'], defaults={'all' : True})
-def show_logs(all):
+@app.route('/debug', methods=['GET'], defaults={'all' : False, 'stack' : False})
+@app.route('/debug/all', methods=['GET'], defaults={'all' : True, 'stack' : False})
+@app.route('/debug/stacktrace', methods=['GET'], defaults={'all' : False, 'stack' : True})
+def show_logs(all, stack):
   # Special URL, we simply try to extract latest 100 lines from syslog
   # and filter out frame messages. These are shown so the user can
   # add these to issues.
-  stats = os.stat('/var/log/syslog')
-  cmd = 'grep "photoframe\[" /var/log/syslog | tail -n 100'
-  title = 'Last 100 lines from the log'
-  if all:
-    title = 'Last 100 lines from the log (unfiltered)'
-    cmd = 'tail -n 100 /var/log/syslog'
-  lines = subprocess.check_output(cmd, shell=True)
+  stats = None
+  if stack:
+    title = 'Stacktrace of all running threads'
+    lines = []
+    for threadId, stack in sys._current_frames().items():
+        lines.append("\n# ThreadID: %s" % threadId)
+        for filename, lineno, name, line in traceback.extract_stack(stack):
+            lines.append('File: "%s", line %d, in %s' % (filename, lineno, name))
+            if line:
+                lines.append("  %s" % (line.strip()))
+  else:
+    stats = os.stat('/var/log/syslog')
+    cmd = 'grep "photoframe\[" /var/log/syslog | tail -n 100'
+    title = 'Last 100 lines from the log'
+    if all:
+      title = 'Last 100 lines from the log (unfiltered)'
+      cmd = 'tail -n 100 /var/log/syslog'
+    lines = subprocess.check_output(cmd, shell=True)
+    if lines:
+      lines = lines.splitlines()
+
   message = '''
   <html><head><title>Internal debugging</title></head><body style="font-family: Verdana"><h1>%s</h1>
   <pre style="margin: 15pt; padding: 10pt; border: 1px solid; background-color: #eeeeee">''' % title
   if lines:
-    for line in lines.splitlines():
+    for line in lines:
       message += line + '\n'
   else:
     message += 'Logs unavailable, perhaps it was archived recently (size will be less than 5000 bytes)'
-  message += '''</pre>
-  (size of logfile %d bytes, created %s)
-  </body>
-  </html>
-  ''' % (stats.st_size, datetime.datetime.fromtimestamp(stats.st_ctime).strftime('%c'))
+  message += '''</pre>'''
+  if stats:
+    message += '(size of logfile %d bytes, created %s)' % (stats.st_size, datetime.datetime.fromtimestamp(stats.st_ctime).strftime('%c'))
+  message += '</body></html>'
   return message, 200
 
 @app.route('/setting', methods=['GET'], defaults={'key':None,'value':None})
