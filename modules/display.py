@@ -60,8 +60,12 @@ class display:
     self.rotated = self.isRotated()
     self.xoffset = 0
     self.yoffset = 0
+    self.url = None
     if self.emulate:
       logging.info('Using framebuffer emulation')
+
+  def setConfigPage(self, url):
+    self.url = url
 
   def setConfiguration(self, tvservice_params, special=None):
     self.enabled = True
@@ -196,6 +200,10 @@ class display:
       logging.debug('Don\'t bother, display is off')
       return
 
+    url = ''
+    if self.url is not None:
+      url = self.url
+
     args = [
       'convert',
       '-size',
@@ -210,13 +218,22 @@ class display:
       '700',
       '-pointsize',
       '32',
-      'label:%s' % message,
+      'caption:%s' % message,
+      '-background',
+      'none',
+      '-gravity',
+      'south',
+      '-fill',
+      '#666666',
+      'caption:Configuration available at %s' % url,
+      '-flatten',
       '-extent',
       '%dx%d+%d+%d' % (self.width + self.xoffset, self.height + self.yoffset, self.xoffset, self.yoffset),
       '-depth',
       '8',
       '%s:-' % self.format
     ]
+
     self._to_display(args)
 
   def image(self, filename):

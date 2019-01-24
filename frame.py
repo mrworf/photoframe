@@ -543,6 +543,9 @@ while True:
   else:
     break
 
+# Let the display know the URL to use
+display.setConfigPage('http://%s:%d/' % (settings.get('local-ip'), 7777))
+
 # Prep random
 random.seed(long(time.clock()))
 colormatch = colormatch(settings.get('colortemp-script'), 2700) # 2700K = Soft white, lowest we'll go
