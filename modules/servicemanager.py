@@ -53,12 +53,16 @@ class ServiceManager:
       return 'PicasaWeb'
     if GooglePhotos.SERVICE_ID == id:
       return 'GooglePhotos'
+    if SimpleUrl.SERVICE_ID == id:
+      return 'SimpleUrl'
+
     return None
 
   def listServices(self):
     result = []
     result.append({'name' : PicasaWeb.SERVICE_NAME, 'id' : PicasaWeb.SERVICE_ID})
     result.append({'name' : GooglePhotos.SERVICE_NAME, 'id' : GooglePhotos.SERVICE_ID})
+    result.append({'name' : SimpleUrl.SERVICE_NAME, 'id' : SimpleUrl.SERVICE_ID})
     return result;
 
   def _save(self):
