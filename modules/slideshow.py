@@ -79,7 +79,7 @@ class slideshow:
       # Once we have IP, show for 10s
       cd = 10
       while (cd > 0):
-        self.display.message('Starting in %d seconds\n\nFrame configuration\n\nhttp://%s:7777' % (cd, self.settings.get('local-ip')))
+        self.display.message('Starting in %d seconds' % (cd))
         cd -= 1
         time.sleep(1)
       self.display.clear()
