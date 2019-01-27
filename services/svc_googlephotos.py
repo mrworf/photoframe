@@ -292,6 +292,9 @@ class GooglePhotos(BaseService):
         if data['status'] != 200:
           return None
         data = json.loads(data['content'])
+        if 'sharedAlbums' not in data:
+          logging.debug('User has no shared albums')
+          break
         for i in range(len(data['sharedAlbums'])):
           if 'title' in data['sharedAlbums'][i]:
             logging.debug('Shared Album: %s' % data['sharedAlbums'][i]['title'])
