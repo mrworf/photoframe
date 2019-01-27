@@ -14,8 +14,6 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 from base import BaseService
-import os
-import requests
 
 class SimpleUrl(BaseService):
   SERVICE_NAME = 'Simple URL'
@@ -30,7 +28,7 @@ class SimpleUrl(BaseService):
     return 'Each item is a URL that should return a single image. The URL may contain the terms "{width}" and/or "{height}" which will be replaced by numbers describing the size of the display.'
 
 
-  def fetchImage(self, destinationFile, supportedMimeTypes, displaySize):
+  def prepareNextItem(self, destinationFile, supportedMimeTypes, displaySize):
     urlList = list(self.getKeywords())
     if len(urlList) == 0:
       return {'mimetype' : None, 'error' : 'No URLs have been specified', 'source': None}
@@ -40,18 +38,10 @@ class SimpleUrl(BaseService):
     Url = Url.replace('{width}', str(displaySize['width']))
     Url = Url.replace('{height}', str(displaySize['height']))
 
-    r = requests.get(Url)
-    with open(destinationFile, 'wb') as f:
-      for chunk in r.iter_content(chunk_size=1024):
-        f.write(chunk)
+    result = self.requestUrl(Url, destination=destinationFile)
 
-    if r.status_code == 200:
-      return {'mimetype' : r.headers.get('content-type'), 'error' : None, 'source': Url}
+    if result['status'] == 200:
+      return {'mimetype' : result['mimetype'], 'error': None, 'source': Url}
 
-    return {'mimetype' : None, 'error' : 'Could not fetch image - status code ' + str(result['status']), 'source': None}
-
-
-  def prepareNextItem(self, destinationFile, supportedMimeTypes, displaySize):
-    result = self.fetchImage(destinationFile, supportedMimeTypes, displaySize)
-    return result
+    return {'mimetype': None, 'error': 'Could not fetch image - status code ' + str(result.status), 'source': None }
 
