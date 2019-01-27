@@ -52,9 +52,6 @@ class SimpleUrl(BaseService):
 
 
   def prepareNextItem(self, destinationFile, supportedMimeTypes, displaySize):
-    self.memoryForget()
-    for file in os.listdir(self.getStoragePath()):
-      os.unlink(os.path.join(self.getStoragePath(), file))
     result = self.fetchImage(destinationFile, supportedMimeTypes, displaySize)
     return result
 
