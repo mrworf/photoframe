@@ -82,7 +82,7 @@ class OAuth:
 			return False
 
 		if result is not None and destination is not None:
-			ret = {'status' : result.status_code, 'content' : None}
+			ret = {'status' : result.status_code, 'content' : None, 'mimetype' : result.headers['Content-Type'], 'headers' : result.headers}
 			try:
 				with open(destination, 'wb') as handle:
 					for chunk in result.iter_content(chunk_size=512):
@@ -94,9 +94,9 @@ class OAuth:
 			return ret
 		else:
 			if result is None:
-				return {'status':500, 'content':'Unable to download URL using OAuth'}
+				return {'status':500, 'content':'Unable to download URL using OAuth', 'mimetype': None, 'headers': None}
 			else:
-				return {'status':result.status_code, 'content':result.content}
+				return {'status':result.status_code, 'content':result.content, 'mimetype' : result.headers['Content-Type'], 'headers' : result.headers}
 
 	def getRedirectId(self):
 		r = requests.get('%s/?register' % self.ridURI)

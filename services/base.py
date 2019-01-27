@@ -340,9 +340,16 @@ class BaseService:
         r = requests.get(url, params=params)
 
       result['status'] = r.status_code
+      result['mimetype'] = None
+      result['headers'] = r.headers
+
+      if 'Content-Type' in r.headers:
+        result['mimetype'] = r.headers['Content-Type']
+
       if destination is None:
         result['content'] = r.content
       else:
+        result['content'] = None
         with open(destination, 'wb') as f:
           for chunk in r.iter_content(chunk_size=1024):
             f.write(chunk)
