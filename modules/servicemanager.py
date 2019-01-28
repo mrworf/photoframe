@@ -26,6 +26,7 @@ import json
 # entry in _resolveService
 from services.svc_picasaweb import PicasaWeb
 from services.svc_googlephotos import GooglePhotos
+from services.svc_simpleurl import SimpleUrl
 
 class ServiceManager:
   def __init__(self, settings):
