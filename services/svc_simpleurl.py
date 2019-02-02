@@ -43,5 +43,5 @@ class SimpleUrl(BaseService):
     if result['status'] == 200:
       return {'mimetype' : result['mimetype'], 'error': None, 'source': Url}
 
-    return {'mimetype': None, 'error': 'Could not fetch image - status code ' + str(result.status), 'source': None }
+    return {'mimetype': None, 'error': 'Could not fetch image - status code ' + str(result['status']), 'source': None }
 
