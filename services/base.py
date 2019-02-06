@@ -330,29 +330,32 @@ class BaseService:
   def requestUrl(self, url, destination=None, params=None, data=None, usePost=False):
     result = {'status':500, 'content' : None}
 
-    if self._OAUTH is not None:
-      # Use OAuth path
-      result = self._OAUTH.request(url, destination, params, data=data, usePost=usePost)
-    else:
-      if usePost:
-        r = requests.post(url, params=params, json=data)
+    try:
+      if self._OAUTH is not None:
+        # Use OAuth path
+        result = self._OAUTH.request(url, destination, params, data=data, usePost=usePost)
       else:
-        r = requests.get(url, params=params)
-
-      result['status'] = r.status_code
-      result['mimetype'] = None
-      result['headers'] = r.headers
-
-      if 'Content-Type' in r.headers:
-        result['mimetype'] = r.headers['Content-Type']
-
-      if destination is None:
-        result['content'] = r.content
-      else:
-        result['content'] = None
-        with open(destination, 'wb') as f:
-          for chunk in r.iter_content(chunk_size=1024):
-            f.write(chunk)
+        if usePost:
+          r = requests.post(url, params=params, json=data)
+        else:
+          r = requests.get(url, params=params)
+  
+        result['status'] = r.status_code
+        result['mimetype'] = None
+        result['headers'] = r.headers
+  
+        if 'Content-Type' in r.headers:
+          result['mimetype'] = r.headers['Content-Type']
+  
+        if destination is None:
+          result['content'] = r.content
+        else:
+          result['content'] = None
+          with open(destination, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=1024):
+              f.write(chunk)
+    except Exception as e:
+      logging.info("requestUrl failed for '" + url + "': " + str(e))
     return result
 
   def getStoragePath(self):
