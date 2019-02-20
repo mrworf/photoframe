@@ -327,7 +327,7 @@ class BaseService:
 
   ###[ Helpers ]######################################
 
-  def requestUrl(self, url, destination=None, params=None, data=None, usePost=False):
+  def requestUrl(self, url, destination=None, params=None, data=None, usePost=False, timeout=None):
     result = {'status':500, 'content' : None}
 
     try:
@@ -336,9 +336,9 @@ class BaseService:
         result = self._OAUTH.request(url, destination, params, data=data, usePost=usePost)
       else:
         if usePost:
-          r = requests.post(url, params=params, json=data)
+          r = requests.post(url, params=params, json=data, timeout=tmeout)
         else:
-          r = requests.get(url, params=params)
+          r = requests.get(url, params=params, timeout=timeout)
   
         result['status'] = r.status_code
         result['mimetype'] = None

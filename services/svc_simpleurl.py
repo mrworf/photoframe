@@ -38,7 +38,7 @@ class SimpleUrl(BaseService):
     Url = Url.replace('{width}', str(displaySize['width']))
     Url = Url.replace('{height}', str(displaySize['height']))
 
-    result = self.requestUrl(Url, destination=destinationFile)
+    result = self.requestUrl(Url, destination=destinationFile, timeout=60)
 
     if result['status'] == 200:
       return {'mimetype' : result['mimetype'], 'error': None, 'source': Url}
