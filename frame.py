@@ -41,16 +41,16 @@ from modules.oauth import OAuth
 from modules.slideshow import slideshow
 from modules.colormatch import colormatch
 from modules.drivers import drivers
-
 from modules.servicemanager import ServiceManager
+from modules.sysconfig import sysconfig
 
-parser = argparse.ArgumentParser(description="PhotoFrame - A RPi3 based digital photoframe", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser = argparse.ArgumentParser(description="PhotoFrame - A RaspberryPi based digital photoframe", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--logfile', default=None, help="Log to file instead of stdout")
 parser.add_argument('--port', default=7777, type=int, help="Port to listen on")
 parser.add_argument('--listen', default="0.0.0.0", help="Address to listen on")
 parser.add_argument('--debug', action='store_true', default=False, help='Enable loads more logging')
-parser.add_argument('--emulatefb', action='store_true', default=False, help='Emulate the framebuffer')
 parser.add_argument('--basedir', default=None, help='Change the root folder of photoframe')
+parser.add_argument('--emulate', action='store_true', help='Run as an app without root access or framebuffer')
 cmdline = parser.parse_args()
 
 if cmdline.debug:
@@ -58,9 +58,17 @@ if cmdline.debug:
 else:
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+if cmdline.emulate:
+  logging.info('Running in emulation mode, settings are stored in /tmp/photoframe/')
+  if not os.path.exists('/tmp/photoframe'):
+    os.mkdir('/tmp/photoframe')
+  settings().reassignBase('/tmp/photoframe/')
+  settings().reassignConfigTxt('extras/config.txt')
+
 if cmdline.basedir is not None:
-  logging.info('Altering default basedir from /root/ to %s', cmdline.basedir)
-  settings().reassign(cmdline.basedir)
+  newpath = cmdline.basedir + '/'
+  logging.info('Altering basedir to %s', newpath)
+  settings().reassign(newpath)
 
 void = open(os.devnull, 'wb')
 
@@ -73,10 +81,6 @@ if not os.path.exists(settings.CONFIGFOLDER):
     sys.exit(255)
 elif not os.path.isdir(settings.CONFIGFOLDER):
   logging.error('%s isn\'t a folder, cannot start', settings.CONFIGFOLDER)
-  sys.exit(255)
-
-if cmdline.emulatefb and not os.path.exists('/usr/bin/fim'):
-  logging.error('--emulatefb requires fim to be installed')
   sys.exit(255)
 
 import requests
@@ -308,6 +312,18 @@ def cfg_keywords(service, index=None):
     return jsonify(result)
   abort(500)
 
+@app.route('/rotation', methods=['GET'], defaults={'orient':None})
+@app.route('/rotation/<int:orient>', methods=['PUT'])
+@auth.login_required
+def cfg_rotation(orient):
+  if orient is None:
+    return jsonify({'rotation' : sysconfig.getDisplayOrientation()})
+  else:
+    if orient >= 0 and orient < 360:
+      sysconfig.setDisplayOrientation(orient)
+      return jsonify({'rotation' : sysconfig.getDisplayOrientation()})
+  abort(500)
+
 @app.route('/maintenance/<cmd>')
 @auth.login_required
 def cfg_reset(cmd):
@@ -505,7 +521,7 @@ def services_operations(action):
 
 settings = settings()
 drivers = drivers()
-display = display(cmdline.emulatefb)
+display = display(cmdline.emulate)
 
 if not settings.load():
   # First run, grab display settings from current mode

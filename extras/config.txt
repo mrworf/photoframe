@@ -1,0 +1,42 @@
+# Uncomment if you get no picture on HDMI for a default "safe" mode
+#hdmi_safe=1
+
+# Uncomment this if your display has a black border of unused pixels visible
+# and your display can output without overscan.
+#disable_overscan=1
+
+# Uncomment the following to adjust overscan. Use positive numbers if console
+# goes off screen, and negative if there is too much border.
+overscan_left=20
+overscan_right=20
+overscan_top=20
+overscan_bottom=20
+
+# Uncomment to force a console size. By default it will be display's size minus
+# overscan.
+#framebuffer_width=1280
+#framebuffer_height=720
+
+# Uncomment if an HDMI display is not detected and composite is being output.
+#hdmi_force_hotplug=1
+
+# Uncomment to force a specific HDMI mode (this will force VGA).
+#hdmi_group=1
+#hdmi_mode=1
+
+# Uncomment to force an HDMI mode rather than DVI. This can make audio work in
+# DMT (computer monitor) modes.
+#hdmi_drive=2
+
+# Uncomment to increase signal to HDMI, if you have interference, blanking, or
+# no display.
+#config_hdmi_boost=4
+
+# Uncomment for composite PAL
+#sdtv_mode=2
+
+# Uncomment to overclock the ARM. 700 MHz is the default.
+#arm_freq=800
+
+# For more options, see http://elinux.org/RPi_config.txt
+display_rotate=1

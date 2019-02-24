@@ -194,8 +194,9 @@ function loadSettings(funcOk)
 	loadConfigData("/details/tvservice", "resolution", funcTmp);
 	loadConfigData("/details/timezone", "timezones", funcTmp);
 	loadConfigData("/details/drivers", "drivers", funcTmp);
-	loadConfigData("/details/version", "version", funcTmp);
-
+  loadConfigData("/details/version", "version", funcTmp);
+  loadConfigData("/rotation", "rotation", funcTmp);
+  
 	loadConfigData("/service/available", 'service-available', funcTmp);
 	loadConfigData("/service/list", 'service-defined', funcTmp);
 	configOutstanding--;

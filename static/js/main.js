@@ -85,8 +85,22 @@ $("input[type='text']").change(function() {
 $("select[name=powersave]").change(function() {
   $.ajax({
     url:"/setting/" + $(this).attr('name') + "/" + encodeURIComponent($(this).val()),
-    type:"PUT"
+         type:"PUT"
   }).done(function(){
+  });
+});
+
+$("select[name=display-rotation]").change(function() {
+  $.ajax({
+    url:"/rotation/" + $(this).val(),
+         type:"PUT"
+  }).done(function(){
+    if(confirm('In order to fully enable this change, you must reboot the photoframe. Do you wish to do this now?')) {
+      $.ajax({
+        url:"/reboot"
+      });
+      $(document.body).html('<h1>Rebooting</h1>')
+    }
   });
 });
 
