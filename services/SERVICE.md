@@ -1,5 +1,8 @@
 # How to develop a service for photoframe
 
+Always prefix your service's filename with `svc_` and place it in this folder, or the photoframe software
+will not detect and add your service.
+
 ## Step 1: Inherit from BaseService
 
 This class provides a lot of the plumbing needed to plugin a new service that can provide photos for the frame.
