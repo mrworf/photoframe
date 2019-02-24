@@ -30,6 +30,8 @@ class ServiceManager:
     if not os.path.exists(svc_folder):
       os.mkdir(svc_folder)
 
+    self._detectServices()
+
     self._BASEDIR = svc_folder
     self._SVC_INDEX = {} # Holds all detected services
     self._SERVICES = {}
@@ -38,7 +40,6 @@ class ServiceManager:
 
     # Translate old config into new
     self._migrate()
-    self._detectServices()
 
   def _detectServices(self):
     for item in os.listdir('services'):
