@@ -21,12 +21,7 @@ import shutil
 import os
 import logging
 import json
-
-# Any added service here also needs corresponding
-# entry in _resolveService
-from services.svc_picasaweb import PicasaWeb
-from services.svc_googlephotos import GooglePhotos
-from services.svc_simpleurl import SimpleUrl
+import re
 
 class ServiceManager:
   def __init__(self, settings):
@@ -36,12 +31,27 @@ class ServiceManager:
       os.mkdir(svc_folder)
 
     self._BASEDIR = svc_folder
+    self._SVC_INDEX = {} # Holds all detected services
     self._SERVICES = {}
     self._CONFIGFILE = os.path.join(self._BASEDIR, 'services.json')
     self._load()
 
     # Translate old config into new
     self._migrate()
+    self._detectServices()
+
+  def _detectServices(self):
+    for item in os.listdir('services'):
+      if os.path.isfile('services/' + item) and item.startswith('svc_') and item.endswith('.py'):
+        with open('services/' + item, 'r') as f:
+          for line in f:
+            line = line.strip()
+            if line.startswith('class ') and line.endswith('(BaseService):'):
+              m = re.search('class +([^\(]+)\(', line)
+              if m is not None:
+                exec('from services.%s import %s' % (item[0:-3], m.group(1)))
+                exec('self._SVC_INDEX["%s"] = {"id":%s.SERVICE_ID, "name":%s.SERVICE_NAME}' % (m.group(1), m.group(1), m.group(1)))
+              break
 
   def _deletefolder(self, folder):
     try:
@@ -50,20 +60,17 @@ class ServiceManager:
       logging.exception('Failed to delete "%s"', folder)
 
   def _resolveService(self, id):
-    if PicasaWeb.SERVICE_ID == id:
-      return 'PicasaWeb'
-    if GooglePhotos.SERVICE_ID == id:
-      return 'GooglePhotos'
-    if SimpleUrl.SERVICE_ID == id:
-      return 'SimpleUrl'
+    for svc in self._SVC_INDEX:
+      if self._SVC_INDEX[svc]['id'] == id:
+        return svc
 
     return None
 
   def listServices(self):
     result = []
-    result.append({'name' : PicasaWeb.SERVICE_NAME, 'id' : PicasaWeb.SERVICE_ID})
-    result.append({'name' : GooglePhotos.SERVICE_NAME, 'id' : GooglePhotos.SERVICE_ID})
-    result.append({'name' : SimpleUrl.SERVICE_NAME, 'id' : SimpleUrl.SERVICE_ID})
+    # Make sure it retains the ID sort order
+    for key, value in sorted(self._SVC_INDEX.iteritems(), key=lambda (k,v): (v['id'],k)):
+      result.append(self._SVC_INDEX[key])
     return result;
 
   def _save(self):
