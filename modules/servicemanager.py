@@ -51,6 +51,7 @@ class ServiceManager:
             if line.startswith('class ') and line.endswith('(BaseService):'):
               m = re.search('class +([^\(]+)\(', line)
               if m is not None:
+                print('Importing %s' % item)
                 exec('from services.%s import %s' % (item[0:-3], m.group(1)))
                 exec('self._SVC_INDEX["%s"] = {"id":%s.SERVICE_ID, "name":%s.SERVICE_NAME}' % (m.group(1), m.group(1), m.group(1)))
               break
