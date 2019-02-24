@@ -83,10 +83,9 @@ class slideshow:
         self.display.message('Starting in %d' % (cd))
         cd -= 1
         time_process = time.time() - time_process
-        if time_process < 1:
-          time.sleep(1 - time_process)
+        if time_process < 1.0:
+          time.sleep(1.0 - time_process)
       self.display.clear()
-
 
     logging.info('Starting presentation')
     delay = 0
