@@ -30,12 +30,13 @@ class ServiceManager:
     if not os.path.exists(svc_folder):
       os.mkdir(svc_folder)
 
-    self._detectServices()
-
     self._BASEDIR = svc_folder
     self._SVC_INDEX = {} # Holds all detected services
     self._SERVICES = {}
     self._CONFIGFILE = os.path.join(self._BASEDIR, 'services.json')
+
+    self._detectServices()
+
     self._load()
 
     # Translate old config into new
