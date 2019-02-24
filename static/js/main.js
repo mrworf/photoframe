@@ -9,7 +9,7 @@ $('#driver').fileupload({
         if (data.result['reboot']) {
       if(confirm('In order to fully enable this change, you must reboot the photoframe. Do you wish to do this now?')) {
         $.ajax({
-          url:"/reboot"
+          url:"/maintenance/reboot"
         });
         rebootWatch();
       } else {
@@ -97,9 +97,9 @@ $("select[name=display-rotation]").change(function() {
   }).done(function(){
     if(confirm('In order to fully enable this change, you must reboot the photoframe. Do you wish to do this now?')) {
       $.ajax({
-        url:"/reboot"
+        url:"/maintenance/reboot"
       });
-      $(document.body).html('<h1>Rebooting</h1>')
+      rebootWatch();
     }
   });
 });
@@ -136,9 +136,9 @@ $("select[name=display-driver]").change(function() {
     if (data['status']) {
       if(confirm('In order to fully enable this change, you must reboot the photoframe. Do you wish to do this now?')) {
         $.ajax({
-          url:"/reboot"
+          url:"/maintenance/reboot"
         });
-        $(document.body).html('<h1>Rebooting</h1>')
+        rebootWatch();
       }
 
     }

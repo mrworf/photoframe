@@ -79,9 +79,12 @@ class slideshow:
       # Once we have IP, show for 10s
       cd = 10
       while (cd > 0):
-        self.display.message('Starting in %d seconds' % (cd))
+        time_process = time.time()
+        self.display.message('Starting in %d' % (cd))
         cd -= 1
-        time.sleep(1)
+        time_process = time.time() - time_process
+        if time_process < 1:
+          time.sleep(1 - time_process)
       self.display.clear()
 
 
