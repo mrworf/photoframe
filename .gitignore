@@ -1,5 +1,6 @@
 # Ignore the auth
 oauth.json
+extras/config.txt.*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

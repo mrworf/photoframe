@@ -245,7 +245,7 @@ class drivers:
 		# Next, load the config.txt and insert/replace our section
 		lines = []
 		try:
-			with open('/boot/config.txt', 'rb') as f:
+			with open(settings.CONFIG_TXT, 'rb') as f:
 				for line in f:
 					line = line.strip()
 					if line == drivers.MARKER:
@@ -272,8 +272,8 @@ class drivers:
 
 		# On success, we rename and delete the old config
 		try:
-			os.rename('/boot/config.txt', '/boot/config.txt.old')
-			os.rename('/boot/config.txt.new', '/boot/config.txt')
+			os.rename(settings.CONFIG_TXT, '/boot/config.txt.old')
+			os.rename('/boot/config.txt.new', settings.CONFIG_TXT)
 			# Keep the first version of the config.txt just-in-case
 			if os.path.exists('/boot/config.txt.original'):
 				os.unlink('/boot/config.txt.old')

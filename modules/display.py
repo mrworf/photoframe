@@ -19,45 +19,21 @@ import logging
 import time
 import re
 import json
+import debug
+
+from sysconfig import sysconfig
+
 from threading import Thread
 
-class emulator(Thread):
-  def __init__(self, width, height, file):
-    Thread.__init__(self)
-    self.daemon = True
-    self.width = width
-    self.height = height
-    self.file = file
-    #self.start()
-
-  def run(self):
-    while (True):
-      args = ['/usr/bin/fim', '--autowindow', '-qc', 'while(1){pread "convert -size %dx%d -depth 8 rgba:%s -resize 50%% png:-" ;reload;sleep 1;}' % (self.width, self.height, self.file)]
-      result = subprocess.check_output(args)
-
 class display:
-  def isRotated(self):
-    # TODO: This should be handled centrally
-    rotate = False
-    with open('/boot/config.txt', 'r') as f:
-      for line in f:
-        clean = line.strip()
-        if clean == '':
-          continue
-        if clean.startswith('display_rotate='):
-          if clean.endswith('1') or clean.endswith('3'):
-            rotate = True
-          else:
-            rotate = False
-    return rotate
-
-  def __init__(self, use_emulator=False):
+  def __init__(self, use_emulator=False, emulate_width=1280, emulate_height=720):
     self.void = open(os.devnull, 'wb')
     self.params = None
     self.special = None
     self.emulate = use_emulator
-    self.emulator = None
-    self.rotated = self.isRotated()
+    self.emulate_width = emulate_width
+    self.emulate_height = emulate_height
+    self.rotated = sysconfig.isDisplayRotated()
     self.xoffset = 0
     self.yoffset = 0
     self.url = None
@@ -74,17 +50,22 @@ class display:
     if self.params is not None:
       self.clear()
 
+    if self.emulate:
+      self.width = self.emulate_width
+      self.height = self.emulate_height
+      self.depth = 32
+      self.reverse = False
+      self.format = 'rgba'
+      self.params = None
+      self.special = None
+      return (self.width, self.height, '')
+
     result = display.validate(tvservice_params, special)
     if result is None:
-      logging.warning('Unable to find a valid display mode')
-      if self.emulate:
-        self.width = 1280
-        self.height = 720
-        self.depth = 32
-        self.reverse = False
-        self.format = 'rgba'
-      else:
-        self.enabled = False
+      logging.error('Unable to find a valid display mode, will default to 1280x720')
+      # TODO: THis is less than ideal, maybe we should fetch resolution from fbset instead?
+      #       but then we should also avoid touching the display since it will cause issues.
+      self.enabled = False
       self.params = None
       self.special = None
       return (1280, 720, '')
@@ -155,7 +136,7 @@ class display:
       ]
 
     if not self.enabled:
-      result = subprocess.check_output(args, stderr=self.void)
+      result = debug.subprocess_check_output(args, stderr=self.void)
     elif self.depth in [24, 32]:
       device = self.getDevice()
       if self.emulate:
@@ -181,7 +162,7 @@ class display:
 
     if self.depth in [24, 32]:
       with open(device, 'wb') as f:
-        ret = subprocess.call(arguments, stdout=f, stderr=self.void)
+        ret = debug.subprocess_call(arguments, stdout=f, stderr=self.void)
     elif self.depth == 16: # Typically RGB565
       # For some odd reason, cannot pipe the output directly to the framebuffer, use temp file
       with open(device, 'wb') as fb:
@@ -191,9 +172,6 @@ class display:
         pip.communicate()
     else:
       logging.error('Do not know how to render this, depth is %d', self.depth)
-
-    if self.emulate and not self.emulator:
-      self.emulator = emulator(self.width, self.height, device)
 
   def message(self, message):
     if not self.enabled:
@@ -271,16 +249,16 @@ class display:
       if self.isHDMI():
         if force: # Make sure display is ON and set to our preference
           if os.path.exists('/opt/vc/bin/tvservice'):
-            subprocess.call(['/opt/vc/bin/tvservice', '-e', self.params], stderr=self.void, stdout=self.void)
+            debug.subprocess_call(['/opt/vc/bin/tvservice', '-e', self.params], stderr=self.void, stdout=self.void)
           time.sleep(1)
-          subprocess.call(['/bin/fbset', '-fb', self.getDevice(), '-depth', '8'], stderr=self.void)
-          subprocess.call(['/bin/fbset', '-fb', self.getDevice(), '-depth', str(self.depth), '-xres', str(self.width), '-yres', str(self.height), '-vxres', str(self.width), '-vyres', str(self.height)], stderr=self.void)
+          debug.subprocess_call(['/bin/fbset', '-fb', self.getDevice(), '-depth', '8'], stderr=self.void)
+          debug.subprocess_call(['/bin/fbset', '-fb', self.getDevice(), '-depth', str(self.depth), '-xres', str(self.width), '-yres', str(self.height), '-vxres', str(self.width), '-vyres', str(self.height)], stderr=self.void)
         else:
-          subprocess.call(['/usr/bin/vcgencmd', 'display_power', '1'], stderr=self.void)
+          debug.subprocess_call(['/usr/bin/vcgencmd', 'display_power', '1'], stderr=self.void)
     else:
       self.clear()
       if self.isHDMI():
-        subprocess.call(['/usr/bin/vcgencmd', 'display_power', '0'], stderr=self.void)
+        debug.subprocess_call(['/usr/bin/vcgencmd', 'display_power', '0'], stderr=self.void)
     self.enabled = enable
 
   def isEnabled(self):
@@ -291,12 +269,12 @@ class display:
       self.message('')
       return
     with open(self.getDevice(), 'wb') as f:
-      subprocess.call(['cat' , '/dev/zero'], stdout=f, stderr=self.void)
+      debug.subprocess_call(['cat' , '/dev/zero'], stdout=f, stderr=self.void)
 
   @staticmethod
   def _isDPI():
     if os.path.exists('/opt/vc/bin/tvservice'):
-      output = subprocess.check_output(['/opt/vc/bin/tvservice', '-s'], stderr=subprocess.STDOUT)
+      output = debug.subprocess_check_output(['/opt/vc/bin/tvservice', '-s'], stderr=subprocess.STDOUT)
     else:
       output = ''
     return '[LCD]' in output
@@ -321,7 +299,7 @@ class display:
       else:
         device = None
     if device:
-      info = subprocess.check_output(['/bin/fbset', '-fb', device], stderr=subprocess.STDOUT).split('\n')
+      info = debug.subprocess_check_output(['/bin/fbset', '-fb', device], stderr=subprocess.STDOUT).split('\n')
       for line in info:
         line = line.strip()
         if line.startswith('geometry'):
@@ -345,7 +323,7 @@ class display:
   def current(self):
     result = None
     if self.isHDMI() and os.path.exists('/opt/vc/bin/tvservice'):
-      output = subprocess.check_output(['/opt/vc/bin/tvservice', '-s'], stderr=subprocess.STDOUT)
+      output = debug.subprocess_check_output(['/opt/vc/bin/tvservice', '-s'], stderr=subprocess.STDOUT)
       # state 0x120006 [DVI DMT (82) RGB full 16:9], 1920x1080 @ 60.00Hz, progressive
       m = re.search('state 0x[0-9a-f]* \[([A-Z]*) ([A-Z]*) \(([0-9]*)\) [^,]*, ([0-9]*)x([0-9]*) \@ ([0-9]*)\.[0-9]*Hz, (.)', output)
       if m is None:
@@ -370,9 +348,10 @@ class display:
   @staticmethod
   def available():
     if os.path.exists('/opt/vc/bin/tvservice'):
-      cea = json.loads(subprocess.check_output(['/opt/vc/bin/tvservice', '-j', '-m', 'CEA'], stderr=subprocess.STDOUT))
-      dmt = json.loads(subprocess.check_output(['/opt/vc/bin/tvservice', '-j', '-m', 'DMT'], stderr=subprocess.STDOUT))
+      cea = json.loads(debug.subprocess_check_output(['/opt/vc/bin/tvservice', '-j', '-m', 'CEA'], stderr=subprocess.STDOUT))
+      dmt = json.loads(debug.subprocess_check_output(['/opt/vc/bin/tvservice', '-j', '-m', 'DMT'], stderr=subprocess.STDOUT))
     else:
+      logging.error('/opt/vc/bin/tvservice is missing! No HDMI resolutions will be available')
       cea = []
       dmt = []
     result = []
@@ -389,6 +368,7 @@ class display:
 
     internal = display._internaldisplay()
     if internal:
+      logging.info('Internal display detected')
       result.append(internal)
 
     # Finally, sort by pixelcount
