@@ -30,12 +30,8 @@ def _stringify(args):
 
 def subprocess_call(cmds, stderr=None, stdout=None):
   logging.debug('subprocess.call(%s)', _stringify(cmds))
-  _stderr = stderr
-  _stdout = stdout
-  return subprocess.call(cmds, stderr=_stderr, stdout=_stdout)
+  return subprocess.call(cmds, stderr=stderr, stdout=stdout)
 
-def subprocess_check_output(cmds, stderr=None, stdout=None):
+def subprocess_check_output(cmds, stderr=None):
   logging.debug('subprocess.check_output(%s)', _stringify(cmds))
-  _stderr = stderr
-  _stdout = stdout
-  return subprocess.check_output(cmds, stderr=_stderr, stdout=_stdout)
+  return subprocess.check_output(cmds, stderr=stderr)
