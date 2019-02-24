@@ -22,6 +22,7 @@ import os
 import logging
 import json
 import re
+import importlib
 
 class ServiceManager:
   def __init__(self, settings):
@@ -42,6 +43,11 @@ class ServiceManager:
     # Translate old config into new
     self._migrate()
 
+  def _instantiate(self, module, klass):
+      module = importlib.import_module('services.' + module)
+      my_class = getattr(module, klass)
+      return my_class
+
   def _detectServices(self):
     for item in os.listdir('services'):
       if os.path.isfile('services/' + item) and item.startswith('svc_') and item.endswith('.py'):
@@ -52,8 +58,8 @@ class ServiceManager:
               m = re.search('class +([^\(]+)\(', line)
               if m is not None:
                 print('Importing %s' % item)
-                exec('from services.%s import %s' % (item[0:-3], m.group(1)))
-                exec('self._SVC_INDEX["%s"] = {"id":%s.SERVICE_ID, "name":%s.SERVICE_NAME}' % (m.group(1), m.group(1), m.group(1)))
+                klass = self._instantiate(item[0:-3], m.group(1))
+                self._SVC_INDEX[m.group(1)] = {'id' : klass.SERVICE_ID, 'name' : klass.SERVICE_NAME, 'module' : item[0:-3], 'class' : m.group(1)}
               break
 
   def _deletefolder(self, folder):
@@ -95,13 +101,14 @@ class ServiceManager:
       os.unlink(self._CONFIGFILE)
       return
 
-    # Instanciate the services
+    # Instantiate the services
     for entry in data:
       svcname = self._resolveService(entry['type'])
       if svcname is None:
         logging.error('Cannot resolve service type %d, skipping', entry['type'])
         continue
-      svc = eval("%s(self._BASEDIR, entry['id'], entry['name'])" % svcname)
+      klass = self._instantiate(self._SVC_INDEX[svcname]['module'], self._SVC_INDEX[svcname]['class'])
+      svc = eval("klass(self._BASEDIR, entry['id'], entry['name'])")
       self._SERVICES[svc.getId()] = {'service' : svc, 'id' : svc.getId(), 'name' : svc.getName()}
 
   def _hash(self, text):
@@ -113,7 +120,8 @@ class ServiceManager:
       return None
 
     genid = self._hash("%s-%f-%d" % (name, time.time(), len(self._SERVICES)))
-    svc = eval("%s(self._BASEDIR, genid, name)" % svcname)
+    klass = self._instantiate(self._SVC_INDEX[svcname]['module'], self._SVC_INDEX[svcname]['class'])
+    svc = eval("klass(self._BASEDIR, genid, name)")
     self._SERVICES[genid] = {'service' : svc, 'id' : svc.getId(), 'name' : svc.getName()}
     self._save()
     return genid
