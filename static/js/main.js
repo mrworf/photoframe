@@ -275,7 +275,8 @@ $('.oauth-json').fileupload({
 });
 
 $(".service-oauth").click(function() {
-  alert("Please select JSON with client authentication data");
+  // Disable alert since it breaks chrome and ie
+  //alert("In the following file selector, please select the JSON file you donwloaded with client authentication data.\n\nIf you don't get a file selector, please make sure you don't have any adblockers blocking this website.");
   $(this).prev().trigger('click');
 });
 
