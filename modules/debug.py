@@ -28,10 +28,10 @@ def _stringify(args):
 
   return result.replace('\n', '\\n')
 
-def subprocess_call(cmds, stderr=None, stdout=None):
+def subprocess_call(cmds, _stderr=None, _stdout=None):
   logging.debug('subprocess.call(%s)', _stringify(cmds))
-  return subprocess.call(cmds, stderr=stderr, stdout=stdout)
+  return subprocess.call(cmds, stderr=_stderr, stdout=_stdout)
 
-def subprocess_check_output(cmds, stderr=None, stdout=None):
+def subprocess_check_output(cmds, _stderr=None, _stdout=None):
   logging.debug('subprocess.check_output(%s)', _stringify(cmds))
-  return subprocess.check_output(cmds, stderr=stderr, stdout=stdout)
+  return subprocess.check_output(cmds, stderr=_stderr, stdout=_stdout)
