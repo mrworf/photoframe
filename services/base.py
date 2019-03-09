@@ -327,7 +327,7 @@ class BaseService:
 
   ###[ Helpers ]######################################
 
-  def requestUrl(self, url, destination=None, params=None, data=None, usePost=False, timeout=None):
+  def requestUrl(self, url, destination=None, params=None, data=None, usePost=False, timeout=180):
     result = {'status':500, 'content' : None}
 
     try:
