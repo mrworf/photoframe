@@ -207,16 +207,21 @@ class GooglePhotos(BaseService):
       # Make sure we don't get a video, unsupported for now (gif is usually bad too)
       if entry['mimeType'] in types:
         # Calculate the size we need to avoid black borders
-        ow = float(entry['mediaMetadata']['width'])
-        oh = float(entry['mediaMetadata']['height'])
-        ar = ow/oh
+        ow = entry['mediaMetadata']['width']
+        oh = entry['mediaMetadata']['height']
+        oar=float(ow)/float(oh)
+        dar = float(displaySize['width'])/float(displaySize['height'])
 
-        if ow > displaySize['width']:
-          width = displaySize['width']
-          height = int(float(displaySize['width']) / ar)
+        if ow > displaySize['width'] and oh > displaySize['height']:
+          if oar <= dar:
+            width = displaySize['width']
+            height = int(float(displaySize['width']) / oar)
+          else:
+            width = int(float(displaySize['height']) * oar)
+            height = displaySize['height']
         else:
-          width = int(float(displaySize['height']) * ar)
-          height = displaySize['height']
+          width = ow
+          height = oh
 
         return entry['mimeType'], entry['baseUrl'] + "=w" + str(width) + "-h" + str(height), entry['productUrl']
       else:
