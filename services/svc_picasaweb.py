@@ -105,6 +105,9 @@ class PicasaWeb(BaseService):
       proposed = images['feed']['entry'][index]['content']['src']
       if self.memorySeen(proposed):
         continue
+      if not self.isCorrectOrientation(images[index]['mediaMetadata'], displaySize):
+        logging.debug("Skipping image '%s' due to wrong orientation!" % images[index]['filename'])
+        continue
       self.memoryRemember(proposed)
 
       entry = images['feed']['entry'][index]
