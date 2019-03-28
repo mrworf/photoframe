@@ -201,6 +201,9 @@ class GooglePhotos(BaseService):
       proposed = images[index]['baseUrl']
       if self.memorySeen(proposed):
         continue
+      if not self.isCorrectOrientation(images[index]['mediaMetadata'], displaySize):
+        logging.debug("Skipping image '%s' due to wrong orientation!" % images[index]['filename'])
+        continue
       self.memoryRemember(proposed)
 
       entry = images[index]

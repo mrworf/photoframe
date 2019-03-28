@@ -117,7 +117,7 @@ class slideshow:
         svc = services[useService]['id']
 
         filename = os.path.join(self.settings.get('tempfolder'), 'image')
-        result = self.services.servicePrepareNextItem(svc, filename, supportedFormats, {'width' : self.settings.getUser('width'), 'height' : self.settings.getUser('height')})
+        result = self.services.servicePrepareNextItem(svc, filename, supportedFormats, {'width': self.settings.getUser('width'), 'height': self.settings.getUser('height'), 'force_orientation': self.settings.getUser('force_orientation')})
         if result['error'] is not None:
           self.display.message('%s failed:\n\n%s' % (services[useService]['name'], result['error']))
         else:
