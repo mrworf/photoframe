@@ -404,4 +404,14 @@ class BaseService:
       os.unlink(n)
     self._MEMORY = []
 
+  def isCorrectOrientation(self, metadata, displaySize):
+    if displaySize['force_orientation'] == 0:
+      return True
+
+    # NOTE: square images are being treated as portrait-orientation
+    image_orientation = 0 if int(metadata["width"]) > int(metadata["height"]) else 1
+    display_orientation = 0 if displaySize["width"] > displaySize["height"] else 1
+
+    return image_orientation == display_orientation
+
 

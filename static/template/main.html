@@ -36,8 +36,16 @@
       <option value="90">90 degrees clockwise</option>
       <option value="180">Up-side-down</option>
       <option value="270">90 degrees counter-clockwise</option>
-      {{/select}}
-    </select>
+	  {{/select}}
+	</select>
+	<br>
+	Only show images that match display orientation
+	<select name="force_orientation">
+		{{#select settings.force_orientation}}
+		<option value="0">no</option>
+		<option value="1">yes</option>
+		{{/select}}
+	</select>
 		<hr>
 		GPIO PIN to monitor for shutdown interrupts
 		<input value="{{settings.shutdown-pin}}" type="text" class="small" name="shutdown-pin" data-validate="gpio" data-confirm="gpio">

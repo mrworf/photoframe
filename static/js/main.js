@@ -104,6 +104,15 @@ $("select[name=display-rotation]").change(function() {
   });
 });
 
+$("select[name=force_orientation]").change(function () {
+  var value = $(this).val()
+  $.ajax({
+    url: "/setting/" + $(this).attr('name') + "/" + encodeURIComponent($(this).val()),
+    type: "PUT"
+  }).done(function (){
+  });
+});
+
 $("select[name=imagesizing]").change(function() {
   $.ajax({
     url:"/setting/" + $(this).attr('name') + "/" + encodeURIComponent($(this).val()),
