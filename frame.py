@@ -30,6 +30,7 @@ import threading
 import argparse
 import shutil
 import traceback
+import re
 
 from modules.remember import remember
 from modules.shutdown import shutdown
@@ -51,6 +52,7 @@ parser.add_argument('--listen', default="0.0.0.0", help="Address to listen on")
 parser.add_argument('--debug', action='store_true', default=False, help='Enable loads more logging')
 parser.add_argument('--basedir', default=None, help='Change the root folder of photoframe')
 parser.add_argument('--emulate', action='store_true', help='Run as an app without root access or framebuffer')
+parser.add_argument('--size', default='1280x720', help='Set the resolution to be used when emulating the framebuffer')
 cmdline = parser.parse_args()
 
 if cmdline.debug:
@@ -521,7 +523,13 @@ def services_operations(action):
 
 settings = settings()
 drivers = drivers()
-display = display(cmdline.emulate)
+
+m = re.search('([0-9]+)x([0-9]+)', cmdline.size)
+if m is None:
+    logging.error('--size has to be WIDTHxHEIGHT')
+    sys.exit(1)
+
+display = display(cmdline.emulate, int(m.group(1)), int(m.group(2)))
 
 if not settings.load():
   # First run, grab display settings from current mode
