@@ -80,41 +80,55 @@ class helper:
 		width_spacing = 3
 		border = None
 		borderSmall = None
+		spacing = None
 
 		# Calculate actual size of image based on display
-		ar = (float)(width) / (float)(height)
-		if width > displayWidth:
-			adjWidth = displayWidth
-			adjHeight = int(float(displayWidth) / ar)
-		else:
-			adjWidth = int(float(displayHeight) * ar)
-			adjHeight = displayHeight
+		oar = (float)(width) / (float)(height)
+		dar = (float)(displayWidth) / (float)(displayHeight)
 
-		logging.debug('Size of image is %dx%d, screen is %dx%d. New size is %dx%d', width, height, displayWidth, displayHeight, adjWidth, adjHeight)
+		if not zoomOnly:
+			if width > displayWidth:
+				adjWidth = displayWidth
+				adjHeight = int(float(displayWidth) / oar)
+			else:
+				adjWidth = int(float(displayHeight) * oar)
+				adjHeight = displayHeight
 
-		resizeString = '%sx%s'
-		if adjHeight < displayHeight:
-			border = '0x%d' % width_border
-			spacing = '0x%d' % width_spacing
-			padding = ((displayHeight - adjHeight) / 2 - width_border)
-			resizeString = '%sx%s^'
-			logging.debug('Landscape image, reframing (padding required %dpx)' % padding)
-		elif adjWidth < displayWidth:
-			border = '%dx0' % width_border
-			spacing = '%dx0' % width_spacing
-			padding = ((displayWidth - adjWidth) / 2 - width_border)
-			resizeString = '^%sx%s'
-			logging.debug('Portrait image, reframing (padding required %dpx)' % padding)
-		else:
-			logging.debug('Image is fullscreen, no reframing needed')
-			return False
+			logging.debug('Size of image is %dx%d, screen is %dx%d. New size is %dx%d', width, height, displayWidth, displayHeight, adjWidth, adjHeight)
 
-		if padding < 20 and not autoChoose:
-			logging.debug('That\'s less than 20px so skip reframing (%dx%d => %dx%d)', width, height, adjWidth, adjHeight)
-			return False
+			if adjHeight < displayHeight:
+				border = '0x%d' % width_border
+				spacing = '0x%d' % width_spacing
+				padding = ((displayHeight - adjHeight) / 2 - width_border)
+				resizeString = '%sx%s^'
+				logging.debug('Landscape image, reframing (padding required %dpx)' % padding)
+			elif adjWidth < displayWidth:
+				border = '%dx0' % width_border
+				spacing = '%dx0' % width_spacing
+				padding = ((displayWidth - adjWidth) / 2 - width_border)
+				resizeString = '^%sx%s'
+				logging.debug('Portrait image, reframing (padding required %dpx)' % padding)
+			else:
+				resizeString = '%sx%s'
+				logging.debug('Image is fullscreen, no reframing needed')
+				return False
 
-		if padding < 60 and autoChoose:
-			zoomOnly = True
+			if padding < 20 and not autoChoose:
+				logging.debug('That\'s less than 20px so skip reframing (%dx%d => %dx%d)', width, height, adjWidth, adjHeight)
+				return False
+
+			if padding < 60 and autoChoose:
+				zoomOnly = True
+
+		if zoomOnly:
+			if oar <= dar:
+				adjWidth = displayWidth
+				adjHeight = int(float(displayWidth) / oar)
+				logging.debug('Size of image is %dx%d, screen is %dx%d. New size is %dx%d  --> cropped to %dx%d', width, height, displayWidth, displayHeight, adjWidth, adjHeight, displayWidth, displayHeight)
+			else:
+				adjWidth = int(float(displayHeight) * oar)
+				adjHeight = displayHeight
+				logging.debug('Size of image is %dx%d, screen is %dx%d. New size is %dx%d --> cropped to %dx%d', width, height, displayWidth, displayHeight, adjWidth, adjHeight, displayWidth, displayHeight)
 
 		cmd = None
 		try:
@@ -124,7 +138,7 @@ class helper:
 					'convert',
 					filename + '[0]',
 					'-resize',
-					resizeString % (displayWidth, displayHeight),
+					'%sx%s' % (adjWidth, adjHeight),
 					'-gravity',
 					'center',
 					'-crop',
