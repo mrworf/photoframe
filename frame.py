@@ -562,7 +562,7 @@ while True:
 
   if settings.get('local-ip') is None:
     logging.error('You must have functional internet connection to use this app')
-    display.message('No internet')
+    display.message('No internet\n\nCheck wifi-config.txt or cable')
     time.sleep(10)
   else:
     break

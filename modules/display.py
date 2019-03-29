@@ -180,7 +180,9 @@ class display:
 
     url = ''
     if self.url is not None:
-      url = self.url
+      url = 'caption:Configuration available at %s' % self.url
+    else:
+      url = 'caption:'
 
     args = [
       'convert',
@@ -203,7 +205,7 @@ class display:
       'south',
       '-fill',
       '#666666',
-      'caption:Configuration available at %s' % url,
+      url,
       '-flatten',
       '-extent',
       '%dx%d+%d+%d' % (self.width + self.xoffset, self.height + self.yoffset, self.xoffset, self.yoffset),
