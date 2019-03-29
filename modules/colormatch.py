@@ -23,6 +23,12 @@ import logging
 class colormatch(Thread):
 	def __init__(self, script, min = None, max = None):
 		Thread.__init__(self)
+		self.luxLimit = None
+		self.luxTimeout = None
+		self.luxLow = None
+		self.luxHigh = None
+		self.standby = False
+
 		self.daemon = True
 		self.sensor = False
 		self.temperature = None
@@ -58,6 +64,35 @@ class colormatch(Thread):
 
 	def getLux(self):
 		return self.lux
+
+	def setAmbientSensitivity(self, luxLimit, timeout):
+		self.luxLimit = luxLimit
+		self.luxTimeout = timeout
+		self.luxLow = None
+		self.luxHigh = None
+		self.standby = False
+
+	def calculateStandby(self):
+		if self.luxLimit is None or self.luxTimeout is None:
+			return
+		if lux < self.luxLimit and self.luxLow is None:
+			self.luxLow = time.time() + self.luxTimeout * 60
+			self.luxHigh = None
+		elif lux >= self.luxLimit and self.luxLow is not None:
+			self.luxLow = None
+			self.luxHigh = time.time() + self.luxTimeout * 60
+
+		previously = self.standby
+		if not self.standby and self.luxLow and time.time() > self.luxLow:
+			self.standby = True
+		elif self.standby and self.luxHigh and time.time() > self.luxHigh:
+			self.standby = False
+		if previously != self.standby:
+			logging.debug('Lux power state has changed: %s', repr(self.standby))
+			self.evaluatePower()
+
+  def _getStandby():
+    return self.standby
 
 	def setUpdateListener(self, listener):
 		self.listener = listener

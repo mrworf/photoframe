@@ -33,7 +33,6 @@ import traceback
 
 from modules.remember import remember
 from modules.shutdown import shutdown
-from modules.timekeeper import timekeeper
 from modules.settings import settings
 from modules.helper import helper
 from modules.display import display
@@ -43,6 +42,9 @@ from modules.colormatch import colormatch
 from modules.drivers import drivers
 from modules.servicemanager import ServiceManager
 from modules.sysconfig import sysconfig
+
+from modules.powermanager import PowerManager
+from modules.power.schedule import schedule
 
 parser = argparse.ArgumentParser(description="PhotoFrame - A RaspberryPi based digital photoframe", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--logfile', default=None, help="Log to file instead of stdout")
@@ -566,14 +568,14 @@ display.setConfigPage('http://%s:%d/' % (settings.get('local-ip'), 7777))
 random.seed(long(time.clock()))
 colormatch = colormatch(settings.get('colortemp-script'), 2700) # 2700K = Soft white, lowest we'll go
 slideshow = slideshow(display, settings, colormatch)
-timekeeper = timekeeper(display.enable, slideshow.start)
-slideshow.setQueryPower(timekeeper.getDisplayOn)
+powermanagement = powermanagement(display.enable, slideshow.start)
+slideshow.setQueryPower(powermanagement.getDisplayOn)
 slideshow.setServiceManager(services)
 
-timekeeper.setConfiguration(settings.getUser('display-on'), settings.getUser('display-off'))
-timekeeper.setAmbientSensitivity(settings.getUser('autooff-lux'), settings.getUser('autooff-time'))
-timekeeper.setPowermode(settings.getUser('powersave'))
-colormatch.setUpdateListener(timekeeper.sensorListener)
+powermanagement.setConfiguration(settings.getUser('display-on'), settings.getUser('display-off'))
+powermanagement.setAmbientSensitivity(settings.getUser('autooff-lux'), settings.getUser('autooff-time'))
+powermanagement.setPowermode(settings.getUser('powersave'))
+colormatch.setUpdateListener(powermanagement.sensorListener)
 
 powermanagement = shutdown(settings.getUser('shutdown-pin'))
 
