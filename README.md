@@ -164,6 +164,4 @@ This will cause photoframe to run in the foreground and provide tons of debug in
 
 Tracks ideas and improvements planned. No specific timeframe is mentioned, but the order of things should be fairly true
 
-- Use fileupload for oauth data instead of copy-n-paste
-- Make photo sources modular (allow multiple Google Photos)
-- More services: Instagram, Amazon, local network share...
+Moved to [github.com](https://github.com/mrworf/photoframe/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aopen+label%3Aenhancement) for more dynamic tracking :-)
