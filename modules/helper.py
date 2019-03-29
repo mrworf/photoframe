@@ -96,7 +96,6 @@ class helper:
 
 			logging.debug('Size of image is %dx%d, screen is %dx%d. New size is %dx%d', width, height, displayWidth, displayHeight, adjWidth, adjHeight)
 
-			resizeString = '%sx%s'
 			if adjHeight < displayHeight:
 				border = '0x%d' % width_border
 				spacing = '0x%d' % width_spacing
@@ -110,6 +109,7 @@ class helper:
 				resizeString = '^%sx%s'
 				logging.debug('Portrait image, reframing (padding required %dpx)' % padding)
 			else:
+				resizeString = '%sx%s'
 				logging.debug('Image is fullscreen, no reframing needed')
 				return False
 
