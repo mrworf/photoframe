@@ -166,7 +166,7 @@ class drivers:
 			return False
 
 		# First, make sure we erase existing driver
-		dstfolder = os.path.join(drivers.EXTERNAL, config['driver'])
+		dstfolder = os.path.join(settings.DRV_EXTERNAL, config['driver'])
 		if os.path.exists(dstfolder):
 			logging.info('"%s" already exists, delete before installing', dstfolder)
 			self._deletefolder(dstfolder)
