@@ -39,6 +39,9 @@ class BaseService:
 
   STATE_DO_CONFIG = 1
   STATE_DO_OAUTH = 2
+  STATE_NEED_KEYWORDS = 3
+  STATE_NO_IMAGES = 4
+  STATE_NOT_CONNECTED = 5
 
   STATE_READY = 999
 
@@ -68,6 +71,9 @@ class BaseService:
 
     self._MEMORY = None
     self._MEMORY_KEY = None
+
+    self._HISTORY = []
+    self.resetIndices()
 
     self.loadState()
     self.preSetup()
@@ -109,6 +115,8 @@ class BaseService:
       return BaseService.STATE_DO_CONFIG
     if self._NEED_OAUTH and (not self.hasOAuthConfig or not self.hasOAuth()):
       return BaseService.STATE_DO_OAUTH
+    if self.needKeywords() and len(self.getKeywords()) == 0:
+      return BaseService.STATE_NEED_KEYWORDS
 
     return BaseService.STATE_READY
 
@@ -143,7 +151,7 @@ class BaseService:
   def getMessages(self):
     # override this if you wish to show a message associated with
     # the provider's instance. Return None to hide
-    # FOrmat: [{'level' : 'INFO', 'message' : None, 'link' : None}]
+    # Format: [{'level' : 'INFO', 'message' : None, 'link' : None}]
     if self.needKeywords() and len(self.getKeywords()) == 0:
       return [
         {
@@ -240,10 +248,18 @@ class BaseService:
 
   ###[ Keyword management ]###########################
 
-  def validateKeywords(self, keywords):
+  def resetIndices(self):
+    self.keywordIndex = 0
+    self.imageIndex = 0
+
+  def resetToLastAlbum(self):
+    self.keywordIndex = max(0, len(self.getKeywords())-1)
+    self.imageIndex = 0
+
+  def validateKeywords(self, keywords):  # shouldn't this be 'validateKeyword' (singular)?
     return {'error':None, 'keywords': keywords}
 
-  def addKeywords(self, keywords):
+  def addKeywords(self, keywords): #shouldn't this be 'addKeyword' (singular)? seems a bit confusing to me, because 'keywords' is a string and not a list!
     # This is how the user will configure it, this adds a new set of keywords to this
     # service module. Return none on success, string with error on failure
     keywords = keywords.strip()
@@ -309,7 +325,7 @@ class BaseService:
 
   ###[ Actual hard work ]###########################
 
-  def prepareNextItem(self, destinationFile, supportedMimeTypes, displaySize):
+  def prepareNextItem(self, destinationFile, supportedMimeTypes, displaySize, randomize):
     # This call requires the service to download the next item it
     # would like to show. The destinationFile has to be used as where to save it
     # and you are only allowed to provide content listed in the supportedMimeTypes.
@@ -322,7 +338,7 @@ class BaseService:
     #
     # NOTE! If you need to index anything before you can get the first item, this would
     # also be the place to do it.
-    result = {'mimetype' : None, 'error' : 'You haven\'t implemented this yet', 'source':None}
+    result = {'mimetype': None, 'error': 'You haven\'t implemented this yet', 'source': None, 'filename': None}
     return result
 
   ###[ Helpers ]######################################
@@ -366,7 +382,7 @@ class BaseService:
   def _fetchMemory(self, key):
     if key is None:
       key = ''
-    h =  self.hashString(key)
+    h = self.hashString(key)
     if self._MEMORY_KEY == h:
       return
     # Save work and swap
@@ -380,29 +396,77 @@ class BaseService:
       self._MEMORY = []
     self._MEMORY_KEY = h
 
-  def memoryRemember(self, itemId, keywords=None):
+  def _differentThanLastHistory(self, keywordindex, imageIndex):
+    if len(self._HISTORY) == 0:
+      return True
+    if keywordindex == self._HISTORY[-1][0] and imageIndex == self._HISTORY[-1][1]:
+      return False
+    return True
+
+  def memoryRemember(self, itemId, keywords=None, alwaysRemember=True):
+    logging.debug("Displaying new image")
+    logging.debug(self._NAME)
+    logging.debug("keyword: %d; index: %d" % (self.keywordIndex, self.imageIndex))
+
     self._fetchMemory(keywords)
     h = self.hashString(itemId)
-    if h in self._MEMORY:
-      return
-    self._MEMORY.append(h)
+    if h not in self._MEMORY:
+      self._MEMORY.append(h)
+    
+    # only remember if image has changed
+    rememberInHistory = alwaysRemember or self._differentThanLastHistory(self.keywordIndex, self.imageIndex)
+    if rememberInHistory:
+      self._HISTORY.append((self.keywordIndex, self.imageIndex))
+    self.imageIndex += 1
 
     if (len(self._MEMORY) % 20) == 0:
       logging.info('Interim saving of memory every 20 entries')
       with open(os.path.join(self._DIR_MEMORY, '%s.json' % self._MEMORY_KEY), 'w') as f:
         json.dump(self._MEMORY, f)
 
+    return rememberInHistory
+
   def memorySeen(self, itemId, keywords=None):
     self._fetchMemory(keywords)
     h = self.hashString(itemId)
     return h in self._MEMORY
 
-  def memoryForget(self, keywords=None):
+  def memoryForgetLast(self, keywords=None):
+    self._fetchMemory(keywords)
+    if len(self._MEMORY) != 0:
+      self._MEMORY.pop()
+    if len(self._HISTORY) == 0:
+      logging.warning("Trying to forget a single memory, but 'self._HISTORY' is empty. This should have never happened!")
+    else:
+      self.keywordIndex, self.imageIndex = self._HISTORY.pop()
+
+  def memoryForget(self, keywords=None, forgetHistory=False):
     self._fetchMemory(keywords)
     n = os.path.join(self._DIR_MEMORY, '%s.json' % self._MEMORY_KEY)
     if os.path.exists(n):
       os.unlink(n)
     self._MEMORY = []
+    if forgetHistory:
+      self._HISTORY = []
+
+  def getPreferredImageSize(self, imageSize, displaySize):
+    # Calculate the size we need to avoid black borders
+    oar = float(imageSize['width'])/float(imageSize['height'])
+    dar = float(displaySize['width'])/float(displaySize['height'])
+
+    newImageSize = {}
+    if imageSize['width'] > displaySize['width'] and imageSize['height'] > displaySize['height']:
+      if oar <= dar:
+        newImageSize['width'] = displaySize['width']
+        newImageSize['height'] = int(float(displaySize['width']) / oar)
+      else:
+        newImageSize['width'] = int(float(displaySize['height']) * oar)
+        newImageSize['height'] = displaySize['height']
+    else:
+      newImageSize['width'] = imageSize['width']
+      newImageSize['height'] = imageSize['height']
+
+    return newImageSize
 
   def isCorrectOrientation(self, metadata, displaySize):
     if displaySize['force_orientation'] == 0:
@@ -414,4 +478,19 @@ class BaseService:
 
     return image_orientation == display_orientation
 
+  def nextAlbum(self):
+    self.imageIndex = 0
+    self.keywordIndex += 1
+    if self.keywordIndex >= len(self._STATE['_KEYWORDS']):
+      self.keywordIndex = 0
+      return False
+    return True
+
+  def prevAlbum(self):
+    self.imageIndex = 0
+    self.keywordIndex -= 1
+    if self.keywordIndex < 0:
+      self.keywordIndex = len(self._STATE['_KEYWORDS']) - 1
+      return False
+    return True
 

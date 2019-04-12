@@ -14,6 +14,10 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 from base import BaseService
+import os
+import logging
+
+from modules.helper import helper
 
 class SimpleUrl(BaseService):
   SERVICE_NAME = 'Simple URL'
@@ -23,25 +27,65 @@ class SimpleUrl(BaseService):
   def __init__(self, configDir, id, name):
     BaseService.__init__(self, configDir, id, name, needConfig=False, needOAuth=False)
 
-
   def helpKeywords(self):
     return 'Each item is a URL that should return a single image. The URL may contain the terms "{width}" and/or "{height}" which will be replaced by numbers describing the size of the display.'
 
-
-  def prepareNextItem(self, destinationFile, supportedMimeTypes, displaySize):
+  def prepareNextItem(self, destinationDir, supportedMimeTypes, displaySize, randomize):
     urlList = list(self.getKeywords())
-    if len(urlList) == 0:
-      return {'mimetype' : None, 'error' : 'No URLs have been specified', 'source': None}
+    count = len(urlList)
+    if count == 0:
+      return {'mimetype': None, 'error': 'No URLs have been specified', 'source': None, 'filename': None}
 
-    Url = urlList[self.getRandomKeywordIndex()]
+    if randomize:
+      offset = self.getRandomKeywordIndex()
+    else:
+      offset = self.keywordIndex + self.imageIndex
 
-    Url = Url.replace('{width}', str(displaySize['width']))
-    Url = Url.replace('{height}', str(displaySize['height']))
+    self.imageIndex = 0
+    for i in range(0, count):
+      if not randomize and (offset + i) >= count:
+        break
 
-    result = self.requestUrl(Url, destination=destinationFile)
+      self.keywordIndex = (offset + i) % count
+      imageUrl = urlList[self.keywordIndex]
+      imageUrl = imageUrl.replace('{width}', str(displaySize['width']))
+      imageUrl = imageUrl.replace('{height}', str(displaySize['height']))
+      imageId = self.hashString(imageUrl)
+      filename = os.path.join(destinationDir, imageId)
+      if randomize and self.memorySeen(imageId):
+        logging.debug("Skipping already displayed image '%s'!" % filename)
+        continue
+      cachedImageSize = helper.getImageSize(filename, deleteCurruptedImage=True)
+      if cachedImageSize is not None:
+        if not self.isCorrectOrientation(cachedImageSize, displaySize):
+          logging.debug("Skipping image '%s' due to wrong orientation!" % filename)
+          continue
 
-    if result['status'] == 200:
-      return {'mimetype' : result['mimetype'], 'error': None, 'source': Url}
+        # use cached image
+        logging.debug("using cached image: '%s'" % filename)
+        return {'id': imageId, 'mimetype': helper.getMimeType(filename), 'error': None, 'source': None}
 
-    return {'mimetype': None, 'error': 'Could not fetch image - status code ' + str(result['status']), 'source': None }
+      # download image
+      result = self.requestUrl(imageUrl, destination=filename)
+      if result['status'] == 200:
+        imageSize = helper.getImageSize(filename, deleteCurruptedImage=True)
+        if not self.isCorrectOrientation(cachedImageSize, displaySize):
+          logging.debug("Skipping image '%s' due to wrong orientation!" % filename)
+          continue
+        return {'id': imageId, 'mimetype': result['mimetype'], 'error': None, 'source': imageUrl}
 
+      logging.warning('SimpleUrl could not fetch image - status code ' + str(result['status']))
+    
+    return {'id': None, 'mimetype': None, 'error': 'No images could be found.\nMake sure your urls each link to the actual image file!', 'source': None}
+
+
+  # Treat the entire service as one album
+  # That way you can group images by creating multiple Simple Url Services
+  def nextAlbum(self):
+    return False
+
+  def prevAlbum(self):
+    return False
+
+  def resetToLastAlbum(self):
+    self.resetIndices()

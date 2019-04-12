@@ -47,6 +47,7 @@ class settings:
       'oauth_state' : None,
       'local-ip' : None,
       'tempfolder' : '/tmp/',
+      'cachefolder': '/root/cache/',
       'colortemp' : None,
       'cfg' : None
     }
@@ -70,7 +71,8 @@ class settings:
       'display-driver' : 'none',
       'display-special' : None,
       'imagesizing' : 'blur',
-      'force_orientation' : 0
+      'force_orientation' : 0,
+      'randomize_images' : 1,
     }
 
   def load(self):
@@ -105,6 +107,9 @@ class settings:
         except:
           logging.exception('Failed to load settings.json, corrupt file?')
           return False
+      # make sure old settings.json files are still compatible and get updated with new keys
+      if "cachefolder" not in self.settings.keys():
+        self.settings["cachefolder"] = '/root/cache/'
       return True
     else:
       return False

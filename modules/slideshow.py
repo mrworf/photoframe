@@ -16,6 +16,7 @@
 import threading
 import logging
 import os
+import shutil
 import random
 import datetime
 import hashlib
@@ -27,21 +28,38 @@ import subprocess
 
 from modules.remember import remember
 from modules.helper import helper
+from modules.diskmanager import DiskManager
 
 class slideshow:
-  SHOWN_IP = False
+  SHOWN_IP = True
 
   def __init__(self, display, settings, colormatch):
     self.queryPowerFunc = None
     self.thread = None
+    self.services = None
     self.display = display
     self.settings = settings
     self.colormatch = colormatch
-    self.imageCurrent = None
-    self.imageMime = None
-    self.services = None
     self.void = open(os.devnull, 'wb')
     self.delayer = threading.Event()
+
+    self.imageCurrent = None
+    self.imageMime = None
+    self.imageOnScreen = False
+    self.cleanConfig = False
+    self.doControl = None
+    self.doClearCache = False
+    self.doMemoryForget = False
+    self.ignoreRandomize = False
+    self.skipPreloadedImage = False
+
+    self.supportedFormats = [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/bmp'
+        # HEIF to be added once I get ImageMagick running with support
+    ]
 
   def getCurrentImage(self):
     return self.imageCurrent, self.imageMime
@@ -69,95 +87,199 @@ class slideshow:
 
   def trigger(self):
     logging.debug('Causing immediate showing of image')
+    self.cleanConfig = True
     self.delayer.set()
 
+  def createEvent(self, cmd):
+    if cmd == "settingsChange":
+      self.skipPreloadedImage = True
+    elif cmd == "memoryForget":
+      self.cleanConfig = True
+      self.doMemoryForget = True
+    elif cmd == "clearCache":
+      self.cleanConfig = True
+      self.doClearCache = True
+    else:
+      self.doControl = cmd
+      if self.settings.getUser("randomize_images"):
+        if cmd == "nextAlbum":
+          self.doControl = "nextImage"
+        elif cmd == "prevAlbum":
+          self.doControl = "prevImage"
+
+    self.delayer.set()
+
+  def handleEvents(self):
+    if self.cleanConfig:
+      logging.info('Change of configuration, flush data and restart')
+      # We need to expunge any pending image now
+      # so we get fresh data to show the user
+      if self.doMemoryForget:
+        self.services.memoryForget(forgetHistory=True)
+        self.doMemoryForget = False
+      if self.doClearCache:
+        DiskManager.empty(self.settings.get('cachefolder'))
+        self.doClearCache = False
+      if self.imageCurrent:
+        self.imageCurrent = None
+        self.skipPreloadedImage = True
+        self.imageOnScreen = False
+        self.display.clear()
+      self.cleanConfig = False
+
+    if self.doControl == "nextImage":
+      #just skip delay and show the next (preloaded) image
+      pass
+    elif self.doControl == "prevImage":
+      self.skipPreloadedImage = True
+      self.ignoreRandomize = True
+      if self.services.prevImage():
+        self.delayer.set()
+    elif self.doControl == "nextAlbum":
+      self.skipPreloadedImage = True
+      self.services.nextAlbum()
+      self.delayer.set()
+    elif self.doControl == "prevAlbum":
+      self.skipPreloadedImage = True
+      self.services.prevAlbum()
+      self.delayer.set()
+    self.doControl = None
+
+  def startupScreen(self):
+    slideshow.SHOWN_IP = True
+    # Once we have IP, show for 10s
+    cd = 10
+    while (cd > 0):
+      time_process = time.time()
+      self.display.message('Starting in %d' % (cd))
+      cd -= 1
+      time_process = time.time() - time_process
+      if time_process < 1.0:
+        time.sleep(1.0 - time_process)
+    self.display.clear()
+
+  def handleErrors(self, result):
+    if result is None:
+      serviceStates = self.services.getAllServiceStates()
+      if len(serviceStates) == 0:
+        msg = 'Photoframe isn\'t ready yet\n\nPlease direct your webbrowser to\n\nhttp://%s:7777/\n\nand add one or more photo providers' % self.settings.get('local-ip')
+      else:
+        msg = 'Please direct your webbrowser to\n\nhttp://%s:7777/\n\nto complete the setup process:\n\n' % self.settings.get('local-ip')
+        for svcName, state in serviceStates:
+          msg += "\n\n'"+svcName+"' --> "
+          if state == 'OAUTH':
+            msg += "Authorization required!"
+          elif state == 'CONFIG':
+            msg += "Configuration required!"
+          elif state == 'NEED_KEYWORDS':
+            msg += "add one or more keywords (album names)"
+          elif state == 'NO_IMAGES_DETECTED':
+            msg += "no images could be found!"
+            if svcName == 'USB-Photos':
+              msg += "\nPlace images and/or albums inside a '/photoframe'-directory on your storage device"
+          elif state == 'CONNECT_STORAGE_DEVICE':
+            msg += "no storage device (e.g. USB-stick) was detected!"
+          else:
+            msg += "not ready for unknown reasons!"
+        
+      self.display.message(msg)
+      self.imageOnScreen = False
+      return True
+
+    if result['error'] is not None:
+      logging.exception('%s failed:\n\n%s' % (self.services.getLastUsedServiceName(), result['error']))
+      self.display.message('%s failed:\n\n%s' % (self.services.getLastUsedServiceName(), result['error']))
+      self.imageOnScreen = False
+      return True
+    return False
+
+  def _colormatch(self, filename):
+    if self.colormatch.hasSensor():
+      # For Now: Always process original image (no caching of colormatch-adjusted images)
+      # 'colormatched_tmp.jpg' will be deleted after the image is displayed
+      filenameTemp = os.path.join(self.settings.getUser('cachefolder'), "colormatched_tmp.jpg")
+      if self.colormatch.adjust(filenameProcessed, filenameTemp):
+        return filenameTemp
+      logging.warning('Unable to adjust image to colormatch, using original')
+    return filename
+
+  def process(self, filename):
+    imageSizing = self.settings.getUser('imagesizing')
+    if imageSizing == None or imageSizing == "none":
+      return self._colormatch(filename)
+    if imageSizing == 'blur':
+      filenameProcessed = helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'))
+    elif imageSizing == 'zoom':
+      filenameProcessed = helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'), zoomOnly=True)
+    elif imageSizing == 'auto':
+      filenameProcessed = helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'), autoChoose=True)
+    return self._colormatch(filenameProcessed)
+
+  def delayNextImage(self, time_process):
+    # Delay before we show the image (but take processing into account)
+    # This should keep us fairly consistent
+    delay = self.settings.getUser('interval')
+    if time_process < delay and self.imageOnScreen:  # or self.imageCurrent is None: why wait when imageCurrent is None ()
+      self.delayer.wait(delay - time_process)
+      self.delayer.clear()
+
+  def showPreloadedImage(self, filename, mimetype, imageId):
+    if not self.skipPreloadedImage:
+      if not os.path.isfile(filename):
+        logging.warning("Trying to show image '%s', but file does not exist!"%filename)
+        self.delayer.set()
+        return
+      self.display.image(filename)
+      self.imageCurrent = filename
+      self.imageMime = mimetype
+      self.imageOnScreen = True
+      self.services.memoryRemember(imageId)
+      if "colormatched_tmp.jpg" in filename:
+        os.unlink(filename)
+    
+    self.skipPreloadedImage = False
+
   def presentation(self):
+    cacheFolder = self.settings.get('cachefolder')
+    lessImportantDirs = ["blurred", "zoomed"]
+    DiskManager.createDirs(cacheFolder, subDirs=lessImportantDirs)
+    DiskManager.garbageCollect(cacheFolder, lessImportantDirs)
+
     self.services.getServices(readyOnly=True)
 
     if not slideshow.SHOWN_IP:
-      slideshow.SHOWN_IP = True
-      # Once we have IP, show for 10s
-      cd = 10
-      while (cd > 0):
-        time_process = time.time()
-        self.display.message('Starting in %d' % (cd))
-        cd -= 1
-        time_process = time.time() - time_process
-        if time_process < 1.0:
-          time.sleep(1.0 - time_process)
-      self.display.clear()
+      self.startupScreen()
 
     logging.info('Starting presentation')
-    delay = 0
-    useService = 0
-    supportedFormats = [
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'image/bmp'
-      # HEIF to be added once I get ImageMagick running with support
-    ]
-
-    self.delayer.clear()
-    imageOnScreen = False
+    i = 0
     while True:
+      i += 1
+      time_process = time.time()
+
       # Avoid showing images if the display is off
       if self.queryPowerFunc is not None and self.queryPowerFunc() is False:
         logging.info("Display is off, exit quietly")
         break
+      
+      if (i % 100) == 0:
+        DiskManager.garbageCollect(cacheFolder, lessImportantDirs)
+  
+      displaySize = {'width': self.settings.getUser('width'), 'height': self.settings.getUser('height'), 'force_orientation': self.settings.getUser('force_orientation')}
+      randomize = (not self.ignoreRandomize) and bool(self.settings.getUser('randomize_images'))
+      self.ignoreRandomize = False
 
-      # For now, just pick the first service
-      time_process = time.time()
+      result = self.services.servicePrepareNextItem(cacheFolder, self.supportedFormats, displaySize, randomize)
+      if self.handleErrors(result):
+        continue
 
-      services = self.services.getServices(readyOnly=True)
-      if len(services) > 0:
-        # Very simple round-robin
-        if useService >= len(services):
-          useService = 0
-        svc = services[useService]['id']
-
-        filename = os.path.join(self.settings.get('tempfolder'), 'image')
-        result = self.services.servicePrepareNextItem(svc, filename, supportedFormats, {'width': self.settings.getUser('width'), 'height': self.settings.getUser('height'), 'force_orientation': self.settings.getUser('force_orientation')})
-        if result['error'] is not None:
-          self.display.message('%s failed:\n\n%s' % (services[useService]['name'], result['error']))
-        else:
-          self.imageMime = result['mimetype']
-          self.imageCurrent = filename
-
-          if self.settings.getUser('imagesizing') == 'blur':
-            helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'))
-          elif self.settings.getUser('imagesizing') == 'zoom':
-            helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'), zoomOnly=True)
-          elif self.settings.getUser('imagesizing') == 'auto':
-            helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'), autoChoose=True)
-          if self.colormatch.hasSensor():
-            if not self.colormatch.adjust(filename):
-              logging.warning('Unable to adjust image to colormatch, using original')
-        useService += 1
-      else:
-        self.display.message('Photoframe isn\'t ready yet\n\nPlease direct your webbrowser to\n\nhttp://%s:7777/\n\nand add one or more photo providers' % self.settings.get('local-ip'))
+      filenameOriginal = os.path.join(cacheFolder, result["id"])
+      filenameProcessed = self.process(filenameOriginal)
+      if filenameProcessed is None:
+        continue
 
       time_process = time.time() - time_process
+      self.delayNextImage(time_process)
+      self.handleEvents()
+      self.showPreloadedImage(filenameProcessed, result["mimetype"], result["id"])
 
-      # Delay before we show the image (but take processing into account)
-      # This should keep us fairly consistent
-      if time_process < delay and (imageOnScreen or self.imageCurrent is None):
-        triggered = self.delayer.wait(delay - time_process)
-        self.delayer.clear()
-        if triggered:
-          logging.info('Change of configuration, flush data and restart')
-          # We need to expunge any pending image now
-          # so we get fresh data to show the user
-          if self.imageCurrent:
-            os.remove(self.imageCurrent)
-            self.imageCurrent = None
-            imageOnScreen = False
-            self.display.clear()
-
-      if self.imageCurrent is not None and os.path.exists(self.imageCurrent):
-        self.display.image(self.imageCurrent)
-        os.remove(self.imageCurrent)
-        imageOnScreen = True
-
-      delay = self.settings.getUser('interval')
     self.thread = None

@@ -19,6 +19,8 @@ import os
 import json
 import logging
 
+from modules.helper import helper
+
 class GooglePhotos(BaseService):
   SERVICE_NAME = 'GooglePhotos'
   SERVICE_ID = 2
@@ -139,50 +141,50 @@ class GooglePhotos(BaseService):
       self.setExtras(extras)
     return result
 
-  def prepareNextItem(self, destinationFile, supportedMimeTypes, displaySize):
-    result = self.fetchImage(destinationFile, supportedMimeTypes, displaySize)
-    if result['error'] is not None:
-      # If we end up here, two things can have happened
-      # 1. All images have been shown
-      # 2. No image or data was able to download
-      # Try forgetting all data and do another run
-      self.memoryForget()
-      for file in os.listdir(self.getStoragePath()):
-        os.unlink(os.path.join(self.getStoragePath(), file))
-      result = self.fetchImage(destinationFile, supportedMimeTypes, displaySize)
-    return result
-
-  def fetchImage(self, destinationFile, supportedMimeTypes, displaySize):
-    # First, pick which keyword to use
+  def prepareNextItem(self, destinationDir, supportedMimeTypes, displaySize, randomize):
     keywordList = list(self.getKeywords())
     offset = 0
 
-    # Make sure we always have a default
     if len(keywordList) == 0:
-      return {'mimetype' : None, 'error' : 'No albums have been specified', 'source': None}
+      return {'mimetype': None, 'error': 'No albums have been specified', 'source': None, 'filename': None}
     else:
-      offset = self.getRandomKeywordIndex()
+      if randomize:
+        offset = self.getRandomKeywordIndex()
+      else:
+        offset = self.keywordIndex
 
     total = len(keywordList)
     for i in range(0, total):
-      index = (i + offset) % total
-      keyword = keywordList[index]
+      if not randomize and (offset + i) >= total:
+        break
+
+      self.keywordIndex = (offset + i) % total
+      keyword = keywordList[self.keywordIndex]
       images = self.getImagesFor(keyword)
       if images is None:
+        self.imageIndex = 0
         continue
 
-      mimeType, imageUrl, sourceUrl = self.getUrlFromImages(supportedMimeTypes, displaySize, images)
+      imageId, mimeType, imageUrl, sourceUrl = self.getUrlFromImages(supportedMimeTypes, displaySize, images, randomize)
       if imageUrl is None:
+        self.imageIndex = 0
         continue
-      result = self.requestUrl(imageUrl, destination=destinationFile)
+
+      filename = os.path.join(destinationDir, imageId)
+      # check if cached image exists or is corrupted
+      if helper.getImageSize(filename, deleteCurruptedImage=True) is not None:
+        logging.debug("using cached image: '%s'"%filename)
+        return {'id': imageId, 'mimetype': helper.getMimeType(filename), 'error': None, 'source': None}
+
+      result = self.requestUrl(imageUrl, destination=filename)
       if result['status'] == 200:
-        return {'mimetype' : mimeType, 'error' : None, 'source': sourceUrl}
+        return {'id': imageId, 'mimetype': mimeType, 'error': None, 'source': sourceUrl}
 
     # Don't assume spelling by default, make sure API is enabled first!
     if not self.isGooglePhotosEnabled():
-      return {'mimetype' : None, 'error' : '"Photos Library API" is not enabled on\nhttps://console.developers.google.com\n\nCheck the Photoframe Wiki for details', 'source': None}
+      return {'id': None, 'mimetype': None, 'error': '"Photos Library API" is not enabled on\nhttps://console.developers.google.com\n\nCheck the Photoframe Wiki for details', 'source': None}
     else:
-      return {'mimetype' : None, 'error' : 'No images could be found,\nCheck spelling or make sure you have added albums', 'source': None}
+      return {'id': None, 'mimetype': None, 'error': 'No images could be found.\nCheck spelling or make sure you have added albums', 'source': None}
 
   def isGooglePhotosEnabled(self):
     url = 'https://photoslibrary.googleapis.com/v1/albums'
@@ -192,16 +194,26 @@ class GooglePhotos(BaseService):
     '''
     return not (data['status'] == 403 and 'Enable it by visiting' in data['content'])
 
-  def getUrlFromImages(self, types, displaySize, images):
+  def getUrlFromImages(self, types, displaySize, images, randomize):
     # Next, pick an image
     count = len(images)
-    offset = random.SystemRandom().randint(0,count-1)
+    if randomize:
+      offset = random.SystemRandom().randint(0, count-1)
+    else:
+      offset = self.imageIndex
+      if offset >= count:
+        # album end reached
+        return None, None, None, None
+
     for i in range(0, count):
-      index = (i + offset) % count
-      proposed = images[index]['baseUrl']
-      if self.memorySeen(proposed):
+      if not randomize and (offset + i) >= count:
+        return None, None, None, None
+
+      index = (offset + i) % count
+
+      if randomize and self.memorySeen(images[index]['id']):
+        logging.debug("Skipping already displayed image '%s'!" % images[index]['filename'])
         continue
-      self.memoryRemember(proposed)
       
       if not self.isCorrectOrientation(images[index]['mediaMetadata'], displaySize):
         logging.debug("Skipping image '%s' due to wrong orientation!" % images[index]['filename'])
@@ -210,28 +222,13 @@ class GooglePhotos(BaseService):
       entry = images[index]
       # Make sure we don't get a video, unsupported for now (gif is usually bad too)
       if entry['mimeType'] in types:
-        # Calculate the size we need to avoid black borders
-        ow = entry['mediaMetadata']['width']
-        oh = entry['mediaMetadata']['height']
-        oar=float(ow)/float(oh)
-        dar = float(displaySize['width'])/float(displaySize['height'])
-
-        if ow > displaySize['width'] and oh > displaySize['height']:
-          if oar <= dar:
-            width = displaySize['width']
-            height = int(float(displaySize['width']) / oar)
-          else:
-            width = int(float(displaySize['height']) * oar)
-            height = displaySize['height']
-        else:
-          width = ow
-          height = oh
-
-        return entry['mimeType'], entry['baseUrl'] + "=w" + str(width) + "-h" + str(height), entry['productUrl']
+        self.imageIndex = index
+        imageSize = self.getPreferredImageSize(entry['mediaMetadata'], displaySize)
+        return entry['id'], entry['mimeType'], entry['baseUrl'] + "=w" + str(imageSize["width"]) + "-h" + str(imageSize["height"]), entry['productUrl']
       else:
-        logging.warning('Unsupported media: %s' % (entry['mimeType']))
+        logging.debug('Unsupported media: %s' % (entry['mimeType']))
       entry = None
-    return None, None, None
+    return None, None, None, None
 
   def getQueryForKeyword(self, keyword):
     result = None

@@ -58,23 +58,73 @@ class helper:
 		return None
 
 	@staticmethod
-	def makeFullframe(filename, displayWidth, displayHeight, zoomOnly=False, autoChoose=False):
-		name, ext = os.path.splitext(filename)
-		filename_temp = "%s-frame%s" % (name, ext)
+	def getMimeType(filename):
+		if not os.path.isfile(filename):
+			return None
+
+		cmd = ["/usr/bin/file", "--mime", filename]
+		try:
+			process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+			out, err = process.communicate()
+			mimetype = out.lstrip(filename).lstrip(":").strip()
+			if "; charset=" in mimetype:
+				mimetype = mimetype.split("; charset=")[0]
+		except subprocess.CalledProcessError as e:
+			logging.debug("unable to determine mimetype of file: %s" % filename)
+			return None
+		return mimetype
+
+	@staticmethod
+	def scaleImage(orgFilename, newFilename, newSize):
+		cmd = [
+			'convert',
+			orgFilename + '[0]',
+			'-scale',
+			'%sx%s' % (newSize["width"], newSize["height"]),
+			'+repage',
+			newFilename
+        ]
+
+		try:
+			subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+		except subprocess.CalledProcessError as e:
+			logging.exception('Unable to reframe the image')
+			logging.error('Output: %s' % repr(e.output))
+			return False
+		return True
+		
+
+	# can also be used to check if image file is corrupted
+	@staticmethod
+	def getImageSize(filename, deleteCurruptedImage=False):
+		if not os.path.isfile(filename):
+			return None
 
 		with open(os.devnull, 'wb') as void:
 			try:
 				output = subprocess.check_output(['/usr/bin/identify', filename], stderr=void)
 			except:
-				logging.exception('Error trying to identify image')
-				return False
+				if deleteCurruptedImage:
+					logging.debug("Deleting currupted (cached) image: %s"%filename)
+					os.unlink(filename)
+				return None
 
 		m = re.search('([1-9][0-9]*)x([1-9][0-9]*)', output)
 		if m is None or m.groups() is None or len(m.groups()) != 2:
 			logging.error('Unable to resolve regular expression for image size')
-			return False
-		width = int(m.group(1))
-		height = int(m.group(2))
+			return None
+
+		imageSize = {}
+		imageSize["width"] = int(m.group(1))
+		imageSize["height"] = int(m.group(2))
+
+		return imageSize
+
+	@staticmethod
+	def makeFullframe(filename, displayWidth, displayHeight, zoomOnly=False, autoChoose=False):
+		imageSize = helper.getImageSize(filename)
+		width = imageSize["width"]
+		height = imageSize["height"]
 
 		width_border = 15
 		width_spacing = 3
@@ -111,11 +161,11 @@ class helper:
 			else:
 				resizeString = '%sx%s'
 				logging.debug('Image is fullscreen, no reframing needed')
-				return False
+				return filename
 
 			if padding < 20 and not autoChoose:
 				logging.debug('That\'s less than 20px so skip reframing (%dx%d => %dx%d)', width, height, adjWidth, adjHeight)
-				return False
+				return filename
 
 			if padding < 60 and autoChoose:
 				zoomOnly = True
@@ -134,6 +184,12 @@ class helper:
 		try:
 			# Time to process
 			if zoomOnly:
+				p, f = os.path.split(filename)
+				filenameProcessed = os.path.join(p, "zoomed", f)
+				if helper.getImageSize(filenameProcessed):
+					logging.debug("using cached processed image: %s" % filenameProcessed)
+					return filenameProcessed
+
 				cmd = [
 					'convert',
 					filename + '[0]',
@@ -144,9 +200,15 @@ class helper:
 					'-crop',
 					'%sx%s+0+0' % (displayWidth, displayHeight),
 					'+repage',
-					filename_temp
+					filenameProcessed
 				]
 			else:
+				p, f = os.path.split(filename)
+				filenameProcessed = os.path.join(p, "blurred", f)
+				if helper.getImageSize(filenameProcessed):
+					logging.debug("using cached processed image: %s"%filenameProcessed)
+					return filenameProcessed
+
 				cmd = [
 					'convert',
 					filename + '[0]',
@@ -181,24 +243,23 @@ class helper:
 					'%sx%s' % (displayWidth, displayHeight),
 					')',
 					'-composite',
-					filename_temp
+					filenameProcessed
 				]
 		except:
 			logging.exception('Error building command line')
 			logging.debug('Filename: ' + repr(filename))
-			logging.debug('Filename_temp: ' + repr(filename_temp))
+			logging.debug('filenameProcessed: ' + repr(filenameProcessed))
 			logging.debug('border: ' + repr(border))
 			logging.debug('spacing: ' + repr(spacing))
-			return False
+			return None
 
 		try:
 			subprocess.check_output(cmd, stderr=subprocess.STDOUT)
 		except subprocess.CalledProcessError as e:
 			logging.exception('Unable to reframe the image')
 			logging.error('Output: %s' % repr(e.output))
-			return False
-		os.rename(filename_temp, filename)
-		return True
+			return None
+		return filenameProcessed
 
 	@staticmethod
 	def timezoneList():

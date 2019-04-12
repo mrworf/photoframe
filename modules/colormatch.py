@@ -62,7 +62,7 @@ class colormatch(Thread):
 	def setUpdateListener(self, listener):
 		self.listener = listener
 
-	def adjust(self, filename, temperature = None):
+	def adjust(self, filename, filenameTemp, temperature=None):
 		if not self.allowAdjust or not self.hasScript:
 			return False
 
@@ -81,10 +81,7 @@ class colormatch(Thread):
 			logging.debug('Adjusting color temperature to %dK' % temperature)
 
 		try:
-			result = subprocess.call([self.script, '-t', "%d" % temperature, filename + '[0]', filename + '.jpg'], stderr=self.void) == 0
-			if result:
-				os.unlink(filename)
-				os.rename(filename + '.jpg', filename)
+			result = subprocess.call([self.script, '-t', "%d" % temperature, filename + '[0]', filenameTemp], stderr=self.void) == 0
 			return result
 		except:
 			logging.exception('Unable to run %s:', self.script)
