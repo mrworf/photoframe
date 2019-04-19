@@ -44,7 +44,7 @@ from modules.colormatch import colormatch
 from modules.drivers import drivers
 from modules.servicemanager import ServiceManager
 from modules.sysconfig import sysconfig
-from modules.diskmanager import DiskManager
+from modules.cachemanager import CacheManager
 
 parser = argparse.ArgumentParser(description="PhotoFrame - A RaspberryPi based digital photoframe", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--logfile', default=None, help="Log to file instead of stdout")
@@ -259,7 +259,7 @@ def cfg_keyvalue(key, value):
       settings.setUser('width',  width)
       settings.setUser('height', height)
       display.enable(True, True)
-      DiskManager.empty(settings.get("cachefolder"))
+      CacheManager.empty(settings.get("cachefolder"))
     if key in ['display-on', 'display-off']:
       timekeeper.setConfiguration(settings.getUser('display-on'), settings.getUser('display-off'))
     if key in ['autooff-lux', 'autooff-time']:
@@ -327,7 +327,7 @@ def cfg_rotation(orient):
   else:
     if orient >= 0 and orient < 360:
       sysconfig.setDisplayOrientation(orient)
-      DiskManager.empty(settings.get("cachefolder"))
+      CacheManager.empty(settings.get("cachefolder"))
       return jsonify({'rotation' : sysconfig.getDisplayOrientation()})
   abort(500)
 

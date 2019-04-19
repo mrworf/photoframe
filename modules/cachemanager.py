@@ -19,17 +19,29 @@ import os
 import time
 import shutil
 
-MIN = 60
-HOUR = MIN  * 60
-DAY = HOUR  * 24
-MONTH = DAY * 30
-YEAR = DAY  * 365
+### CONSTANTS ###
 
-# all values are in Bytes!
+MIN = 60
+HOUR = MIN * 60
+DAY = HOUR * 24
+MONTH = DAY * 30
+YEAR = DAY * 365
+
 KB = 10**3
 MB = KB * 10**3
 GB = MB * 10**3
+#NOTE: all values are in Bytes!
 
+##################
+
+class CacheManager:
+  STATE_HEAPS = 0
+  STATE_ENOUGH = 1
+  STATE_WORRISOME = 2
+  STATE_CRITICAL = 3
+  STATE_FULL = 4
+
+@staticmethod
 def formatBytes(size):
   if size > 0.1*GB:
     return "%.1fGB" % (float(size)/GB)
@@ -37,14 +49,7 @@ def formatBytes(size):
     return "%.1fMB" % (float(size)/MB)
   elif size > 0.1*KB:
     return "%.1fKB" % (float(size)/KB)
-  return "%dB"%size
-
-class DiskManager:
-  STATE_HEAPS = 0
-  STATE_ENOUGH = 1
-  STATE_WORRISOME = 2
-  STATE_CRITICAL = 3
-  STATE_FULL = 4
+  return "%dB" % size
 
   @staticmethod
   def createDirs(path, subDirs=[]):
@@ -83,9 +88,13 @@ class DiskManager:
       for filename in [os.path.join(path, f) for f in files]:
         stat = os.stat(filename)
         if stat.st_mtime < now - minAge:
-          logging.debug("deleting old file '%s'"%filename)
-          freedUpSpace += stat.st_size
-          os.remove(filename)
+          try:
+            os.remove(filename)
+            logging.debug("old file '%s' deleted" % filename)
+            freedUpSpace += stat.st_size
+          except OSError as e:
+            logging.warning("unable to delete file '%s'!" % filename)
+            logging.exception("Output: "+e.msg)
     return freedUpSpace
 
   @staticmethod
@@ -100,7 +109,7 @@ class DiskManager:
   @staticmethod
   def getDiskSpaceState(path):
     # all values are in bytes!
-    dirSize = float(DiskManager.getDirSize(path))
+    dirSize = float(CacheManager.getDirSize(path))
 
     stat = os.statvfs(path)
     total = float(stat.f_blocks*stat.f_bsize)
@@ -111,15 +120,15 @@ class DiskManager:
     logging.debug("total space on partition: %s" % formatBytes(total))
 
     if free < 50*MB:
-      return DiskManager.STATE_FULL
+      return CacheManager.STATE_FULL
     elif free/total < 0.1:
-      return DiskManager.STATE_CRITICAL
+      return CacheManager.STATE_CRITICAL
     elif free/total < 0.2:
-      return DiskManager.STATE_WORRISOME
+      return CacheManager.STATE_WORRISOME
     elif free/total < 0.5:
-      return DiskManager.STATE_ENOUGH
+      return CacheManager.STATE_ENOUGH
     else:
-      return DiskManager.STATE_HEAPS
+      return CacheManager.STATE_HEAPS
 
   # Free up space of any tmp/cache folder
   # Frequently calling this function will make sure, less important files are deleted before having to delete more important ones.
@@ -127,19 +136,19 @@ class DiskManager:
   @staticmethod
   def garbageCollect(path, lessImportantDirs):
     logging.debug("Garbage Collector started!")
-    state = DiskManager.getDiskSpaceState(path)
+    state = CacheManager.getDiskSpaceState(path)
     freedUpSpace = 0
-    if state == DiskManager.STATE_FULL:
-      freedUpSpace = DiskManager.empty(path)
-    elif state == DiskManager.STATE_CRITICAL:
+    if state == CacheManager.STATE_FULL:
+      freedUpSpace = CacheManager.empty(path)
+    elif state == CacheManager.STATE_CRITICAL:
       for subDir in [os.path.join(path, d) for d in lessImportantDirs]:
-        freedUpSpace += DiskManager.empty(subDir)
-    elif state == DiskManager.STATE_WORRISOME:
-      freedUpSpace = DiskManager.deleteOldFiles(path, 7*DAY)
-    elif state == DiskManager.STATE_ENOUGH:
-      freedUpSpace = DiskManager.deleteOldFiles(path, MONTH)
+        freedUpSpace += CacheManager.empty(subDir)
+    elif state == CacheManager.STATE_WORRISOME:
+      freedUpSpace = CacheManager.deleteOldFiles(path, 7*DAY)
+    elif state == CacheManager.STATE_ENOUGH:
+      freedUpSpace = CacheManager.deleteOldFiles(path, MONTH)
     else:
-      freedUpSpace = DiskManager.deleteOldFiles(path, 6*MONTH)
+      freedUpSpace = CacheManager.deleteOldFiles(path, 6*MONTH)
 
     if freedUpSpace:
       logging.info("Garbage Collector was able to free up %s of disk space!"%formatBytes(freedUpSpace))

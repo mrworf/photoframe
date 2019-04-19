@@ -28,7 +28,7 @@ import subprocess
 
 from modules.remember import remember
 from modules.helper import helper
-from modules.diskmanager import DiskManager
+from modules.cachemanager import CacheManager
 
 class slideshow:
   SHOWN_IP = True
@@ -123,7 +123,7 @@ class slideshow:
         self.services.memoryForget(forgetHistory=True)
         self.doMemoryForget = False
       if self.doClearCache:
-        DiskManager.empty(self.settings.get('cachefolder'))
+        CacheManager.empty(self.settings.get('cachefolder'))
         self.doClearCache = False
       if self.imageCurrent:
         self.imageCurrent = None
@@ -247,8 +247,8 @@ class slideshow:
   def presentation(self):
     cacheFolder = self.settings.get('cachefolder')
     lessImportantDirs = ["blurred", "zoomed"]
-    DiskManager.createDirs(cacheFolder, subDirs=lessImportantDirs)
-    DiskManager.garbageCollect(cacheFolder, lessImportantDirs)
+    CacheManager.createDirs(cacheFolder, subDirs=lessImportantDirs)
+    CacheManager.garbageCollect(cacheFolder, lessImportantDirs)
 
     self.services.getServices(readyOnly=True)
 
@@ -267,7 +267,7 @@ class slideshow:
         break
       
       if (i % 100) == 0:
-        DiskManager.garbageCollect(cacheFolder, lessImportantDirs)
+        CacheManager.garbageCollect(cacheFolder, lessImportantDirs)
   
       displaySize = {'width': self.settings.getUser('width'), 'height': self.settings.getUser('height'), 'force_orientation': self.settings.getUser('force_orientation')}
       randomize = (not self.ignoreRandomize) and bool(self.settings.getUser('randomize_images'))
