@@ -32,6 +32,7 @@ from modules.diskmanager import DiskManager
 
 class slideshow:
   SHOWN_IP = True
+  EVENTS = ["nextImage", "prevImage", "nextAlbum", "prevAlbum", "settingsChange", "memoryForget", "clearCache"]
 
   def __init__(self, display, settings, colormatch):
     self.queryPowerFunc = None
@@ -91,6 +92,10 @@ class slideshow:
     self.delayer.set()
 
   def createEvent(self, cmd):
+    if cmd not in slidehsow.EVENTS:
+      logging.warning("Unknown event '%s' detected!"%cmd)
+      return 
+
     if cmd == "settingsChange":
       self.skipPreloadedImage = True
     elif cmd == "memoryForget":

@@ -536,11 +536,8 @@ def services_operations(action):
 @app.route('/control/<cmd>')
 @auth.login_required
 def control_slideshow(cmd):
-  if cmd in slideshowEvents:
-    slideshow.createEvent(cmd)
-    return jsonify({'control': True})
-
-  abort(404)
+  slideshow.createEvent(cmd)
+  return jsonify({'control': True})
 
 
 settings = settings()
