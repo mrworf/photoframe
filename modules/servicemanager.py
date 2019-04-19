@@ -276,9 +276,11 @@ class ServiceManager:
   def getAllServiceStates(self):
     serviceStates = []
     for id in self._SERVICES:
-      name = self._SERVICES[id]['service'].getName()
+      svc = self._SERVICES[id]['service']
+      name = svc.getName()
       state = self.getServiceState(id)
-      serviceStates.append((name, state))
+      additionalInfo = svc.explainState()
+      serviceStates.append((name, state, additionalInfo))
     return serviceStates
 
   def _migrate(self):

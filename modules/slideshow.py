@@ -170,7 +170,7 @@ class slideshow:
         msg = 'Photoframe isn\'t ready yet\n\nPlease direct your webbrowser to\n\nhttp://%s:7777/\n\nand add one or more photo providers' % self.settings.get('local-ip')
       else:
         msg = 'Please direct your webbrowser to\n\nhttp://%s:7777/\n\nto complete the setup process:\n\n' % self.settings.get('local-ip')
-        for svcName, state in serviceStates:
+        for svcName, state, additionalInfo in serviceStates:
           msg += "\n\n'"+svcName+"' --> "
           if state == 'OAUTH':
             msg += "Authorization required!"
@@ -180,13 +180,14 @@ class slideshow:
             msg += "add one or more keywords (album names)"
           elif state == 'NO_IMAGES_DETECTED':
             msg += "no images could be found!"
-            if svcName == 'USB-Photos':
-              msg += "\nPlace images and/or albums inside a '/photoframe'-directory on your storage device"
           elif state == 'CONNECT_STORAGE_DEVICE':
             msg += "no storage device (e.g. USB-stick) was detected!"
           else:
             msg += "not ready for unknown reasons!"
-        
+
+          if additionalInfo is not None:
+            msg += "\n"+additionalInfo
+          
       self.display.message(msg)
       self.imageOnScreen = False
       return True

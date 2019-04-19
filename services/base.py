@@ -162,6 +162,11 @@ class BaseService:
       ]
     return []
 
+  def explainState(self):
+    # override this if you wish to show additional on-screen information for a specific state
+    # return String
+    return None
+
   ###[ All the OAuth functionality ]###########################
 
   def getOAuthScope(self):
