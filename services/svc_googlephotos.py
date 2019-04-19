@@ -223,7 +223,7 @@ class GooglePhotos(BaseService):
       # Make sure we don't get a video, unsupported for now (gif is usually bad too)
       if entry['mimeType'] in types:
         self.imageIndex = index
-        imageSize = self.getPreferredImageSize(entry['mediaMetadata'], displaySize)
+        imageSize = self.calculateRecommendedImageSize(entry['mediaMetadata'], displaySize)
         return entry['id'], entry['mimeType'], entry['baseUrl'] + "=w" + str(imageSize["width"]) + "-h" + str(imageSize["height"]), entry['productUrl']
       else:
         logging.debug('Unsupported media: %s' % (entry['mimeType']))

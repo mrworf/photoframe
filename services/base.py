@@ -69,10 +69,17 @@ class BaseService:
     self._DIR_PRIVATE = os.path.join(self._DIR_BASE, 'private')
     self._FILE_STATE = os.path.join(self._DIR_BASE, 'state.json')
 
+    # MEMORY stores unique image ids of already displayed images
+    # it prevents an image from being shown multiple times, before ALL images have been displayed
+    # From time to time, memory is saved to disk as a backup. 
     self._MEMORY = None
     self._MEMORY_KEY = None
 
+    # HISTORY stores (keywordId, imageId)-pairs
+    # That way it can be useful to determine any previously displayed image
+    # Unlike memory, the history is only stored in RAM
     self._HISTORY = []
+
     self.resetIndices()
 
     self.loadState()
@@ -264,7 +271,7 @@ class BaseService:
   def validateKeywords(self, keywords):  # shouldn't this be 'validateKeyword' (singular)?
     return {'error':None, 'keywords': keywords}
 
-  def addKeywords(self, keywords): #shouldn't this be 'addKeyword' (singular)? seems a bit confusing to me, because 'keywords' is a string and not a list!
+  def addKeywords(self, keywords):
     # This is how the user will configure it, this adds a new set of keywords to this
     # service module. Return none on success, string with error on failure
     keywords = keywords.strip()
@@ -376,6 +383,40 @@ class BaseService:
             f.write(chunk)
     return result
 
+  def calculateRecommendedImageSize(self, imageSize, displaySize):
+    # The recommended image size is basically the displaySize extended along one side to match the aspect ratio of your image
+    # e.g. displaySize: 1920x1080, imageSize: 4000x3000 --> recImageSize: 1920x1440
+    # If possible every image request url should contain the recommended width/height parameters
+    # That way the image provider does most of the scaling for us and
+    # the image only needs to be cropped (zoomOnly) or downscaled a little bit (blur / do nothing) during post-processing
+
+    oar = float(imageSize['width'])/float(imageSize['height'])
+    dar = float(displaySize['width'])/float(displaySize['height'])
+
+    newImageSize = {}
+    if imageSize['width'] > displaySize['width'] and imageSize['height'] > displaySize['height']:
+      if oar <= dar:
+        newImageSize['width'] = displaySize['width']
+        newImageSize['height'] = int(float(displaySize['width']) / oar)
+      else:
+        newImageSize['width'] = int(float(displaySize['height']) * oar)
+        newImageSize['height'] = displaySize['height']
+    else:
+      newImageSize['width'] = imageSize['width']
+      newImageSize['height'] = imageSize['height']
+
+    return newImageSize
+
+  def isCorrectOrientation(self, metadata, displaySize):
+    if displaySize['force_orientation'] == 0:
+      return True
+
+    # NOTE: square images are being treated as portrait-orientation
+    image_orientation = 0 if int(metadata["width"]) > int(metadata["height"]) else 1
+    display_orientation = 0 if displaySize["width"] > displaySize["height"] else 1
+
+    return image_orientation == display_orientation
+
   def getStoragePath(self):
     return self._DIR_PRIVATE
 
@@ -437,13 +478,17 @@ class BaseService:
     return h in self._MEMORY
 
   def memoryForgetLast(self, keywords=None):
+    # remove the currently displayed image from memory as well as history
+    # implications: 
+    # - the image will be treated as never seen before (random image order)
+    # - the same image will be preloaded again during 'prepareNextItem' (non-random image order)
     self._fetchMemory(keywords)
     if len(self._MEMORY) != 0:
       self._MEMORY.pop()
-    if len(self._HISTORY) == 0:
-      logging.warning("Trying to forget a single memory, but 'self._HISTORY' is empty. This should have never happened!")
-    else:
+    if len(self._HISTORY) != 0:
       self.keywordIndex, self.imageIndex = self._HISTORY.pop()
+    else:
+      logging.warning("Trying to forget a single memory, but 'self._HISTORY' is empty. This should have never happened!")
 
   def memoryForget(self, keywords=None, forgetHistory=False):
     self._fetchMemory(keywords)
@@ -454,36 +499,11 @@ class BaseService:
     if forgetHistory:
       self._HISTORY = []
 
-  def getPreferredImageSize(self, imageSize, displaySize):
-    # Calculate the size we need to avoid black borders
-    oar = float(imageSize['width'])/float(imageSize['height'])
-    dar = float(displaySize['width'])/float(displaySize['height'])
-
-    newImageSize = {}
-    if imageSize['width'] > displaySize['width'] and imageSize['height'] > displaySize['height']:
-      if oar <= dar:
-        newImageSize['width'] = displaySize['width']
-        newImageSize['height'] = int(float(displaySize['width']) / oar)
-      else:
-        newImageSize['width'] = int(float(displaySize['height']) * oar)
-        newImageSize['height'] = displaySize['height']
-    else:
-      newImageSize['width'] = imageSize['width']
-      newImageSize['height'] = imageSize['height']
-
-    return newImageSize
-
-  def isCorrectOrientation(self, metadata, displaySize):
-    if displaySize['force_orientation'] == 0:
-      return True
-
-    # NOTE: square images are being treated as portrait-orientation
-    image_orientation = 0 if int(metadata["width"]) > int(metadata["height"]) else 1
-    display_orientation = 0 if displaySize["width"] > displaySize["height"] else 1
-
-    return image_orientation == display_orientation
+  ###[ Slideshow controls ]=======================================================
 
   def nextAlbum(self):
+    # skip to the next album
+    # return False if service is out of albums to tell the serviceManager that it should use the next Service instead
     self.imageIndex = 0
     self.keywordIndex += 1
     if self.keywordIndex >= len(self._STATE['_KEYWORDS']):
@@ -492,6 +512,8 @@ class BaseService:
     return True
 
   def prevAlbum(self):
+    # skip to the previous album
+    # return False if service is already on its first album to tell the serviceManager that it should use the previous Service instead
     self.imageIndex = 0
     self.keywordIndex -= 1
     if self.keywordIndex < 0:

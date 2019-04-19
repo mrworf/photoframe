@@ -225,7 +225,7 @@ class slideshow:
     # Delay before we show the image (but take processing into account)
     # This should keep us fairly consistent
     delay = self.settings.getUser('interval')
-    if time_process < delay and self.imageOnScreen:  # or self.imageCurrent is None: why wait when imageCurrent is None ()
+    if time_process < delay and self.imageOnScreen:
       self.delayer.wait(delay - time_process)
       self.delayer.clear()
 
