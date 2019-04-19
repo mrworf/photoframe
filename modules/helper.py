@@ -96,7 +96,7 @@ class helper:
 
 	# can also be used to check if image file is corrupted
 	@staticmethod
-	def getImageSize(filename, deleteCurruptedImage=False):
+	def getImageSize(filename):
 		if not os.path.isfile(filename):
 			return None
 
@@ -104,9 +104,6 @@ class helper:
 			try:
 				output = subprocess.check_output(['/usr/bin/identify', filename], stderr=void)
 			except:
-				if deleteCurruptedImage:
-					logging.debug("Deleting currupted (cached) image: %s"%filename)
-					os.unlink(filename)
 				return None
 
 		m = re.search('([1-9][0-9]*)x([1-9][0-9]*)', output)

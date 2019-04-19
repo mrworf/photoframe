@@ -172,9 +172,12 @@ class GooglePhotos(BaseService):
 
       filename = os.path.join(destinationDir, imageId)
       # check if cached image exists or is corrupted
-      if helper.getImageSize(filename, deleteCurruptedImage=True) is not None:
+      if helper.getImageSize(filename) is not None:
         logging.debug("using cached image: '%s'"%filename)
         return {'id': imageId, 'mimetype': helper.getMimeType(filename), 'error': None, 'source': None}
+      elif os.path.isfile(filename):
+        logging.debug("Deleting currupted (cached) image: %s" % filename)
+        os.unlink(filename)
 
       result = self.requestUrl(imageUrl, destination=filename)
       if result['status'] == 200:
