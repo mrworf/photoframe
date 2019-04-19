@@ -344,13 +344,14 @@ class BaseService:
     # displaySize holds the keys width & height to provide a hint for the service to avoid downloading HUGE files
     # Return for this function is a key/value map with the following MANDATORY
     # fields:
+    #  "id" : a unique - preferably not-changing - ID to identify the same image in future requests, e.g. hash(imageUrl)
     #  "mimetype" : the filetype you downloaded, for example "image/jpeg"
     #  "error" : None or a human readable text string as to why you failed
     #  "source" : Link to where the item came from or None if not provided
     #
     # NOTE! If you need to index anything before you can get the first item, this would
     # also be the place to do it.
-    result = {'mimetype': None, 'error': 'You haven\'t implemented this yet', 'source': None, 'filename': None}
+    result = {'id': None, 'mimetype': None, 'error': 'You haven\'t implemented this yet', 'source': None}
     return result
 
   ###[ Helpers ]######################################
@@ -443,6 +444,7 @@ class BaseService:
     self._MEMORY_KEY = h
 
   def _differentThanLastHistory(self, keywordindex, imageIndex):
+    # just a little helper function to compare indices with the indices of the previously displayed image
     if len(self._HISTORY) == 0:
       return True
     if keywordindex == self._HISTORY[-1][0] and imageIndex == self._HISTORY[-1][1]:
@@ -450,25 +452,30 @@ class BaseService:
     return True
 
   def memoryRemember(self, itemId, keywords=None, alwaysRemember=True):
+    # some debug info about the service of the currently displayed image
     logging.debug("Displaying new image")
     logging.debug(self._NAME)
     logging.debug("keyword: %d; index: %d" % (self.keywordIndex, self.imageIndex))
 
+    # The MEMORY makes sure that this image won't be shown again until memoryForget is called
     self._fetchMemory(keywords)
     h = self.hashString(itemId)
     if h not in self._MEMORY:
       self._MEMORY.append(h)
-    
-    # only remember if image has changed
-    rememberInHistory = alwaysRemember or self._differentThanLastHistory(self.keywordIndex, self.imageIndex)
-    if rememberInHistory:
-      self._HISTORY.append((self.keywordIndex, self.imageIndex))
-    self.imageIndex += 1
-
+    # save memory
     if (len(self._MEMORY) % 20) == 0:
       logging.info('Interim saving of memory every 20 entries')
       with open(os.path.join(self._DIR_MEMORY, '%s.json' % self._MEMORY_KEY), 'w') as f:
         json.dump(self._MEMORY, f)
+    
+    # annoying behaviour fix: only remember current image in history if the image has actually changed
+    rememberInHistory = alwaysRemember or self._differentThanLastHistory(self.keywordIndex, self.imageIndex)
+    if rememberInHistory:
+      # The HISTORY makes it possible to show previously displayed images
+      self._HISTORY.append((self.keywordIndex, self.imageIndex))
+
+    # (non-random image order only): on 'prepareNextItem' --> make sure to preload the following image
+    self.imageIndex += 1
 
     return rememberInHistory
 
