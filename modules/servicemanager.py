@@ -353,7 +353,7 @@ class ServiceManager:
       svc = self.forceService
     elif randomize:
       availableServices = [s for s in availableServices if self._SERVICES[s['id']]['service'] not in self._OUT_OF_IMAGES]
-      logging.debug("# of avaialable services %d"%len(availableServices))
+      logging.debug("# of available services %d"%len(availableServices))
       if len(availableServices) == 0:
         self.memoryForget()
         availableServices = self.getServices(readyOnly=True)

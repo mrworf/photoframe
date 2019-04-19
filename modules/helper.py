@@ -63,15 +63,15 @@ class helper:
 			return None
 
 		cmd = ["/usr/bin/file", "--mime", filename]
-		try:
-			process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-			out, err = process.communicate()
-			mimetype = out.lstrip(filename).lstrip(":").strip()
-			if "; charset=" in mimetype:
-				mimetype = mimetype.split("; charset=")[0]
-		except subprocess.CalledProcessError as e:
-			logging.debug("unable to determine mimetype of file: %s" % filename)
-			return None
+		with open(os.devnull, 'wb') as void:
+			try:
+				output = subprocess.check_output(cmd, stderr=void).strip("\n")
+				mimetype = output.lstrip(filename+":").strip()
+				if "; charset=" in mimetype:
+					mimetype = mimetype.split("; charset=")[0]
+			except subprocess.CalledProcessError as e:
+				logging.debug("unable to determine mimetype of file: %s" % filename)
+				return None
 		return mimetype
 
 	@staticmethod
