@@ -41,15 +41,15 @@ class CacheManager:
   STATE_CRITICAL = 3
   STATE_FULL = 4
 
-@staticmethod
-def formatBytes(size):
-  if size > 0.1*GB:
-    return "%.1fGB" % (float(size)/GB)
-  elif size > 0.1*MB:
-    return "%.1fMB" % (float(size)/MB)
-  elif size > 0.1*KB:
-    return "%.1fKB" % (float(size)/KB)
-  return "%dB" % size
+  @staticmethod
+  def formatBytes(size):
+    if size > 0.1*GB:
+      return "%.1fGB" % (float(size)/GB)
+    elif size > 0.1*MB:
+      return "%.1fMB" % (float(size)/MB)
+    elif size > 0.1*KB:
+      return "%.1fKB" % (float(size)/KB)
+    return "%dB" % size
 
   @staticmethod
   def createDirs(path, subDirs=[]):
@@ -67,7 +67,7 @@ def formatBytes(size):
       logging.exception('Failed to delete "%s". Directory does not exist!' % path)
       return freedUpSpace
 
-    for p, dirs, files in os.walk(path):
+    for p, _dirs, files in os.walk(path):
       for filename in [os.path.join(p, f) for f in files]:
         freedUpSpace += os.stat(filename).st_size
         try:
@@ -84,7 +84,7 @@ def formatBytes(size):
   def deleteOldFiles(topPath, minAge):
     freedUpSpace = 0
     now = time.time()
-    for path, dirs, files in os.walk(topPath):
+    for path, _dirs, files in os.walk(topPath):
       for filename in [os.path.join(path, f) for f in files]:
         stat = os.stat(filename)
         if stat.st_mtime < now - minAge:
@@ -94,13 +94,13 @@ def formatBytes(size):
             freedUpSpace += stat.st_size
           except OSError as e:
             logging.warning("unable to delete file '%s'!" % filename)
-            logging.exception("Output: "+e.msg)
+            logging.exception("Output: "+e.strerror)
     return freedUpSpace
 
   @staticmethod
   def getDirSize(path):
     size = 0
-    for path, dirs, files in os.walk(path):
+    for path, _dirs, files in os.walk(path):
       for filename in [os.path.join(path, f) for f in files]:
         size += os.stat(filename).st_size
     return size
@@ -115,9 +115,9 @@ def formatBytes(size):
     total = float(stat.f_blocks*stat.f_bsize)
     free = float(stat.f_bfree*stat.f_bsize)
 
-    logging.debug("'%s' takes up %s" % (path, formatBytes(dirSize)))
-    logging.debug("free space on partition: %s" % formatBytes(free))
-    logging.debug("total space on partition: %s" % formatBytes(total))
+    logging.debug("'%s' takes up %s" % (path, CacheManager.formatBytes(dirSize)))
+    logging.debug("free space on partition: %s" % CacheManager.formatBytes(free))
+    logging.debug("total space on partition: %s" % CacheManager.formatBytes(total))
 
     if free < 50*MB:
       return CacheManager.STATE_FULL
@@ -151,7 +151,7 @@ def formatBytes(size):
       freedUpSpace = CacheManager.deleteOldFiles(path, 6*MONTH)
 
     if freedUpSpace:
-      logging.info("Garbage Collector was able to free up %s of disk space!"%formatBytes(freedUpSpace))
+      logging.info("Garbage Collector was able to free up %s of disk space!" % CacheManager.formatBytes(freedUpSpace))
     else:
-      logging.debug("Garbage Collector was able to free up %s of disk space!" % formatBytes(freedUpSpace))
+      logging.debug("Garbage Collector was able to free up %s of disk space!" % CacheManager.formatBytes(freedUpSpace))
 

@@ -240,7 +240,7 @@ class GooglePhotos(BaseService):
     return {'albumId': albumid, 'sourceUrl' : source, 'albumName' : albumname}
 
   def selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize):
-    result = BaseService.selectImagefromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize)
+    result = BaseService.selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize)
     if result is not None:
       return result
 
@@ -288,10 +288,10 @@ class GooglePhotos(BaseService):
     if os.path.exists(filename):
       with open(filename, 'r') as f:
         images = json.load(f)
-    return self.parseImages(images)
+    return self.parseAlbumInfo(images)
 
-  def parseImages(self, images):
-    # parse Google specific keys into a format that the base service can understand
+  def parseAlbumInfo(self, images):
+    # parse GooglePhoto specific keys into a format that the base service can understand
     if images is None:
       return None
     parsedImages = []
@@ -302,7 +302,7 @@ class GooglePhotos(BaseService):
         "source": image["productUrl"],
         "mimetype": image["mimeType"],
         "size": dict((k, image["mediaMetadata"][k]) for k in ["width", "height"]),
-        "filename": image["filename"],
+        "filename": image["filename"]
       })
     return parsedImages
 

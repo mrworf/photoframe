@@ -17,13 +17,14 @@ import subprocess
 import socket
 import logging
 import os
+import shutil
 import re
 
 class helper:
 	@staticmethod
 	def getResolution():
 		res = None
-		output = subprocess.check_output(['/bin/fbset'], stderr=DEVNULL)
+		output = subprocess.check_output(['/bin/fbset'], stderr=subprocess.DEVNULL)
 		for line in output.split('\n'):
 			line = line.strip()
 			if line.startswith('mode "'):
@@ -69,10 +70,19 @@ class helper:
 				mimetype = output.lstrip(filename+":").strip()
 				if "; charset=" in mimetype:
 					mimetype = mimetype.split("; charset=")[0]
-			except subprocess.CalledProcessError as e:
+			except subprocess.CalledProcessError:
 				logging.debug("unable to determine mimetype of file: %s" % filename)
 				return None
 		return mimetype
+
+	@staticmethod
+	def copyFile(orgFilename, newFilename):
+		try:
+			shutil.copyfile(orgFilename, newFilename)
+		except:
+			logging.exception('Unable copy file from "%s" to "%s"'%(orgFilename, newFilename))
+			return False
+		return True
 
 	@staticmethod
 	def scaleImage(orgFilename, newFilename, newSize):
@@ -126,7 +136,6 @@ class helper:
 		width_border = 15
 		width_spacing = 3
 		border = None
-		borderSmall = None
 		spacing = None
 
 		# Calculate actual size of image based on display

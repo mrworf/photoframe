@@ -92,7 +92,7 @@ class slideshow:
     self.delayer.set()
 
   def createEvent(self, cmd):
-    if cmd not in slidehsow.EVENTS:
+    if cmd not in slideshow.EVENTS:
       logging.warning("Unknown event '%s' detected!"%cmd)
       return 
 
@@ -199,7 +199,7 @@ class slideshow:
       return True
     return False
 
-  def _colormatch(self, filename):
+  def _colormatch(self, filenameProcessed):
     if self.colormatch.hasSensor():
       # For Now: Always process original image (no caching of colormatch-adjusted images)
       # 'colormatched_tmp.jpg' will be deleted after the image is displayed
@@ -207,7 +207,7 @@ class slideshow:
       if self.colormatch.adjust(filenameProcessed, filenameTemp):
         return filenameTemp
       logging.warning('Unable to adjust image to colormatch, using original')
-    return filename
+    return filenameProcessed
 
   def process(self, filename):
     imageSizing = self.settings.getUser('imagesizing')
