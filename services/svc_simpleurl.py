@@ -23,68 +23,74 @@ class SimpleUrl(BaseService):
   SERVICE_NAME = 'Simple URL'
   SERVICE_ID   = 3
 
-
   def __init__(self, configDir, id, name):
     BaseService.__init__(self, configDir, id, name, needConfig=False, needOAuth=False)
+
+    self.brokenUrls = []
 
   def helpKeywords(self):
     return 'Each item is a URL that should return a single image. The URL may contain the terms "{width}" and/or "{height}" which will be replaced by numbers describing the size of the display.'
 
-  def prepareNextItem(self, destinationDir, supportedMimeTypes, displaySize, randomize):
-    urlList = list(self.getKeywords())
-    count = len(urlList)
-    if count == 0:
-      return {'mimetype': None, 'error': 'No URLs have been specified', 'source': None, 'filename': None}
+  def removeKeywords(self, index):
+    url = self.getKeywords()[index]
+    result = BaseService.removeKeywords(self, index)
+    if result and url in self.brokenUrls:
+      self.brokenUrls.remove(url)
+    return result
 
-    if randomize:
-      offset = self.getRandomKeywordIndex()
-    else:
-      offset = self.keywordIndex + self.imageIndex
+  def getMessages(self):
+    msgs = BaseService.getMessages(self)
+    if len(self.brokenUrls) != 0:
+      msgs.append(
+        {
+          'level': 'WARNING',
+          'message': 'Broken urls or unsupported images detected!\nPlease remove %s' % str([".../"+self.getUrlFilename(url) for url in self.brokenUrls]),
+          'link': None
+        }
+      )
+    return msgs
 
-    self.imageIndex = 0
-    for i in range(0, count):
-      if not randomize and (offset + i) >= count:
-        break
 
-      self.keywordIndex = (offset + i) % count
-      imageUrl = urlList[self.keywordIndex]
-      imageUrl = imageUrl.replace('{width}', str(displaySize['width']))
-      imageUrl = imageUrl.replace('{height}', str(displaySize['height']))
-      imageId = self.hashString(imageUrl)
-      filename = os.path.join(destinationDir, imageId)
-      if randomize and self.memorySeen(imageId):
-        logging.debug("Skipping already displayed image '%s'!" % filename)
-        continue
-      cachedImageSize = helper.getImageSize(filename, deleteCurruptedImage=True)
-      if cachedImageSize is not None:
-        if not self.isCorrectOrientation(cachedImageSize, displaySize):
-          logging.debug("Skipping image '%s' due to wrong orientation!" % filename)
-          continue
+  def getUrlFilename(self, url):
+    return url.rsplit("/", 1)[-1]
 
-        # use cached image
-        logging.debug("using cached image: '%s'" % filename)
-        return {'id': imageId, 'mimetype': helper.getMimeType(filename), 'error': None, 'source': None}
-
-      # download image
-      result = self.requestUrl(imageUrl, destination=filename)
-      if result['status'] == 200:
-        imageSize = helper.getImageSize(filename, deleteCurruptedImage=True)
-        if not self.isCorrectOrientation(cachedImageSize, displaySize):
-          logging.debug("Skipping image '%s' due to wrong orientation!" % filename)
-          continue
-        return {'id': imageId, 'mimetype': result['mimetype'], 'error': None, 'source': imageUrl}
-
-      logging.warning('SimpleUrl could not fetch image - status code ' + str(result['status']))
+  def selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize):
+    result = BaseService.selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize)
     
-    return {'id': None, 'mimetype': None, 'error': 'No images could be found.\nMake sure your urls each link to the actual image file!', 'source': None}
+    # catch unsupported mimetypes (can only be done after downloading the image)
+    # if no other errors occured
+    if result is not None and result["error"] is None and result["mimetype"] not in supportedMimeTypes:
+      logging.warning("unsupported mimetype '%s'. You should remove '.../%s' from keywords" % (result["mimetype"], self.getUrlFilename(result["source"])))
+      self.brokenUrls.append(result["source"])
+      # retry once (with another image)
+      result = BaseService.selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize)
+      if result is not None and result["error"] is None and result["mimetype"] not in supportedMimeTypes:
+        logging.warning("unsupported mimetype '%s'. You should remove '.../%s' from keywords" % (result["mimetype"], self.getUrlFilename(result["source"])))
+        self.brokenUrls.append(result["source"])
+        return {'id': None, 'mimetype': None, 'error': '%s includes urls that link to unsupported files!' % self.SERVICE_NAME, 'source': None}
 
+    return result
+
+  def getImagesFor(self, keyword):
+    url = keyword
+    if url in self.brokenUrls:
+      return []
+    image = {"id": self.hashString(url), "url": url, "source": url, "mimetype": None, "size": None, "filename": self.getUrlFilename(url)}
+    return [image]
+
+  def addUrlParams(self, url, _recommendedSize, displaySize):
+    url = url.replace('{width}', str(displaySize['width']))
+    url = url.replace('{height}', str(displaySize['height']))
+    return url
 
   # Treat the entire service as one album
   # That way you can group images by creating multiple Simple Url Services
   def nextAlbum(self):
+    # Tell the serviceManager to use next service instead
     return False
 
   def prevAlbum(self):
+    # Tell the serviceManager to use previous service instead
     return False
 
   def resetToLastAlbum(self):

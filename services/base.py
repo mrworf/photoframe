@@ -21,6 +21,7 @@ import logging
 import requests
 
 from modules.oauth import OAuth
+from modules.helper import helper
 
 # This is the base implementation of a service. It provides all the
 # basic features like OAuth and Authentication as well as state and
@@ -351,10 +352,129 @@ class BaseService:
     #
     # NOTE! If you need to index anything before you can get the first item, this would
     # also be the place to do it.
-    result = {'id': None, 'mimetype': None, 'error': 'You haven\'t implemented this yet', 'source': None}
+    #
+    # If your service uses keywords (as albums) you probably only need to implement 'getImagesFor' and 'addUrlParams'
+
+    if self.needKeywords():
+      result = self.selectImageFromAlbum(destinationFile, supportedMimeTypes, displaySize, randomize)
+      if result is None:
+        result = {'id': None, 'mimetype': None, 'source': None, 'error': 'No (new) images could be found!'}
+    else:
+      result = {'id': None, 'mimetype': None, 'source': None, 'error': 'You haven\'t implemented this yet!'}
+
     return result
 
+  def getImagesFor(self, keyword):
+    # TODO explanation
+    # id, mimetype, url, size, filename, sources
+
+    return None
+
+  def addUrlParams(self, url, recommendedSize, displaySize):
+    # If the service provider allows 'width' / 'height' parameters 
+    # override this function and place them inside the url.
+    # If the recommendedSize is None (due to unknown imageSize) 
+    # use the displaySize instead (better than nothing, but image quality might suffer a little bit)
+
+    return url
+
   ###[ Helpers ]######################################
+
+  def selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize):
+    # chooses an album and selects an image from that album --> return {'id':, 'mimetype':, 'error':, 'source':}
+    # if no (new) images can be found --> return None
+
+    keywordList = list(self.getKeywords())
+    keywordCount = len(keywordList)
+    if keywordCount == 0:
+      return {'id': None, 'mimetype': None, 'source': None, 'error': 'No albums have been specified'}
+
+    if randomize:
+      index = self.getRandomKeywordIndex()
+    else:
+      index = self.keywordIndex
+
+    # if current keywordList[index] does not contain any new images --> just run through all albums
+    for i in range(0, keywordCount):
+      if not randomize and (index + i) >= keywordCount:
+        # (non-random image order): return if the last album is exceeded --> serviceManager should use next service
+        break
+      self.keywordIndex = (index + i) % keywordCount
+      keyword = keywordList[self.keywordIndex]
+      
+      # a provider-specific implementation for 'getImagesFor' is obligatory!
+      images = self.getImagesFor(keyword)
+      if images is None:
+        return {'id': None, 'mimetype': None, 'source': None, 'error': 'You haven\'t implemented "getImagesFor" yet'}
+      elif len(images) == 0:
+        self.imageIndex = 0
+        continue
+      elif any(key not in images[0].keys() for key in ['id', 'url', 'mimetype', 'source', 'filename']):
+        return {'id': None, 'mimetype': None, 'source': None, 'error': 'You haven\'t implemented "getImagesFor" correctly (some keys are missing)'}
+
+      image = self.selectImage(images, supportedMimeTypes, displaySize, randomize)
+      if image is None:
+        self.imageIndex = 0
+        continue
+
+      filename = os.path.join(destinationDir, image['id'])
+      if self.useCachedImage(filename):
+        if image['mimetype'] is None:
+          image['mimetype'] = helper.getMimeType(filename)
+        return {'id': image['id'], 'mimetype': image['mimetype'], 'source': image['source'], 'error': None}
+
+      # you should implement 'addUrlParams' if the provider allows 'width' / 'height' parameters!
+      recommendedSize = self.calcRecommendedSize(image['size'], displaySize)
+      url = self.addUrlParams(image['url'], recommendedSize, displaySize)
+
+      result = self.requestUrl(url, destination=filename)
+      if result['status'] == 200:
+        if image['mimetype'] is None:
+          image['mimetype'] = result['mimetype']
+        return {'id': image['id'], 'mimetype': image['mimetype'], 'source': image['source'], 'error': None}
+      else:
+        return {'id': None, 'mimetype': None, 'source': None, 'error': "%d: Unable to download image!" % result['status']}
+
+    self.resetIndices()
+    return None
+
+  def selectImage(self, images, supportedMimeTypes, displaySize, randomize):
+    imageCount = len(images)
+    if randomize:
+      index = random.SystemRandom().randint(0, imageCount-1)
+    else:
+      index = self.imageIndex
+
+    for i in range(0, imageCount):
+      if not randomize and (index + i) >= imageCount:
+        break
+
+      self.imageIndex = (index + i) % imageCount
+      image = images[self.imageIndex]
+
+      orgFilename = image['filename'] if image['filename'] is not None else image['id']
+      if randomize and self.memorySeen(image['id']):
+        logging.debug("Skipping already displayed image '%s'!" % orgFilename)
+        continue
+      if not self.isCorrectOrientation(image['size'], displaySize):
+        logging.debug("Skipping image '%s' due to wrong orientation!" % orgFilename)
+        continue
+      if image['mimetype'] is not None and image['mimetype'] not in supportedMimeTypes:
+        # Make sure we don't get a video, unsupported for now (gif is usually bad too)
+        logging.debug('Unsupported media: %s' % (image['mimetype']))
+        continue
+
+      return image
+    return None
+
+  def useCachedImage(self, filename):
+    if helper.getImageSize(filename) is not None:
+      logging.debug("using cached image: '%s'"%filename)
+      return True
+    elif os.path.isfile(filename):
+      logging.debug("Deleting currupted (cached) image: %s" % filename)
+      os.unlink(filename)
+    return False
 
   def requestUrl(self, url, destination=None, params=None, data=None, usePost=False):
     result = {'status':500, 'content' : None}
@@ -384,12 +504,15 @@ class BaseService:
             f.write(chunk)
     return result
 
-  def calculateRecommendedImageSize(self, imageSize, displaySize):
+  def calcRecommendedSize(self, imageSize, displaySize):
     # The recommended image size is basically the displaySize extended along one side to match the aspect ratio of your image
     # e.g. displaySize: 1920x1080, imageSize: 4000x3000 --> recImageSize: 1920x1440
-    # If possible every image request url should contain the recommended width/height parameters
-    # That way the image provider does most of the scaling for us and
-    # the image only needs to be cropped (zoomOnly) or downscaled a little bit (blur / do nothing) during post-processing
+    # If possible every request url should contain the recommended width/height as parameters to reduce image file sizes.
+    # That way the image provider does most of the scaling (instead of the rather slow raspberryPi),
+    # the image only needs to be cropped (zoomOnly) or downscaled a little bit (blur / do nothing) during post-processing.
+
+    if imageSize is None or "width" not in imageSize or "height" not in imageSize:
+      return None
 
     oar = float(imageSize['width'])/float(imageSize['height'])
     dar = float(displaySize['width'])/float(displaySize['height'])
@@ -408,12 +531,15 @@ class BaseService:
 
     return newImageSize
 
-  def isCorrectOrientation(self, metadata, displaySize):
+  def isCorrectOrientation(self, imageSize, displaySize):
     if displaySize['force_orientation'] == 0:
+      return True
+    if imageSize is None or "width" not in imageSize or "height" not in imageSize:
+      # always show image if size is unknown!
       return True
 
     # NOTE: square images are being treated as portrait-orientation
-    image_orientation = 0 if int(metadata["width"]) > int(metadata["height"]) else 1
+    image_orientation = 0 if int(imageSize["width"]) > int(imageSize["height"]) else 1
     display_orientation = 0 if displaySize["width"] > displaySize["height"] else 1
 
     return image_orientation == display_orientation

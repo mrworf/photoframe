@@ -141,53 +141,6 @@ class GooglePhotos(BaseService):
       self.setExtras(extras)
     return result
 
-  def prepareNextItem(self, destinationDir, supportedMimeTypes, displaySize, randomize):
-    keywordList = list(self.getKeywords())
-    offset = 0
-
-    if len(keywordList) == 0:
-      return {'mimetype': None, 'error': 'No albums have been specified', 'source': None, 'filename': None}
-    else:
-      if randomize:
-        offset = self.getRandomKeywordIndex()
-      else:
-        offset = self.keywordIndex
-
-    total = len(keywordList)
-    for i in range(0, total):
-      if not randomize and (offset + i) >= total:
-        break
-
-      self.keywordIndex = (offset + i) % total
-      keyword = keywordList[self.keywordIndex]
-      images = self.getImagesFor(keyword)
-      if images is None:
-        self.imageIndex = 0
-        continue
-
-      imageId, mimeType, imageUrl, sourceUrl = self.getUrlFromImages(supportedMimeTypes, displaySize, images, randomize)
-      if imageUrl is None:
-        self.imageIndex = 0
-        continue
-
-      filename = os.path.join(destinationDir, imageId)
-      # check if cached image exists or is corrupted
-      if helper.getImageSize(filename) is not None:
-        logging.debug("using cached image: '%s'"%filename)
-        return {'id': imageId, 'mimetype': helper.getMimeType(filename), 'error': None, 'source': None}
-      elif os.path.isfile(filename):
-        logging.debug("Deleting currupted (cached) image: %s" % filename)
-        os.unlink(filename)
-
-      result = self.requestUrl(imageUrl, destination=filename)
-      if result['status'] == 200:
-        return {'id': imageId, 'mimetype': mimeType, 'error': None, 'source': sourceUrl}
-
-    # Don't assume spelling by default, make sure API is enabled first!
-    if not self.isGooglePhotosEnabled():
-      return {'id': None, 'mimetype': None, 'error': '"Photos Library API" is not enabled on\nhttps://console.developers.google.com\n\nCheck the Photoframe Wiki for details', 'source': None}
-    else:
-      return {'id': None, 'mimetype': None, 'error': 'No images could be found.\nCheck spelling or make sure you have added albums', 'source': None}
 
   def isGooglePhotosEnabled(self):
     url = 'https://photoslibrary.googleapis.com/v1/albums'
@@ -196,42 +149,6 @@ class GooglePhotos(BaseService):
 {\n  "error": {\n    "code": 403,\n    "message": "Photos Library API has not been used in project 742138104895 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/photoslibrary.googleapis.com/overview?project=742138104895 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.",\n    "status": "PERMISSION_DENIED",\n    "details": [\n      {\n        "@type": "type.googleapis.com/google.rpc.Help",\n        "links": [\n          {\n            "description": "Google developers console API activation",\n            "url": "https://console.developers.google.com/apis/api/photoslibrary.googleapis.com/overview?project=742138104895"\n          }\n        ]\n      }\n    ]\n  }\n}\n'
     '''
     return not (data['status'] == 403 and 'Enable it by visiting' in data['content'])
-
-  def getUrlFromImages(self, types, displaySize, images, randomize):
-    # Next, pick an image
-    count = len(images)
-    if randomize:
-      offset = random.SystemRandom().randint(0, count-1)
-    else:
-      offset = self.imageIndex
-      if offset >= count:
-        # album end reached
-        return None, None, None, None
-
-    for i in range(0, count):
-      if not randomize and (offset + i) >= count:
-        return None, None, None, None
-
-      index = (offset + i) % count
-
-      if randomize and self.memorySeen(images[index]['id']):
-        logging.debug("Skipping already displayed image '%s'!" % images[index]['filename'])
-        continue
-      
-      if not self.isCorrectOrientation(images[index]['mediaMetadata'], displaySize):
-        logging.debug("Skipping image '%s' due to wrong orientation!" % images[index]['filename'])
-        continue
-
-      entry = images[index]
-      # Make sure we don't get a video, unsupported for now (gif is usually bad too)
-      if entry['mimeType'] in types:
-        self.imageIndex = index
-        imageSize = self.calculateRecommendedImageSize(entry['mediaMetadata'], displaySize)
-        return entry['id'], entry['mimeType'], entry['baseUrl'] + "=w" + str(imageSize["width"]) + "-h" + str(imageSize["height"]), entry['productUrl']
-      else:
-        logging.debug('Unsupported media: %s' % (entry['mimeType']))
-      entry = None
-    return None, None, None, None
 
   def getQueryForKeyword(self, keyword):
     result = None
@@ -322,6 +239,16 @@ class GooglePhotos(BaseService):
       return None
     return {'albumId': albumid, 'sourceUrl' : source, 'albumName' : albumname}
 
+  def selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize):
+    result = BaseService.selectImagefromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize)
+    if result is not None:
+      return result
+
+    if not self.isGooglePhotosEnabled():
+      return {'id': None, 'mimetype': None, 'source': None, 'error': '"Photos Library API" is not enabled on\nhttps://console.developers.google.com\n\nCheck the Photoframe Wiki for details'}
+    else:
+      return {'id': None, 'mimetype': None, 'source': None, 'error': 'No (new) images could be found.\nCheck spelling or make sure you have added albums'}
+    
   def getImagesFor(self, keyword):
     images = None
     filename = os.path.join(self.getStoragePath(), self.hashString(keyword) + '.json')
@@ -361,4 +288,27 @@ class GooglePhotos(BaseService):
     if os.path.exists(filename):
       with open(filename, 'r') as f:
         images = json.load(f)
-    return images
+    return self.parseImages(images)
+
+  def parseImages(self, images):
+    # parse Google specific keys into a format that the base service can understand
+    if images is None:
+      return None
+    parsedImages = []
+    for image in images:
+      parsedImages.append({
+        "id": image["id"],
+        "url": image["baseUrl"],
+        "source": image["productUrl"],
+        "mimetype": image["mimeType"],
+        "size": dict((k, image["mediaMetadata"][k]) for k in ["width", "height"]),
+        "filename": image["filename"],
+      })
+    return parsedImages
+
+  def addUrlParams(self, url, recommendedSize, _displaySize):
+    return url + "=w" + str(recommendedSize["width"]) + "-h" + str(recommendedSize["height"])
+    
+
+
+
