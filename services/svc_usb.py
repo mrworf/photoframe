@@ -22,6 +22,7 @@ import logging
 
 from modules.helper import helper
 
+
 class USB_Photos(BaseService):
   SERVICE_NAME = 'USB-Photos'
   SERVICE_ID = 4
@@ -30,7 +31,7 @@ class USB_Photos(BaseService):
   BASE_DIR = "/mnt/usb/photoframe"
 
   def __init__(self, configDir, id, name):
-    BaseService.__init__(self, configDir, id, name, needConfig=False, needOAuth=False)  
+    BaseService.__init__(self, configDir, id, name, needConfig=False, needOAuth=False)
 
   def preSetup(self):
     self.device = None
@@ -46,7 +47,6 @@ class USB_Photos(BaseService):
       if device is None:
         # Service should still be working fine
         logging.warning("Unable to determine which storage device is mounted to '%s'" % USB_Photos.USB_DIR)
-      
 
   def helpKeywords(self):
     return "Place photo albums in /photoframe/{album_name} on your usb-device.\nUse the {album_name} as keyword (CasE-seNsitiVe!).\nIf you want to display all albums simply write 'ALLALBUMS' as keyword.\nAlternatively, place images directly inside the '/photoframe/' directory. "
@@ -91,7 +91,7 @@ class USB_Photos(BaseService):
           logging.debug("USB-Service: removing keyword '%s' because there are no images directly inside the basedir!" % keyword)
           self.removeKeywords(index)
       elif keyword not in self.getAllAlbumNames():
-        logging.info("USB-Service: removing invalid keyword: %s"%keyword)
+        logging.info("USB-Service: removing invalid keyword: %s" % keyword)
         self.removeKeywords(index)
       index -= 1
 
@@ -102,6 +102,8 @@ class USB_Photos(BaseService):
     if len(self.getAllAlbumNames()) == 0 and len(self.getBaseDirImages()) == 0:
       self.unmountBaseDir()
       return BaseService.STATE_NO_IMAGES
+    if len(self.getKeywords()) == 0:
+      return BaseService.STATE_NEED_KEYWORDS
     return BaseService.updateState(self)
 
   def getMessages(self):
@@ -130,7 +132,7 @@ class USB_Photos(BaseService):
           if onlyMounted and mountPath is not None:
             storageDevices.append((sd, mountPath))
           elif onlyUnmounted and mountPath is not None:
-            logging.debug("'%s' is already mounted to '%s'"%(sd, mountPath))
+            logging.debug("'%s' is already mounted to '%s'" % (sd, mountPath))
           else:
             storageDevices.append(sd)
     except subprocess.CalledProcessError as e:
@@ -148,7 +150,7 @@ class USB_Photos(BaseService):
       try:
         subprocess.check_output(cmd, stderr=subprocess.STDOUT)
       except subprocess.CalledProcessError as e:
-        logging.exception('Unable to create directory: %s'%cmd[-1])
+        logging.exception('Unable to create directory: %s' % cmd[-1])
         logging.error('Output: %s' % repr(e.output))
 
     if storageDevices is None:
@@ -170,7 +172,7 @@ class USB_Photos(BaseService):
         logging.warning('Unable to mount storage device "%s" to "%s"!' % (device, USB_Photos.USB_DIR))
         logging.warning('Output: %s' % repr(e.output))
 
-    logging.debug("unable to mount any storage device %s to '%s'"%(storageDevices, USB_Photos.USB_DIR))
+    logging.debug("unable to mount any storage device %s to '%s'" % (storageDevices, USB_Photos.USB_DIR))
     return False
 
   def unmountBaseDir(self):
@@ -187,105 +189,67 @@ class USB_Photos(BaseService):
   def getAllAlbumNames(self):
     return filter(lambda x: os.path.isdir(os.path.join(USB_Photos.BASE_DIR, x)), os.listdir(USB_Photos.BASE_DIR))
 
-
-  def prepareNextItem(self, destinationDir, supportedMimeTypes, displaySize, randomize):
-    keywords = self.getKeywords()
-    keywordCount = len(keywords)
-    if keywordCount == 0:
-      return {'id': None, 'mimetype': None, 'error': 'Please add keywords to display albums!\n\nAlternatively, place images directly inside "/photoframe/"-directory on your USB-device', 'source': None}
-
-    if randomize:
-      keywordOffset = random.SystemRandom().randint(0, keywordCount-1)
-    else:
-      keywordOffset = self.keywordIndex
-
-    for i in range(0, keywordCount):
-      if not randomize and (keywordOffset + i) >= keywordCount:
-        break
-
-      self.keywordIndex = (i + keywordOffset) % keywordCount
-      keyword = keywords[self.keywordIndex]
-      images = self.getImagesFor(keyword)
-      if images is None:
-        self.imageIndex = 0
-        continue
-
-      usbFilename, imageId, mimetype, imageSize = self.selectImage(images, randomize, supportedMimeTypes, displaySize)
-      if usbFilename is None:
-        self.imageIndex = 0
-        continue
-      
-      # use complete path to image for hashing a new filename, because e.g. "IMG_0013.JPG" might be a duplicate
-      cacheFilename = os.path.join(destinationDir, imageId)
-      # check if cached image even exists or is corrupted
-      if helper.getImageSize(cacheFilename, deleteCurruptedImage=True) is not None:
-        logging.debug("using cached image: '%s'" % cacheFilename)
-      else:
-        # yes, even local images should be "cached", because many high-res images take really long to process (downsampling takes up to 10 seconds)
-        logging.debug("caching image: '%s" % cacheFilename)
-        newImageSize = self.getPreferredImageSize(imageSize, displaySize)
-        helper.scaleImage(usbFilename, cacheFilename, newImageSize)
-      return {'id': imageId, 'mimetype': mimetype, 'error': None, 'source': None}
+  def selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize):
+    result = BaseService.selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize)
+    if result is not None:
+      return result
 
     if os.path.exists(USB_Photos.USB_DIR):
-      return {'id': None, 'mimetype': None, 'error': 'No images could be found on storage device "%s"!\n\nPlease place albums inside /photoframe/{album_name} directory and add each {album_name} as keyword.\n\nAlternatively, put images directly inside the "/photoframe/"-directory on your storage device.'%self.device, 'source': None}
+      return {'id': None, 'mimetype': None, 'error': 'No images could be found on storage device "%s"!\n\nPlease place albums inside /photoframe/{album_name} directory and add each {album_name} as keyword.\n\nAlternatively, put images directly inside the "/photoframe/"-directory on your storage device.' % self.device}
     else:
-      return {'id': None, 'mimetype': None, 'error': 'No storage device detected! Please connect a USB-stick!\n\n Place albums inside /photoframe/{album_name} directory and add each {album_name} as keyword.\n\nAlternatively, put images directly inside the "/photoframe/"-directory on your storage device.', 'source': None}
+      return {'id': None, 'mimetype': None, 'error': 'No external storage device detected! Please connect a USB-stick!\n\n Place albums inside /photoframe/{album_name} directory and add each {album_name} as keyword.\n\nAlternatively, put images directly inside the "/photoframe/"-directory on your storage device.'}
 
   def getImagesFor(self, keyword):
     if not os.path.isdir(USB_Photos.BASE_DIR):
       #no usb device connected?
-      return None
+      return []
+    images = []
     if keyword == "_PHOTOFRAME_":
       files = self.getBaseDirImages()
-      return [os.path.join(USB_Photos.BASE_DIR, f) for f in files]
+      images = self.getAlbumInfo(USB_Photos.BASE_DIR, files)
     else:
-      if not os.path.isdir(os.path.join(USB_Photos.BASE_DIR, keyword)):
+      if os.path.isdir(os.path.join(USB_Photos.BASE_DIR, keyword)):
+        files = os.listdir(os.path.join(USB_Photos.BASE_DIR, keyword))
+        images = self.getAlbumInfo(os.path.join(USB_Photos.BASE_DIR, keyword), files)
+      else:
         logging.warning("The album '%s' does not exist. Did you unplug the storage device assosiated with '%s'?!" % (os.path.join(USB_Photos.BASE_DIR, keyword), self.device))
-        return None
-      files = os.listdir(os.path.join(USB_Photos.BASE_DIR, keyword))
-      return [os.path.join(USB_Photos.BASE_DIR, keyword, f) for f in files]
+    return images
 
-    
-  def selectImage(self, images, randomize, supportedMimeTypes, displaySize):
-    if images == None:
-      #"directory does not exist!"
-      return None, None, None, None
+  def getAlbumInfo(self, path, files):
+    images = []
+    for filename in files:
+      fullFilename = os.path.join(path, filename)
+      images.append({
+          "id": self.hashString(fullFilename),
+          "url": fullFilename,
+          "source": fullFilename,
+          "mimetype": helper.getMimeType(fullFilename),
+          "size": helper.getImageSize(fullFilename),
+          "filename": filename
+      })
+    return images
 
-    imageCount = len(images)
-    if imageCount == 0:
-      return None, None, None, None
+  def addUrlParams(self, url, recommendedSize, displaySize):
+    if recommendedSize is None:
+      return url
+    return "%s||%d||%d" % (url, recommendedSize["width"], recommendedSize["height"])
 
-    if randomize:
-      imageOffset = random.SystemRandom().randint(0, imageCount-1)
+  def requestUrl(self, url, destination=None, params=None, data=None, usePost=False):
+    # pretend to download the file (for compatability with 'selectImageFromAlbum' of baseService)
+    # instead just cache a scaled version of the file and return {status: 200}
+    if url.count("||") == 2:
+      filename, width, height = url.split("||", 2)
+      recSize = {"width": width, "height": height}
     else:
-      imageOffset = self.imageIndex
-      if imageOffset >= imageCount:
-        return None, None, None, None
+      filename = url
+      recSize = None
 
-    for i in range(0, imageCount):
-      if not randomize and (imageOffset + i) >= imageCount:
-        return None, None, None, None
-
-      imageIndex = (imageOffset + i) % imageCount
-
-      filename = images[imageIndex]
-      imageId = self.hashString(filename)
-      mimetype = helper.getMimeType(filename)
-      imageSize = helper.getImageSize(filename)
-      if randomize and self.memorySeen(imageId):
-        logging.debug("Skipping already displayed image '%s'!" % filename)
-        continue
-      if mimetype not in supportedMimeTypes:
-        logging.warning("unsupported mimetype: %s"%mimetype)
-        continue
-      if not self.isCorrectOrientation(imageSize, displaySize):
-        logging.debug("Skipping image '%s' due to wrong orientation!" % filename)
-        continue
-
-      self.imageIndex = imageIndex
-      return filename, imageId, mimetype, imageSize
-    return None, None, None, None
-
-
-    
+    if destination is None or not os.path.isfile(filename):
+      return {"status": 400}
+    if recSize is not None:
+      if helper.scaleImage(filename, destination, recSize):
+        return {"status": 200}
+    else:
+      if helper.copyFile(filename, destination):
+        return {"status": 200}
+    return {"status": 418}
