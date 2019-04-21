@@ -596,7 +596,6 @@ slideshow = slideshow(display, settings, colormatch)
 timekeeper = timekeeper(display.enable, slideshow.start)
 slideshow.setQueryPower(timekeeper.getDisplayOn)
 slideshow.setServiceManager(services)
-slideshowEvents = ["nextImage", "prevImage", "nextAlbum", "prevAlbum"]
 
 timekeeper.setConfiguration(settings.getUser('display-on'), settings.getUser('display-off'))
 timekeeper.setAmbientSensitivity(settings.getUser('autooff-lux'), settings.getUser('autooff-time'))
