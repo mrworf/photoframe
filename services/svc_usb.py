@@ -96,15 +96,25 @@ class USB_Photos(BaseService):
       index -= 1
 
   def updateState(self):
+    state = None
     if not os.path.exists(USB_Photos.BASE_DIR):
       if not self.mountStorageDevice():
-        return BaseService.STATE_NOT_CONNECTED
+        state = BaseService.STATE_NOT_CONNECTED
     if len(self.getAllAlbumNames()) == 0 and len(self.getBaseDirImages()) == 0:
       self.unmountBaseDir()
-      return BaseService.STATE_NO_IMAGES
-    if len(self.getKeywords()) == 0:
-      return BaseService.STATE_NEED_KEYWORDS
-    return BaseService.updateState(self)
+      state = BaseService.STATE_NO_IMAGES
+    if state is None:
+      state = BaseService.updateState(self)
+
+    self._CURRENT_STATE = state
+    return self._CURRENT_STATE
+
+  def explainState(self):
+    if self._CURRENT_STATE == BaseService.STATE_NOT_CONNECTED:
+      return "no storage device (e.g. USB-stick) detected!"
+    elif self._CURRENT_STATE == BaseService.STATE_NO_IMAGES:
+      return "no images could be found!\nPlace images and/or albums inside a '/photoframe'-directory on your storage device"
+    return None
 
   def getMessages(self):
     if os.path.exists(USB_Photos.BASE_DIR):
