@@ -350,6 +350,9 @@ class ServiceManager:
         lastService = self._HISTORY[-1]
       elif self.lastUsedService != None:
         lastService = self.lastUsedService
+    # if lastService is not ready anymore!
+    if lastService not in [self._SERVICES[s['id']]['service'] for s in availableServices]:
+      lastService = None
 
     if self.forceService is not None:
       svc = self.forceService
@@ -372,7 +375,7 @@ class ServiceManager:
           svc = self._getOffsetService(availableServices, lastService, 1)
           svc.resetIndices()
         elif self.prevService:
-          svc = svc = self._getOffsetService(availableServices, lastService, -1)
+          svc = self._getOffsetService(availableServices, lastService, -1)
           svc.resetToLastAlbum()
         else:
           svc = lastService
@@ -467,6 +470,16 @@ class ServiceManager:
     previousService.memoryForgetLast()
     if previousService in self._OUT_OF_IMAGES:
       self._OUT_OF_IMAGES.remove(previousService)
+
+    # skip all previous images of services that are not ready
+    while previousService.updateState() != previousService.STATE_READY:
+      if len(self._HISTORY) == 0:
+        previousService = None
+        break
+      previousService = self._HISTORY.pop()
+      previousService.memoryForgetLast()
+      if previousService in self._OUT_OF_IMAGES:
+        self._OUT_OF_IMAGES.remove(previousService)
 
     self.forceService = previousService
     return True
