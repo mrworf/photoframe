@@ -203,7 +203,7 @@ class slideshow:
     if self.colormatch.hasSensor():
       # For Now: Always process original image (no caching of colormatch-adjusted images)
       # 'colormatched_tmp.jpg' will be deleted after the image is displayed
-      filenameTemp = os.path.join(self.settings.getUser('cachefolder'), "colormatched_tmp.jpg")
+      filenameTemp = os.path.join(self.settings.getUser('tempfolder'), "colormatched_tmp.jpg")
       if self.colormatch.adjust(filenameProcessed, filenameTemp):
         return filenameTemp
       logging.warning('Unable to adjust image to colormatch, using original')
