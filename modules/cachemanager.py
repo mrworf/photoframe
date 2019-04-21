@@ -19,6 +19,8 @@ import os
 import time
 import shutil
 
+from modules.helper import helper
+
 ### CONSTANTS ###
 
 MIN = 60
@@ -50,6 +52,18 @@ class CacheManager:
     elif size > 0.1*KB:
       return "%.1fKB" % (float(size)/KB)
     return "%dB" % size
+
+  @staticmethod
+  def useCachedImage(filename):
+    # check if ImageMagick can determine the imageSize
+    # otherwise the image is probably currupted and should not be used anymore
+    if helper.getImageSize(filename) is not None:
+      logging.debug("using cached image: '%s'" % filename)
+      return True
+    elif os.path.isfile(filename):
+      logging.debug("Deleting currupted (cached) image: %s" % filename)
+      os.unlink(filename)
+    return False
 
   @staticmethod
   def createDirs(path, subDirs=[]):

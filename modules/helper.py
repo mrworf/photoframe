@@ -104,7 +104,6 @@ class helper:
 		return True
 		
 
-	# can also be used to check if image file is corrupted
 	@staticmethod
 	def getImageSize(filename):
 		if not os.path.isfile(filename):

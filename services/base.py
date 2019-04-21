@@ -21,7 +21,7 @@ import logging
 import requests
 
 from modules.oauth import OAuth
-from modules.helper import helper
+from modules.cachemanager import CacheManager
 
 # This is the base implementation of a service. It provides all the
 # basic features like OAuth and Authentication as well as state and
@@ -431,7 +431,7 @@ class BaseService:
         continue
 
       filename = os.path.join(destinationDir, image['id'])
-      if self.useCachedImage(filename):
+      if CacheManager.useCachedImage(filename):
         if image['mimetype'] is None:
           image['mimetype'] = helper.getMimeType(filename)
         return {'id': image['id'], 'mimetype': image['mimetype'], 'source': image['source'], 'error': None}
@@ -479,15 +479,6 @@ class BaseService:
 
       return image
     return None
-
-  def useCachedImage(self, filename):
-    if helper.getImageSize(filename) is not None:
-      logging.debug("using cached image: '%s'"%filename)
-      return True
-    elif os.path.isfile(filename):
-      logging.debug("Deleting currupted (cached) image: %s" % filename)
-      os.unlink(filename)
-    return False
 
   def requestUrl(self, url, destination=None, params=None, data=None, usePost=False):
     result = {'status':500, 'content' : None}

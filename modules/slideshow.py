@@ -193,7 +193,7 @@ class slideshow:
       return True
 
     if result['error'] is not None:
-      logging.exception('%s failed:\n\n%s' % (self.services.getLastUsedServiceName(), result['error']))
+      logging.debug('%s failed:\n\n%s' % (self.services.getLastUsedServiceName(), result['error']))
       self.display.message('%s failed:\n\n%s' % (self.services.getLastUsedServiceName(), result['error']))
       self.imageOnScreen = False
       return True
