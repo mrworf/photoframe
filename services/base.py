@@ -52,7 +52,7 @@ class BaseService:
     self._NAME = name
     self._OAUTH = None
 
-    self._STATE = BaseService.STATE_UNINITIALIZED
+    self._CURRENT_STATE = BaseService.STATE_UNINITIALIZED
     self._ERROR = None
 
     self._STATE = {
@@ -120,13 +120,15 @@ class BaseService:
         self.postSetup()
 
     if self._NEED_CONFIG and not self.hasConfiguration():
-      return BaseService.STATE_DO_CONFIG
-    if self._NEED_OAUTH and (not self.hasOAuthConfig or not self.hasOAuth()):
-      return BaseService.STATE_DO_OAUTH
-    if self.needKeywords() and len(self.getKeywords()) == 0:
-      return BaseService.STATE_NEED_KEYWORDS
+      self._CURRENT_STATE = BaseService.STATE_DO_CONFIG
+    elif self._NEED_OAUTH and (not self.hasOAuthConfig or not self.hasOAuth()):
+      self._CURRENT_STATE = BaseService.STATE_DO_OAUTH
+    elif self.needKeywords() and len(self.getKeywords()) == 0:
+      self._CURRENT_STATE = BaseService.STATE_NEED_KEYWORDS
+    else:
+      self._CURRENT_STATE = BaseService.STATE_READY
 
-    return BaseService.STATE_READY
+    return self._CURRENT_STATE
 
   ###[ Allows loading/saving of service state ]###########################
 
@@ -160,7 +162,7 @@ class BaseService:
     # override this if you wish to show a message associated with
     # the provider's instance. Return None to hide
     # Format: [{'level' : 'INFO', 'message' : None, 'link' : None}]
-    if self.needKeywords() and len(self.getKeywords()) == 0:
+    if self._CURRENT_STATE == self.STATE_NEED_KEYWORDS:
       return [
         {
           'level': 'INFO',

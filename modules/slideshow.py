@@ -178,12 +178,12 @@ class slideshow:
             msg += "Configuration required!"
           elif state == 'NEED_KEYWORDS':
             msg += "add one or more keywords (album names)"
-          elif state == 'NO_IMAGES_DETECTED':
-            msg += "no images could be found!"
-          elif state == 'CONNECT_STORAGE_DEVICE':
-            msg += "no storage device (e.g. USB-stick) was detected!"
           else:
-            msg += "not ready for unknown reasons!"
+            if additionalInfo is None:
+              msg += "not ready for unknown reasons!"
+            else:
+              msg += additionalInfo
+              additionalInfo = None
 
           if additionalInfo is not None:
             msg += "\n"+additionalInfo
