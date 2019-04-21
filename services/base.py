@@ -345,7 +345,7 @@ class BaseService:
     # displaySize holds the keys width & height to provide a hint for the service to avoid downloading HUGE files
     # Return for this function is a key/value map with the following MANDATORY
     # fields:
-    #  "id" : a unique - preferably not-changing - ID to identify the same image in future requests, e.g. hash(imageUrl)
+    #  "id" : a unique - preferably not-changing - ID to identify the same image in future requests, e.g. hashString(imageUrl)
     #  "mimetype" : the filetype you downloaded, for example "image/jpeg"
     #  "error" : None or a human readable text string as to why you failed
     #  "source" : Link to where the item came from or None if not provided
@@ -353,7 +353,8 @@ class BaseService:
     # NOTE! If you need to index anything before you can get the first item, this would
     # also be the place to do it.
     #
-    # If your service uses keywords (as albums) you probably only need to implement 'getImagesFor' and 'addUrlParams'
+    # If your service uses keywords (as albums) 'selectImageFromAlbum' of the baseService class should do most of the work for you
+    # You will probably only need to implement 'getImagesFor' and 'addUrlParams'
 
     if self.needKeywords():
       result = self.selectImageFromAlbum(destinationFile, supportedMimeTypes, displaySize, randomize)
@@ -365,8 +366,18 @@ class BaseService:
     return result
 
   def getImagesFor(self, keyword):
-    # TODO explanation
-    # id, mimetype, url, size, filename, sources
+    # You need to override this function if your service needs keywords and 
+    # you want to use 'selectImageFromAlbum' of the baseService class
+    # This function should collect data about all images matching a specific keyword
+    # Return for this function is a list of multiple key/value maps each containing the following MANDATORY fields:
+    # "id":       a unique - preferably not-changing - ID to identify the same image in future requests, e.g. hashString(imageUrl)
+    # "url":      Link to the actual image file
+    # "sources":  Link to where the item came from or None if not provided
+    # "mimetype": the filetype of the image, for example "image/jpeg" 
+    #             can be None, but you should catch unsupported mimetypes after the image has downloaded (example: svc_simpleurl.py)
+    # "size":     a key/value map containing "width" and "height" of the image
+    #             can be None, but the service won't be able to determine a recommendedImageSize for 'addUrlParams'
+    # "filename": the original filename of the image or None if unknown (only used for debugging purposes)
 
     return None
 
