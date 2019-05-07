@@ -186,6 +186,10 @@ $("#reset").click(function() {
   }
 });
 
+$("#debug").click(function() {
+  location = "/debug";
+});
+
 $("#reboot").click(function() {
   if (confirm("Are you sure you want to REBOOT?")) {
     $.ajax({
