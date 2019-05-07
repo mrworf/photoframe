@@ -359,6 +359,18 @@ class GooglePhotos(BaseService):
 
     # Now try loading
     if os.path.exists(filename):
-      with open(filename, 'r') as f:
-        images = json.load(f)
+      try:
+        with open(filename, 'r') as f:
+          images = json.load(f)
+      except:
+        logging.exception('Failed to decode JSON file, maybe it was corrupted? Size is %d', os.path.getsize(filename))
+        logging.error('Since file is corrupt, we try to save a copy for later analysis (%s.corrupt)', filename)
+        try:
+          if os.path.exists(filename + '.corrupt'):
+            os.unlink(filename + '.corrupt')
+          os.rename(filename, filename + '.corrupt')
+        except:
+          logging.exception('Failed to save copy of corrupt file, deleting instead')
+          os.unlink(filename)
+        images = None
     return images
