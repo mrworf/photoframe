@@ -299,8 +299,12 @@ class ServiceManager:
     if id not in self._SERVICES:
       return {'error' : 'Service not available', 'mime' : None, 'source' : None}
 
-    svc = self._SERVICES[id]['service']
-    return svc.prepareNextItem(destinationFile, supportedMimeTypes, displaySize)
+    try:
+      svc = self._SERVICES[id]['service']
+      return svc.prepareNextItem(destinationFile, supportedMimeTypes, displaySize)
+    except:
+      logging.exception('Service %s failed', self._SERVICES[id]['name'])
+      return {'error' : 'Software glitch, check log', 'mime' : None, 'source' : None}
 
   def hasKeywords(self):
     # Check any and all services to see if any is ready and if they have keywords
