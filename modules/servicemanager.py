@@ -266,9 +266,7 @@ class ServiceManager:
     elif state == svc.STATE_NEED_KEYWORDS:
       return 'NEED_KEYWORDS'
     elif state == svc.STATE_NO_IMAGES:
-      return 'NO_IMAGES_DETECTED'
-    elif state == svc.STATE_NOT_CONNECTED:
-      return 'CONNECT_STORAGE_DEVICE'
+      return 'NO_IMAGES'
     elif state == svc.STATE_READY:
       return 'READY'
     return 'ERROR'
@@ -404,6 +402,8 @@ class ServiceManager:
 
       self.nextService = True
       svc = self.chooseService(randomize, lastService=svc)
+      if svc is None:
+        return None
       result = svc.prepareNextItem(destinationDir, supportedMimeTypes, displaySize, randomize)
 
       if result['error'] is not None:

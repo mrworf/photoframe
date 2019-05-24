@@ -19,8 +19,6 @@ import os
 import json
 import logging
 
-from modules.helper import helper
-
 class GooglePhotos(BaseService):
   SERVICE_NAME = 'GooglePhotos'
   SERVICE_ID = 2
@@ -271,6 +269,8 @@ class GooglePhotos(BaseService):
           break
         else:
           data = json.loads(data['content'])
+          if 'mediaItems' not in data:
+            break
           logging.debug('Got %d entries, adding it to existing %d entries', len(data['mediaItems']), len(result))
           result += data['mediaItems']
           if 'nextPageToken' not in data:
@@ -283,6 +283,7 @@ class GooglePhotos(BaseService):
           json.dump(result, f)
       else:
         logging.error('No result returned for keyword "%s"!', keyword)
+        return []
 
     # Now try loading
     if os.path.exists(filename):

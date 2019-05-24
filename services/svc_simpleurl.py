@@ -17,8 +17,6 @@ from base import BaseService
 import os
 import logging
 
-from modules.helper import helper
-
 class SimpleUrl(BaseService):
   SERVICE_NAME = 'Simple URL'
   SERVICE_ID   = 3

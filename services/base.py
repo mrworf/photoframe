@@ -21,6 +21,7 @@ import logging
 import requests
 
 from modules.oauth import OAuth
+from modules.helper import helper
 from modules.cachemanager import CacheManager
 
 # This is the base implementation of a service. It provides all the
@@ -42,7 +43,6 @@ class BaseService:
   STATE_DO_OAUTH = 2
   STATE_NEED_KEYWORDS = 3
   STATE_NO_IMAGES = 4
-  STATE_NOT_CONNECTED = 5
 
   STATE_READY = 999
 
@@ -125,6 +125,8 @@ class BaseService:
       self._CURRENT_STATE = BaseService.STATE_DO_OAUTH
     elif self.needKeywords() and len(self.getKeywords()) == 0:
       self._CURRENT_STATE = BaseService.STATE_NEED_KEYWORDS
+    elif self.getNumImages() == 0:
+      self._CURRENT_STATE = BaseService.STATE_NO_IMAGES
     else:
       self._CURRENT_STATE = BaseService.STATE_READY
 
@@ -157,6 +159,12 @@ class BaseService:
 
   def getId(self):
     return self._ID
+
+  def getNumImages(self):
+    # just a placeholder for now
+    # should be replaced with the actual number of images to ensure 
+    # that each image has the same probability of being shown
+    return 1
 
   def getMessages(self):
     # override this if you wish to show a message associated with

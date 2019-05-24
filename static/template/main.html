@@ -147,7 +147,7 @@
 			<input type="button" data-service="{{id}}" class="service-oauth" value="Authorize">
 			For details on how to create an authorization, please see <a href="https://github.com/mrworf/photoframe/wiki/How-to-create-an-authorization-file" target="_blank">the wiki</a>
 		{{/ifvalue}}
-		{{#ifany state "READY" "NEED_KEYWORDS"}}
+		{{#ifany state "READY" "NEED_KEYWORDS" "NO_IMAGES"}}
 		{{#if keywords.keywords}}
 		<p class="nospace" id="keywords">
 			{{#each keywords.keywords}}
