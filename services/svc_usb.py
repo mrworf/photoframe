@@ -27,6 +27,8 @@ class USB_Photos(BaseService):
   SERVICE_NAME = 'USB-Photos'
   SERVICE_ID = 4
 
+  SUBSTATE_NOT_CONNECTED = 404
+
   INDEX = 0
 
   def __init__(self, configDir, id, name):
@@ -40,6 +42,9 @@ class USB_Photos(BaseService):
     self.device = None
     if not os.path.exists(self.baseDir):
       self.mountStorageDevice()
+    elif len(os.listdir(self.baseDir)) == 0:
+      self.unmountBaseDir()
+      self.mountStorageDevice()
     else:
       self.checkForInvalidKeywords()
       for device, mountPath in self.detectAllStorageDevices(onlyMounted=True):
@@ -47,7 +52,7 @@ class USB_Photos(BaseService):
           self.device = device
           logging.info("USB-Service has detected device '%s'" % self.device)
           break
-      if device is None:
+      if self.device is None:
         # Service should still be working fine
         logging.warning("Unable to determine which storage device is mounted to '%s'" % self.usbDir)
 
@@ -55,20 +60,14 @@ class USB_Photos(BaseService):
     return "Place photo albums in /photoframe/{album_name} on your usb-device.\nUse the {album_name} as keyword (CasE-seNsitiVe!).\nIf you want to display all albums simply write 'ALLALBUMS' as keyword.\nAlternatively, place images directly inside the '/photoframe/' directory. "
 
   def validateKeywords(self, keyword):
-    # Quick check, don't allow duplicates!
-    if keyword in self.getKeywords():
-      logging.error('Album was already in list')
-      return {'error': 'Album already in list', 'keywords': keyword}
-
-    if keyword != 'ALLALBUMS':
+    if keyword != 'ALLALBUMS' and keyword != '_PHOTOFRAME_':
       if keyword not in self.getAllAlbumNames():
         return {'error': 'No such album "%s"' % keyword, 'keywords': keyword}
 
-    return {'error': None, 'keywords': keyword, 'extras': None}
+    return BaseService.validateKeywords(self, keyword)
 
   def getKeywords(self):
     if not os.path.exists(self.baseDir):
-      #wrong error TODO
       return []
 
     keywords = list(self._STATE['_KEYWORDS'])
@@ -77,6 +76,9 @@ class USB_Photos(BaseService):
       keywords.remove("ALLALBUMS")
       albums = self.getAllAlbumNames()
       keywords.extend(filter(lambda a: a not in keywords, albums))
+
+      if "ALLALBUMS" in albums:
+        logging.error("You should not have a album called 'ALLALBUMS'!")
 
     if len(keywords) == 0 and len(self.getBaseDirImages()) != 0 and "_PHOTOFRAME_" not in keywords:
       keywords.append("_PHOTOFRAME_")
@@ -97,35 +99,45 @@ class USB_Photos(BaseService):
         logging.info("USB-Service: removing invalid keyword: %s" % keyword)
         self.removeKeywords(index)
       index -= 1
+    self.saveState()
 
   def updateState(self):
-    state = None
+    self.subState = None
     if not os.path.exists(self.baseDir):
       if not self.mountStorageDevice():
-        state = BaseService.STATE_NOT_CONNECTED
-    elif len(self.getAllAlbumNames()) == 0 and len(self.getBaseDirImages()) == 0:
-      state = BaseService.STATE_NO_IMAGES
-    if state is None:
-      state = BaseService.updateState(self)
+        self._CURRENT_STATE = BaseService.STATE_NO_IMAGES
+        self.subState = USB_Photos.SUBSTATE_NOT_CONNECTED
+        return self._CURRENT_STATE
+    if len(self.getAllAlbumNames()) == 0 and len(self.getBaseDirImages()) == 0:
+      self._CURRENT_STATE = BaseService.STATE_NO_IMAGES
+      return self._CURRENT_STATE
 
-    self._CURRENT_STATE = state
-    return self._CURRENT_STATE
+    return BaseService.updateState(self)
 
   def explainState(self):
-    if self._CURRENT_STATE == BaseService.STATE_NOT_CONNECTED:
-      return "no storage device (e.g. USB-stick) detected!"
-    elif self._CURRENT_STATE == BaseService.STATE_NO_IMAGES:
-      return "no images could be found!\nPlace images and/or albums inside a '/photoframe'-directory on your storage device"
+    if self._CURRENT_STATE == BaseService.STATE_NO_IMAGES:
+      if self.subState == USB_Photos.SUBSTATE_NOT_CONNECTED:
+        return "No storage device (e.g. USB-stick) has been detected!"
+      else:
+        return "Place images and/or albums inside a '/photoframe'-directory on your storage device!"
     return None
 
   def getMessages(self):
+    # display a message indicating which storage device is being used or an error messing if no suitable storage device could be found
     if os.path.exists(self.baseDir):
-      msgs = BaseService.getMessages(self)
+      msgs = [
+          {
+              'level': 'SUCCESS',
+              'message': 'Storage device "%s" is mounted to "%s"' % (self.device if self.device is not None else "unknown", self.usbDir),
+              'link': None
+          }
+      ]
+      msgs.extend(BaseService.getMessages(self))
     else:
       msgs = [
           {
-              'level': 'WARNING',
-              'message': 'No storage device could be found that contains the "/photoframe/"-directory!',
+              'level': 'ERROR',
+              'message': 'No storage device could be found that contains the "/photoframe/"-directory! Try to reboot or manually mount the desired storage device to "%s"' % self.usbDir,
               'link': None
           }
       ]
@@ -143,10 +155,11 @@ class USB_Photos(BaseService):
         for sd, mountPath in map(lambda d: d.split(" ", 1) if d.find(" ") != -1 else (d, None), devices):
           if onlyMounted and mountPath is not None:
             storageDevices.append((sd, mountPath))
-          elif onlyUnmounted and mountPath is not None:
-            logging.debug("'%s' is already mounted to '%s'" % (sd, mountPath))
-          else:
-            storageDevices.append(sd)
+          elif onlyUnmounted:
+            if mountPath is not None:
+              logging.debug("'%s' is already mounted to '%s'" % (sd, mountPath))
+            else:
+              storageDevices.append(sd)
     except subprocess.CalledProcessError as e:
       logging.exception('USB-Service: unable to detect storage devices!')
       logging.error('Output: %s' % repr(e.output))
@@ -213,7 +226,6 @@ class USB_Photos(BaseService):
 
   def getImagesFor(self, keyword):
     if not os.path.isdir(self.baseDir):
-      #no usb device connected?
       return []
     images = []
     if keyword == "_PHOTOFRAME_":
@@ -224,7 +236,7 @@ class USB_Photos(BaseService):
         files = os.listdir(os.path.join(self.baseDir, keyword))
         images = self.getAlbumInfo(os.path.join(self.baseDir, keyword), files)
       else:
-        logging.warning("The album '%s' does not exist. Did you unplug the storage device assosiated with '%s'?!" % (os.path.join(self.baseDir, keyword), self.device))
+        logging.warning("The album '%s' does not exist. Did you unplug the storage device associated with '%s'?!" % (os.path.join(self.baseDir, keyword), self.device))
     return images
 
   def getAlbumInfo(self, path, files):
