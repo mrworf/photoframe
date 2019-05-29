@@ -16,13 +16,14 @@
 
 import hashlib
 import time
-import random
 import shutil
 import os
 import logging
 import json
 import re
 import importlib
+
+from modules.helper import helper
 
 class ServiceManager:
   def __init__(self, settings):
@@ -338,6 +339,15 @@ class ServiceManager:
         return self._SERVICES[key]['service']
     return lastService
 
+  def selectRandomService(self, services):
+    # select service at random but weighted by the number of images each service provides
+    numImages = [self._SERVICES[s['id']]['service'].getNumImages() for s in services]
+    totalImages = sum(numImages)
+    if totalImages == 0:
+      return 0
+    i = helper.getWeightedRandomIndex(numImages)
+    return services[i]['id']
+
   def chooseService(self, randomize, lastService=None):
     availableServices = self.getServices(readyOnly=True)
     if len(availableServices) == 0:
@@ -361,7 +371,7 @@ class ServiceManager:
         self.memoryForget()
         availableServices = self.getServices(readyOnly=True)
 
-      key = random.choice(availableServices)['id']
+      key = self.selectRandomService(availableServices)
       svc = self._SERVICES[key]['service']
     else:
       if lastService == None:

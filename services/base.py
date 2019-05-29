@@ -55,12 +55,16 @@ class BaseService:
     self._CURRENT_STATE = BaseService.STATE_UNINITIALIZED
     self._ERROR = None
 
+    # NUM_IMAGES keeps track of how many images are being provided by each keyword
+    # As for now, unsupported images (mimetype, orientation) and already displayed images are NOT excluded due to simplicity,
+    # but it should still serve as a rough estimate to ensure that every image has a similar chance of being shown in "random_image_mode"!
     self._STATE = {
-      '_OAUTH_CONFIG' : None,
-      '_OAUTH_CONTEXT' : None,
-      '_CONFIG' : None,
-      '_KEYWORDS' : [],
-      '_EXTRAS' : None
+        '_OAUTH_CONFIG' : None,
+        '_OAUTH_CONTEXT' : None,
+        '_CONFIG' : None,
+        '_KEYWORDS' : [],
+        '_NUM_IMAGES' : {},
+        '_EXTRAS' : None
     }
     self._NEED_CONFIG = needConfig
     self._NEED_OAUTH = needOAuth
@@ -72,7 +76,7 @@ class BaseService:
 
     # MEMORY stores unique image ids of already displayed images
     # it prevents an image from being shown multiple times, before ALL images have been displayed
-    # From time to time, memory is saved to disk as a backup. 
+    # From time to time, memory is saved to disk as a backup.
     self._MEMORY = None
     self._MEMORY_KEY = None
 
@@ -160,25 +164,38 @@ class BaseService:
   def getId(self):
     return self._ID
 
-  def getNumImages(self):
-    # just a placeholder for now
-    # should be replaced with the actual number of images to ensure 
-    # that each image has the same probability of being shown
-    return 1
+  def getNumImages(self, excludeUnsuported=True):
+    # return the total number of images provided by this service
+    if self.needKeywords():
+      for keyword in self.getKeywords():
+        if keyword not in self._STATE["_NUM_IMAGES"]:
+          images = self.getImagesFor(keyword)
+          if images is not None:
+            self._STATE["_NUM_IMAGES"][keyword] = len(images)
+    return sum([self._STATE["_NUM_IMAGES"][k] for k in self._STATE["_NUM_IMAGES"]])
 
   def getMessages(self):
     # override this if you wish to show a message associated with
     # the provider's instance. Return None to hide
     # Format: [{'level' : 'INFO', 'message' : None, 'link' : None}]
-    if self._CURRENT_STATE == self.STATE_NEED_KEYWORDS:
-      return [
-        {
-          'level': 'INFO',
-          'message' : 'Please add one or more items in order to show photos from this provider (see help button)',
-          'link': None
-        }
-      ]
-    return []
+    msgs = []
+    if self._CURRENT_STATE in [self.STATE_NEED_KEYWORDS, self.STATE_NO_IMAGES]:
+      msgs.append(
+          {
+              'level': 'INFO',
+              'message' : 'Please add one or more items in order to show photos from this provider (see help button)',
+              'link': None
+          }
+      )
+    if 0 in self._STATE["_NUM_IMAGES"].values():
+      msgs.append(
+          {
+              'level': 'WARNING',
+              'message': 'At least one keyword does not appear to provide any images! Please remove keyword(s) %s' % str([str(keyword) for keyword in self._STATE["_KEYWORDS"] if self._STATE["_NUM_IMAGES"][keyword] == 0]),
+              'link': None
+          }
+      )
+    return msgs
 
   def explainState(self):
     # override this if you wish to show additional on-screen information for a specific state
@@ -315,7 +332,9 @@ class BaseService:
     if index < 0 or index > (len(self._STATE['_KEYWORDS'])-1):
       logging.error('removeKeywords: Out of range %d' % index)
       return False
-    self._STATE['_KEYWORDS'].pop(index)
+    kw = self._STATE['_KEYWORDS'].pop(index)
+    if kw in self._STATE['_NUM_IMAGES']:
+      del self._STATE['_NUM_IMAGES'][kw]
     self.saveState()
     return True
 
@@ -328,9 +347,12 @@ class BaseService:
     return 'Has not been defined'
 
   def getRandomKeywordIndex(self):
-    if len(self._STATE['_KEYWORDS']) == 0:
+    # select keyword index at random but weighted by the number of images of each album
+    totalImages = self.getNumImages()
+    if totalImages == 0:
       return 0
-    return random.SystemRandom().randint(0,len(self._STATE['_KEYWORDS'])-1)
+    numImages = [self._STATE['_NUM_IMAGES'][kw] for kw in self._STATE['_NUM_IMAGES']]
+    return helper.getWeightedRandomIndex(numImages)
 
   def getKeywordLink(self, index):
     if index < 0 or index > (len(self._STATE['_KEYWORDS'])-1):
@@ -376,14 +398,14 @@ class BaseService:
     return result
 
   def getImagesFor(self, keyword):
-    # You need to override this function if your service needs keywords and 
+    # You need to override this function if your service needs keywords and
     # you want to use 'selectImageFromAlbum' of the baseService class
     # This function should collect data about all images matching a specific keyword
     # Return for this function is a list of multiple key/value maps each containing the following MANDATORY fields:
     # "id":       a unique - preferably not-changing - ID to identify the same image in future requests, e.g. hashString(imageUrl)
     # "url":      Link to the actual image file
     # "sources":  Link to where the item came from or None if not provided
-    # "mimetype": the filetype of the image, for example "image/jpeg" 
+    # "mimetype": the filetype of the image, for example "image/jpeg"
     #             can be None, but you should catch unsupported mimetypes after the image has downloaded (example: svc_simpleurl.py)
     # "size":     a key/value map containing "width" and "height" of the image
     #             can be None, but the service won't be able to determine a recommendedImageSize for 'addUrlParams'
@@ -392,9 +414,9 @@ class BaseService:
     return None
 
   def addUrlParams(self, url, recommendedSize, displaySize):
-    # If the service provider allows 'width' / 'height' parameters 
+    # If the service provider allows 'width' / 'height' parameters
     # override this function and place them inside the url.
-    # If the recommendedSize is None (due to unknown imageSize) 
+    # If the recommendedSize is None (due to unknown imageSize)
     # use the displaySize instead (better than nothing, but image quality might suffer a little bit)
 
     return url
@@ -422,16 +444,18 @@ class BaseService:
         break
       self.keywordIndex = (index + i) % keywordCount
       keyword = keywordList[self.keywordIndex]
-      
+
       # a provider-specific implementation for 'getImagesFor' is obligatory!
       images = self.getImagesFor(keyword)
       if images is None:
         return {'id': None, 'mimetype': None, 'source': None, 'error': 'You haven\'t implemented "getImagesFor" yet'}
-      elif len(images) == 0:
+      self._STATE["_NUM_IMAGES"][keyword] = len(images)
+      if len(images) == 0:
         self.imageIndex = 0
         continue
       elif any(key not in images[0].keys() for key in ['id', 'url', 'mimetype', 'source', 'filename']):
         return {'id': None, 'mimetype': None, 'source': None, 'error': 'You haven\'t implemented "getImagesFor" correctly (some keys are missing)'}
+      self.saveState()
 
       image = self.selectImage(images, supportedMimeTypes, displaySize, randomize)
       if image is None:
@@ -605,7 +629,7 @@ class BaseService:
       logging.info('Interim saving of memory every 20 entries')
       with open(os.path.join(self._DIR_MEMORY, '%s.json' % self._MEMORY_KEY), 'w') as f:
         json.dump(self._MEMORY, f)
-    
+
     # annoying behaviour fix: only remember current image in history if the image has actually changed
     rememberInHistory = alwaysRemember or self._differentThanLastHistory(self.keywordIndex, self.imageIndex)
     if rememberInHistory:
@@ -624,7 +648,7 @@ class BaseService:
 
   def memoryForgetLast(self, keywords=None):
     # remove the currently displayed image from memory as well as history
-    # implications: 
+    # implications:
     # - the image will be treated as never seen before (random image order)
     # - the same image will be preloaded again during 'prepareNextItem' (non-random image order)
     self._fetchMemory(keywords)

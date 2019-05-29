@@ -19,8 +19,19 @@ import logging
 import os
 import shutil
 import re
+import random
 
 class helper:
+	@staticmethod
+	def getWeightedRandomIndex(weights):
+		totalWeights = sum(weights)
+		normWeights = [float(w)/totalWeights for w in weights]
+		x = random.SystemRandom().random()
+		for i in range(len(normWeights)):
+			x -= normWeights[i]
+			if x <= 0.:
+				return i
+
 	@staticmethod
 	def getResolution():
 		res = None
