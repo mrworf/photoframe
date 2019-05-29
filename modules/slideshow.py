@@ -223,7 +223,7 @@ class slideshow:
     delay = self.settings.getUser('interval')
     if time_process < delay and self.imageOnScreen:
       self.delayer.wait(delay - time_process)
-      self.delayer.clear()
+    self.delayer.clear()
 
   def showPreloadedImage(self, filename, mimetype, imageId):
     if not self.skipPreloadedImage:
