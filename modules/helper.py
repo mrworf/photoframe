@@ -21,7 +21,23 @@ import shutil
 import re
 import random
 
+# A regular expression to determine whether a url is valid or not (e.g. "www.example.de/someImg.jpg" is missing "http://")
+VALID_URL_REGEX = re.compile(
+	r'^(?:http|ftp)s?://'  # http:// or https://
+	r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
+	r'localhost|'  # localhost...
+	r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+	r'(?::\d+)?'  # optional port
+	r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+
 class helper:
+	@staticmethod
+	def isValidUrl(url):
+		# Catches most invalid URLs
+		if re.match(VALID_URL_REGEX, url) is None:
+			return False
+		return True
+
 	@staticmethod
 	def getWeightedRandomIndex(weights):
 		totalWeights = sum(weights)

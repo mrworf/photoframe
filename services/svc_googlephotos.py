@@ -111,15 +111,14 @@ class GooglePhotos(BaseService):
       return False
 
   def validateKeywords(self, keywords):
+    tst = BaseService.validateKeywords(self, keywords)
+    if tst["error"] is not None:
+      return tst
+
     # Remove quotes around keyword
     if keywords[0] == '"' and keywords[-1] == '"':
       keywords = keywords[1:-1]
     keywords = keywords.upper().lower().strip()
-
-    # Quick check, don't allow duplicates!
-    if keywords in self.getKeywords():
-      logging.error('Album was already in list')
-      return {'error':'Album already in list', 'keywords' : keywords}
 
     # No error in input, resolve album now and provide it as extra data
     albumId = None

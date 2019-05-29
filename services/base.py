@@ -296,7 +296,12 @@ class BaseService:
     self.keywordIndex = max(0, len(self.getKeywords())-1)
     self.imageIndex = 0
 
-  def validateKeywords(self, keywords):  # shouldn't this be 'validateKeyword' (singular)?
+  def validateKeywords(self, keywords):
+    # Quick check, don't allow duplicates!
+    if keywords in self.getKeywords():
+      logging.error('Keyword is already in list')
+      return {'error': 'Keyword already in list', 'keywords': keywords}
+
     return {'error':None, 'keywords': keywords}
 
   def addKeywords(self, keywords):
@@ -472,7 +477,14 @@ class BaseService:
       recommendedSize = self.calcRecommendedSize(image['size'], displaySize)
       url = self.addUrlParams(image['url'], recommendedSize, displaySize)
 
-      result = self.requestUrl(url, destination=filename)
+      try:
+        result = self.requestUrl(url, destination=filename)
+      except requests.exceptions.RequestException as e:
+        # catch any exception caused by malformed url, unstable internet connection, ... that would otherwise break the entire photoframe
+        logging.debug(str(e))
+        if helper.getIP() is None:
+          return {'id': None, 'mimetype': None, 'source': None, 'error': "No internet connection!"}
+        return {'id': None, 'mimetype': None, 'source': url, 'error': "Unable to download image!\nServer might be unavailable or URL could be broken:\n%s" % url}
       if result['status'] == 200:
         if image['mimetype'] is None:
           image['mimetype'] = result['mimetype']

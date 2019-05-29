@@ -15,7 +15,10 @@
 #
 from base import BaseService
 import os
+import re
 import logging
+
+from modules.helper import helper
 
 class SimpleUrl(BaseService):
   SERVICE_NAME = 'Simple URL'
@@ -36,38 +39,44 @@ class SimpleUrl(BaseService):
       self.brokenUrls.remove(url)
     return result
 
-  def getMessages(self):
-    msgs = BaseService.getMessages(self)
-    if len(self.brokenUrls) != 0:
-      msgs.append(
-        {
-          'level': 'WARNING',
-          'message': 'Broken urls or unsupported images detected!\nPlease remove %s' % str([".../"+self.getUrlFilename(url) for url in self.brokenUrls]),
-          'link': None
-        }
-      )
-    return msgs
+  def hasKeywordSourceUrl(self):
+    return True
 
+  def getKeywordSourceUrl(self, index):
+    keys = self.getKeywords()
+    if index < 0 or index >= len(keys):
+      return 'Out of range, index = %d' % index
+    return keys[index]
+
+  def validateKeywords(self, keywords):
+    # Catches most invalid URLs
+    if not helper.isValidUrl(keywords):
+      return {'error': 'URL appears to be invalid', 'keywords': keywords}
+
+    return BaseService.validateKeywords(self, keywords)
 
   def getUrlFilename(self, url):
     return url.rsplit("/", 1)[-1]
 
-  def selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize):
+  def selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize, retry=1):
     result = BaseService.selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize)
-    
+    if result is None:
+      return None
+    # catch broken urls
+    if result["error"] is not None and result["source"] is not None:
+      logging.warning("broken url detected. You should remove '.../%s' from keywords" % (self.getUrlFilename(result["source"])))
     # catch unsupported mimetypes (can only be done after downloading the image)
-    # if no other errors occured
-    if result is not None and result["error"] is None and result["mimetype"] not in supportedMimeTypes:
+    elif result["error"] is None and result["mimetype"] not in supportedMimeTypes:
       logging.warning("unsupported mimetype '%s'. You should remove '.../%s' from keywords" % (result["mimetype"], self.getUrlFilename(result["source"])))
-      self.brokenUrls.append(result["source"])
-      # retry once (with another image)
-      result = BaseService.selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize)
-      if result is not None and result["error"] is None and result["mimetype"] not in supportedMimeTypes:
-        logging.warning("unsupported mimetype '%s'. You should remove '.../%s' from keywords" % (result["mimetype"], self.getUrlFilename(result["source"])))
-        self.brokenUrls.append(result["source"])
-        return {'id': None, 'mimetype': None, 'error': '%s includes urls that link to unsupported files!' % self.SERVICE_NAME, 'source': None}
+    else:
+      return result
 
-    return result
+    # track broken urls / unsupported mimetypes and display warning message on web interface
+    self.brokenUrls.append(result["source"])
+    # retry (with another image)
+    if retry > 0:
+      return self.selectImageFromAlbum(destinationDir, supportedMimeTypes, displaySize, randomize, retry=retry-1)
+    return {'id': None, 'mimetype': None, 'error': '%s uses broken urls / unsupported images!' % self.SERVICE_NAME, 'source': None}
 
   def getImagesFor(self, keyword):
     url = keyword
