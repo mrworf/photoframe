@@ -55,6 +55,11 @@ class SimpleUrl(BaseService):
 
     return BaseService.validateKeywords(self, keywords)
 
+  def memoryForget(self, keywords=None, forgetHistory=False):
+    # give broken URLs another try (server may have been temporarily unavailable)
+    self.brokenUrls = []
+    return BaseService.memoryForget(self, keywords=keywords, forgetHistory=forgetHistory)
+
   def getUrlFilename(self, url):
     return url.rsplit("/", 1)[-1]
 

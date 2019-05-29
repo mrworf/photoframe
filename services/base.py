@@ -679,6 +679,8 @@ class BaseService:
     self._MEMORY = []
     if forgetHistory:
       self._HISTORY = []
+    self._STATE['_NUM_IMAGES'] = {k: v for k, v in self._STATE['_NUM_IMAGES'].items() if v != 0}
+    self.saveState()
 
   ###[ Slideshow controls ]=======================================================
 
