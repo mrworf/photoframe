@@ -31,7 +31,7 @@ from modules.helper import helper
 from modules.cachemanager import CacheManager
 
 class slideshow:
-  SHOWN_IP = True
+  SHOWN_IP = False
   EVENTS = ["nextImage", "prevImage", "nextAlbum", "prevAlbum", "settingsChange", "memoryForget", "clearCache"]
 
   def __init__(self, display, settings, colormatch):
