@@ -120,6 +120,11 @@ p.message {
   font-weight: bold;
 }
 
+.SUCCESS {
+  color: rgb(0, 155, 0);
+  background-color: rgb(189, 248, 189);
+}
+
 .INFO {
   color: #00529B;
   background-color: #BDE5F8;
