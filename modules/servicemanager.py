@@ -425,7 +425,6 @@ class ServiceManager:
     self.lastUsedService = svc
     return result
 
-
   def hasKeywords(self):
     # Check any and all services to see if any is ready and if they have keywords
     for k in self._SERVICES:
