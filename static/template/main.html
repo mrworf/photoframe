@@ -1,4 +1,12 @@
 <h1><a href="https://github.com/mrworf/photoframe">PhotoFrame Configuration</a></h1>
+<div class=controls>
+	<button class="slideshowControl" id="prevAlbum">Prev Album</button>
+	<button class="slideshowControl" id="prevImage">Prev Image</button>
+	<button class="slideshowControl" id="nextImage">Next Image</button>
+	<button class="slideshowControl" id="nextAlbum">Next Album</button>
+</div>
+<br>
+<br>
 <img class="thumbnail" alt="On screen now" title="Realtime view, updates every 30s" src="/details/current" id="screen">
 <div class="settings">
 	<div>
@@ -91,6 +99,14 @@
 			<option value="auto">Blur/Zoom as necessary</option>
 			{{/select}}
 		</select>
+		<br>
+		Randomize image order
+		<select name="randomize_images">
+			{{#select settings.randomize_images}}
+			<option value="0">no</option>
+			<option value="1">yes</option>
+			{{/select}}
+		</select>
 	</div>
 </div>
 <br>
@@ -104,6 +120,8 @@
 		<input type="button" id="reboot" value="Reboot">
 		<input type="button" id="shutdown" value="Power off">
 		<div style="display: inline-block; width: 100px"></div>
+		<input type="button" id="forgetMemory" title="Show images that have already been displayed" value="Forget Memory">
+		<input type="button" id="clearCache" title="In case you have recently cropped or edited your photos" value="Clear Cache">
 		<input type="button" id="reset" value="Factory Reset">
 		<div style="display: inline-block; width: 100px"></div>
 		<input type="button" id="debug" value="Log report">
@@ -131,7 +149,7 @@
 			<input type="button" data-service="{{id}}" class="service-oauth" value="Authorize">
 			For details on how to create an authorization, please see <a href="https://github.com/mrworf/photoframe/wiki/How-to-create-an-authorization-file" target="_blank">the wiki</a>
 		{{/ifvalue}}
-		{{#ifvalue state value="READY" }}
+		{{#ifany state "READY" "NEED_KEYWORDS" "NO_IMAGES"}}
 		{{#if keywords.keywords}}
 		<p class="nospace" id="keywords">
 			{{#each keywords.keywords}}
@@ -151,7 +169,7 @@
 			<input type="text" class="keyword" style="flex: 2; text-align: left">
 			<input type="button" class="keyword-add" data-service="{{id}}" value="Add">
 		</p>
-		{{/ifvalue}}
+		{{/ifany}}
 	</div>
 </div>
 {{/each}}

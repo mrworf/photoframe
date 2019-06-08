@@ -92,6 +92,11 @@ img.thumbnail {
   margin-left: 5pt;
 }
 
+div.controls {
+  display: flex; 
+  float: right
+}
+
 div.busy {
   opacity:0.8;
   background-color:#ccc;

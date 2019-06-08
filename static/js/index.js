@@ -216,6 +216,15 @@ TemplateEngine = function() {
 			return options.inverse(this);
 		}
 	});
+	
+	window.Handlebars.registerHelper('ifany', function (conditional, ...args) {
+		options = args.pop()
+		if (args.includes(conditional)) {
+			return options.fn(this);
+		} else {
+			return options.inverse(this);
+		}
+	});
 
 	window.Handlebars.registerHelper('encode', function(value, options) {
 		return encodeURIComponent(value);

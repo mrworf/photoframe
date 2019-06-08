@@ -14,34 +14,96 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 from base import BaseService
+import os
+import re
+import logging
+
+from modules.helper import helper
 
 class SimpleUrl(BaseService):
   SERVICE_NAME = 'Simple URL'
   SERVICE_ID   = 3
 
-
   def __init__(self, configDir, id, name):
     BaseService.__init__(self, configDir, id, name, needConfig=False, needOAuth=False)
 
+    self.brokenUrls = []
 
   def helpKeywords(self):
     return 'Each item is a URL that should return a single image. The URL may contain the terms "{width}" and/or "{height}" which will be replaced by numbers describing the size of the display.'
 
+  def removeKeywords(self, index):
+    url = self.getKeywords()[index]
+    result = BaseService.removeKeywords(self, index)
+    if result and url in self.brokenUrls:
+      self.brokenUrls.remove(url)
+    return result
 
-  def prepareNextItem(self, destinationFile, supportedMimeTypes, displaySize):
-    urlList = list(self.getKeywords())
-    if len(urlList) == 0:
-      return {'mimetype' : None, 'error' : 'No URLs have been specified', 'source': None}
+  def hasKeywordSourceUrl(self):
+    return True
 
-    Url = urlList[self.getRandomKeywordIndex()]
+  def getKeywordSourceUrl(self, index):
+    keys = self.getKeywords()
+    if index < 0 or index >= len(keys):
+      return 'Out of range, index = %d' % index
+    return keys[index]
 
-    Url = Url.replace('{width}', str(displaySize['width']))
-    Url = Url.replace('{height}', str(displaySize['height']))
+  def validateKeywords(self, keywords):
+    # Catches most invalid URLs
+    if not helper.isValidUrl(keywords):
+      return {'error': 'URL appears to be invalid', 'keywords': keywords}
 
-    result = self.requestUrl(Url, destination=destinationFile)
+    return BaseService.validateKeywords(self, keywords)
 
-    if result['status'] == 200:
-      return {'mimetype' : result['mimetype'], 'error': None, 'source': Url}
+  def memoryForget(self, keywords=None, forgetHistory=False):
+    # give broken URLs another try (server may have been temporarily unavailable)
+    self.brokenUrls = []
+    return BaseService.memoryForget(self, keywords=keywords, forgetHistory=forgetHistory)
 
-    return {'mimetype': None, 'error': 'Could not fetch image - status code ' + str(result['status']), 'source': None }
+  def getUrlFilename(self, url):
+    return url.rsplit("/", 1)[-1]
 
+  def selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize, retry=1):
+    result = BaseService.selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize)
+    if result is None:
+      return None
+    # catch broken urls
+    if result["error"] is not None and result["source"] is not None:
+      logging.warning("broken url detected. You should remove '.../%s' from keywords" % (self.getUrlFilename(result["source"])))
+    # catch unsupported mimetypes (can only be done after downloading the image)
+    elif result["error"] is None and result["mimetype"] not in supportedMimeTypes:
+      logging.warning("unsupported mimetype '%s'. You should remove '.../%s' from keywords" % (result["mimetype"], self.getUrlFilename(result["source"])))
+    else:
+      return result
+
+    # track broken urls / unsupported mimetypes and display warning message on web interface
+    self.brokenUrls.append(result["source"])
+    # retry (with another image)
+    if retry > 0:
+      return self.selectImageFromAlbum(destinationDir, supportedMimeTypes, displaySize, randomize, retry=retry-1)
+    return {'id': None, 'mimetype': None, 'error': '%s uses broken urls / unsupported images!' % self.SERVICE_NAME, 'source': None}
+
+  def getImagesFor(self, keyword):
+    url = keyword
+    if url in self.brokenUrls:
+      return []
+    image = {"id": self.hashString(url), "url": url, "source": url, "mimetype": None, "size": None, "filename": self.getUrlFilename(url)}
+    return [image]
+
+  def addUrlParams(self, url, _recommendedSize, displaySize):
+    url = url.replace('{width}', str(displaySize['width']))
+    url = url.replace('{height}', str(displaySize['height']))
+    return url
+
+  # Treat the entire service as one album
+  # That way you can group images by creating multiple Simple Url Services
+  def nextAlbum(self):
+    # Tell the serviceManager to use next service instead
+    return False
+
+  def prevAlbum(self):
+    # Tell the serviceManager to use previous service instead
+    return False
+
+  def resetToLastAlbum(self):
+    self.resetIndices()

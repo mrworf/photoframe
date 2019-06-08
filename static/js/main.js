@@ -1,33 +1,32 @@
-// Refresh image every 30s
 $('#driver').fileupload({
-      add: function (e, data) {
-        $('#driver-button').prop('disabled', 'disabled');
-          data.submit();
-      },
-      done: function (e, data) {
-        console.log(data);
-        if (data.result['reboot']) {
+  add: function (e, data) {
+    $('#driver-button').prop('disabled', 'disabled');
+    data.submit();
+  },
+  done: function (e, data) {
+    console.log(data);
+    if (data.result['reboot']) {
       if(confirm('In order to fully enable this change, you must reboot the photoframe. Do you wish to do this now?')) {
         $.ajax({
           url:"/maintenance/reboot"
         });
         rebootWatch();
       } else {
-              alert("Upload complete, refreshing drivers");
-              location.reload();
+        alert("Upload complete, refreshing drivers");
+        location.reload();
       }
-      } else {
-            alert("Upload complete, refreshing drivers");
-            location.reload();
-      }
-      },
-      fail: function (e, data) {
-        alert('Failed to upload the driver');
-      },
-      always: function(e, data) {
-        $('#driver-button').prop('disabled', '');
-      }
-  });
+    } else {
+      alert("Upload complete, refreshing drivers");
+      location.reload();
+    }
+  },
+  fail: function (e, data) {
+    alert('Failed to upload the driver');
+  },
+  always: function(e, data) {
+    $('#driver-button').prop('disabled', '');
+  }
+});
 
 $("#driver-button").click(function() {
   $('#driver').trigger('click');
@@ -35,21 +34,33 @@ $("#driver-button").click(function() {
 
 function rebootWatch() {
   $(document.body).html('<h1>Rebooting</h1>')
+  setTimeout(document.location.reload.bind(document.location), 60000);
 }
 
+// Refresh image every 30s
 function reloadScreen() {
   $('#screen').attr('src', "/details/current?" + new Date().getTime())
-  setTimeout(reloadScreen, 30000);
+  reloadScreenTimeout = setTimeout(reloadScreen, 30000);
 }
 reloadScreen();
+
+$(".slideshowControl").click(function () {
+  $.ajax({
+    url: "/control/" + $(this).attr("id")
+  }).done(function (){
+    //update thumbnail image
+    clearTimeout(reloadScreenTimeout);
+    reloadScreenTimeout = setTimeout(reloadScreen, 3000);
+  });
+});
 
 function updateAmbient() {
   $.ajax({
     url:'/details/color'
   }).done(function(data) {
     if (data['temperature'] == null)
-      return;
-
+    return;
+    
     $('#colortemp').text(data['temperature'].toFixed(0));
     $('#lux').text(data['lux'].toFixed(2));
     setTimeout(updateAmbient, 5000);
@@ -57,13 +68,29 @@ function updateAmbient() {
 }
 updateAmbient();
 
+function disableSlideshowControls(){
+  if ($("select[name=randomize_images]").val() == "1") {
+    $("#prevAlbum").prop('disabled', true);
+    $("#prevAlbum").prop('title', "disable 'randomize image order'")
+    $("#nextAlbum").prop('disabled', true);
+    $("#nextAlbum").prop('title', "disable 'randomize image order'")
+  }
+  else {
+    $("#prevAlbum").prop('disabled', false);
+    $("#prevAlbum").prop('title', "")
+    $("#nextAlbum").prop('disabled', false);
+    $("#nextAlbum").prop('title', "")
+  }
+}
+disableSlideshowControls()
+
 valid = new Validator();
 confirmation = new Confirmation();
 
 $("input[type='text']").change(function() {
   if ($(this).attr('name') == undefined)
-    return;
-
+  return;
+  
   confirmit = $(this).data('confirm');
   if (confirmit && !eval('confirmation.' + confirmit + '()')) {
     // Yeah, not pretty, but easier
@@ -121,6 +148,15 @@ $("select[name=imagesizing]").change(function() {
   });
 });
 
+$("select[name=randomize_images]").change(function () {
+  $.ajax({
+    url: "/setting/" + $(this).attr('name') + "/" + encodeURIComponent($(this).val()),
+    type: "PUT"
+  }).done(function () {
+    disableSlideshowControls();
+  });
+});
+
 $("select[name=tvservice]").change(function() {
   $.ajax({
     url:"/setting/tvservice/" + encodeURIComponent($(this).val()),
@@ -149,7 +185,6 @@ $("select[name=display-driver]").change(function() {
         });
         rebootWatch();
       }
-
     }
     console.log(data);
   });
@@ -182,6 +217,24 @@ $("#reset").click(function() {
       url:"/maintenance/reset"
     }).done(function(){
       location.reload();
+    });
+  }
+});
+
+$("#clearCache").click(function () {
+  if (confirm("Are you sure you want to REMOVE ALL CACHED IMAGES on your device?")) {
+    $.ajax({
+      url: "/maintenance/clearCache"
+    }).done(function () {
+    });
+  }
+});
+
+$("#forgetMemory").click(function () {
+  if (confirm("Are you sure you want to FORGET ALL IMAGES that have already been displayed?")) {
+    $.ajax({
+      url: "/maintenance/forgetMemory"
+    }).done(function () {
     });
   }
 });
@@ -222,6 +275,13 @@ $("input[class='keyword-delete']").click(function(){
     }).done(function(data){
       location.reload();
     });
+  }
+});
+
+$('.keyword').keypress(function (e) {
+  if (e.which == 13) {
+    $(this).next(".keyword-add").trigger("click");
+    return false;
   }
 });
 
