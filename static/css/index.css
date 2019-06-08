@@ -93,8 +93,10 @@ img.thumbnail {
 }
 
 div.controls {
+  margin-top: 5pt;
   display: flex; 
-  float: right
+  float: right;
+  clear: right;
 }
 
 div.busy {
