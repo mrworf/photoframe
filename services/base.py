@@ -415,8 +415,10 @@ class BaseService:
     # "size":     a key/value map containing "width" and "height" of the image
     #             can be None, but the service won't be able to determine a recommendedImageSize for 'addUrlParams'
     # "filename": the original filename of the image or None if unknown (only used for debugging purposes)
+    # "error":    If present, will generate an error shown to the user with the text within this key as the message
 
-    return None
+    return [{'error':'You haven\'t implemented getImagesFor'}]
+
 
   def addUrlParams(self, url, recommendedSize, displaySize):
     # If the service provider allows 'width' / 'height' parameters
@@ -453,7 +455,11 @@ class BaseService:
       # a provider-specific implementation for 'getImagesFor' is obligatory!
       images = self.getImagesFor(keyword)
       if images is None:
-        return {'id': None, 'mimetype': None, 'source': None, 'error': 'You haven\'t implemented "getImagesFor" yet'}
+        logging.warning('Function returned None, this is used sometimes when a temporary error happens. Still logged')
+        self.imageIndex = 0
+        continue
+      if len(images) > 0 and 'error' in images[0]:
+        return images[0]
       self._STATE["_NUM_IMAGES"][keyword] = len(images)
       if len(images) == 0:
         self.imageIndex = 0

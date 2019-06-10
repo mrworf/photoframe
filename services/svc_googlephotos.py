@@ -255,7 +255,7 @@ class GooglePhotos(BaseService):
       params = self.getQueryForKeyword(keyword)
       if params is None:
         logging.error('Unable to create query the keyword "%s"', keyword)
-        return None
+        return [{'error':'Unable to get photos using keyword "%s"' % keyword}]
 
       url = 'https://photoslibrary.googleapis.com/v1/mediaItems:search'
       maxItems = 1000 # Should be configurable
