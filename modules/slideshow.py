@@ -123,7 +123,7 @@ class slideshow:
         self.services.memoryForget(forgetHistory=True)
         self.doMemoryForget = False
       if self.doClearCache:
-        CacheManager.empty(self.settings.get('cachefolder'))
+        CacheManager.empty(self.settings.CACHEFOLDER)
         self.doClearCache = False
       if self.imageCurrent:
         self.imageCurrent = None
@@ -242,7 +242,7 @@ class slideshow:
     self.skipPreloadedImage = False
 
   def presentation(self):
-    cacheFolder = self.settings.get('cachefolder')
+    cacheFolder = self.settings.CACHEFOLDER
     lessImportantDirs = ["blurred", "zoomed"]
     CacheManager.createDirs(cacheFolder, subDirs=lessImportantDirs)
     CacheManager.garbageCollect(cacheFolder, lessImportantDirs)

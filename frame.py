@@ -71,7 +71,7 @@ if cmdline.emulate:
 if cmdline.basedir is not None:
   newpath = cmdline.basedir + '/'
   logging.info('Altering basedir to %s', newpath)
-  settings().reassign(newpath)
+  settings().reassignBase(newpath)
 
 void = open(os.devnull, 'wb')
 
@@ -277,7 +277,7 @@ def cfg_keyvalue(key, value):
       settings.setUser('width',  width)
       settings.setUser('height', height)
       display.enable(True, True)
-      CacheManager.empty(settings.get("cachefolder"))
+      CacheManager.empty(settings.CACHEFOLDER)
     if key in ['display-on', 'display-off']:
       timekeeper.setConfiguration(settings.getUser('display-on'), settings.getUser('display-off'))
     if key in ['autooff-lux', 'autooff-time']:
@@ -345,7 +345,7 @@ def cfg_rotation(orient):
   else:
     if orient >= 0 and orient < 360:
       sysconfig.setDisplayOrientation(orient)
-      CacheManager.empty(settings.get("cachefolder"))
+      CacheManager.empty(settings.CACHEFOLDER)
       return jsonify({'rotation' : sysconfig.getDisplayOrientation()})
   abort(500)
 

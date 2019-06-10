@@ -28,6 +28,9 @@ class settings:
 
   CONFIG_TXT = '/boot/config.txt'
 
+  CACHEFOLDER = '/root/cache/'
+
+
   DEPRECATED_USER = ['resolution']
   DEPRECATED_SYSTEM = ['colortemp-script']
 
@@ -40,6 +43,7 @@ class settings:
     settings.COLORMATCH = settings.COLORMATCH.replace('/root/', newbase)
     settings.DRV_BUILTIN = settings.DRV_BUILTIN.replace('/root/', newbase)
     settings.DRV_EXTERNAL = settings.DRV_EXTERNAL.replace('/root/', newbase)
+    settings.CACHEFOLDER = settings.CACHEFOLDER.replace('/root/', newbase)
 
   def __init__(self):
     self.settings = {
@@ -47,7 +51,6 @@ class settings:
       'oauth_state' : None,
       'local-ip' : None,
       'tempfolder' : '/tmp/',
-      'cachefolder': '/root/cache/',
       'colortemp' : None,
       'cfg' : None
     }
