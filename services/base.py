@@ -333,6 +333,8 @@ class BaseService:
     try:
       if self._OAUTH is not None:
         # Use OAuth path
+        if timeout != 180:
+            logging.warning('OAuth requests do not honor timeout parameter')
         result = self._OAUTH.request(url, destination, params, data=data, usePost=usePost)
       else:
         if usePost:
