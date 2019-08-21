@@ -169,7 +169,7 @@ class helper:
 		dar = (float)(displayWidth) / (float)(displayHeight)
 
 		if not zoomOnly:
-			if width > displayWidth and height <= displayHeight:
+			if oar >= dar:
 				adjWidth = displayWidth
 				adjHeight = int(float(displayWidth) / oar)
 			else:
