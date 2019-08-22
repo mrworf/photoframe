@@ -206,6 +206,7 @@ class slideshow:
     return filenameProcessed
 
   def process(self, filename):
+    helper.autoOrient(filename)
     imageSizing = self.settings.getUser('imagesizing')
     if imageSizing == None or imageSizing == "none":
       return self._colormatch(filename)
