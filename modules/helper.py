@@ -49,9 +49,9 @@ class helper:
 				return i
 	@staticmethod
     	def autoOrient(filename):
-            if not os.path.isfile(filename):
-                return False
-        return subprocess.call(['/usr/bin/mogrify', '-auto-orient', filename])
+        	if not os.path.isfile(filename):
+                	return False
+            	return subprocess.call(['/usr/bin/mogrify', '-auto-orient', filename])
 
 	@staticmethod
 	def getResolution():
