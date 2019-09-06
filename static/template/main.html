@@ -44,6 +44,14 @@
       <option value="270">90 degrees counter-clockwise</option>
 	  {{/select}}
 	</select>
+		<br>
+		Use display overscan
+		<select name="display-overscan">
+      {{#select overscan.overscan}}
+      <option value="true">Yes</option>
+      <option value="false">No</option>
+	  {{/select}}
+	</select>
 	<br>
 	Only show images that match display orientation
 	<select name="force_orientation">

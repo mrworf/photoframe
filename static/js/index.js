@@ -196,6 +196,7 @@ function loadSettings(funcOk)
 	loadConfigData("/details/drivers", "drivers", funcTmp);
   loadConfigData("/details/version", "version", funcTmp);
   loadConfigData("/rotation", "rotation", funcTmp);
+  loadConfigData("/overscan", "overscan", funcTmp);
   
 	loadConfigData("/service/available", 'service-available', funcTmp);
 	loadConfigData("/service/list", 'service-defined', funcTmp);

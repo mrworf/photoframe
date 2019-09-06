@@ -131,6 +131,20 @@ $("select[name=display-rotation]").change(function() {
   });
 });
 
+$("select[name=display-overscan]").change(function() {
+  $.ajax({
+    url:"/overscan/" + $(this).val(),
+         type:"PUT"
+  }).done(function(){
+    if(confirm('In order to fully enable this change, you must reboot the photoframe. Do you wish to do this now?')) {
+      $.ajax({
+        url:"/maintenance/reboot"
+      });
+      rebootWatch();
+    }
+  });
+});
+
 $("select[name=force_orientation]").change(function () {
   var value = $(this).val()
   $.ajax({

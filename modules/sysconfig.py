@@ -21,44 +21,28 @@ import logging
 
 class sysconfig:
   @staticmethod
-  def isDisplayRotated():
-    rotate = False
+  def _getConfigFileState(key):
     if os.path.exists(settings.CONFIG_TXT):
       with open(settings.CONFIG_TXT, 'r') as f:
         for line in f:
           clean = line.strip()
           if clean == '':
             continue
-          if clean.startswith('display_rotate='):
-            if clean.endswith('1') or clean.endswith('3'):
-              rotate = True
-            else:
-              rotate = False
-    return rotate
+          if clean.startswith('%s=' % key):
+            _, value = clean.split('=', 1)
+            return value
+    return None
 
   @staticmethod
-  def getDisplayOrientation():
-    rotate = 0
-    if os.path.exists(settings.CONFIG_TXT):
-      with open(settings.CONFIG_TXT, 'r') as f:
-        for line in f:
-          clean = line.strip()
-          if clean == '':
-            continue
-          if clean.startswith('display_rotate='):
-            rotate = int(clean[-1])*90
-    return rotate
-
-  @staticmethod
-  def setDisplayOrientation(deg):
+  def _changeConfigFile(key, value):
+    configline = '%s=%s\n' % (key, value)
     found = False
-    configline = 'display_rotate=%d\n' % int(deg/90)
     if os.path.exists(settings.CONFIG_TXT):
       with open(settings.CONFIG_TXT, 'r') as ifile:
         with open(settings.CONFIG_TXT + '.new', 'w') as ofile:
           for line in ifile:
             clean = line.strip()
-            if clean.startswith('display_rotate='):
+            if clean.startswith('%s=' % key):
               found = True
               line = configline
             ofile.write(line)
@@ -75,4 +59,36 @@ class sysconfig:
         return True
       except:
         logging.exception('Failed to activate new config.txt, you may need to restore the config.txt')
+
+  @staticmethod
+  def isDisplayRotated():
+    state = sysconfig._getConfigFileState('display_rotate')
+    if state is not None:
+      return state.endswith('1') or state.endswith('3')
     return False
+
+  @staticmethod
+  def getDisplayOrientation():
+    rotate = 0
+    state = sysconfig._getConfigFileState('display_rotate')
+    if state is not None:
+      rotate = int(state)*90
+    return rotate
+
+  @staticmethod
+  def setDisplayOverscan(enable):
+    if enable:
+      return sysconfig._changeConfigFile('disable_overscan', '0')
+    else:
+      return sysconfig._changeConfigFile('disable_overscan', '1')
+
+  @staticmethod
+  def isDisplayOverscan():
+    state = sysconfig._getConfigFileState('disable_overscan')
+    if state is not None:
+      return state == '0'
+    return True # Typically true for RPi
+
+  @staticmethod
+  def setDisplayOrientation(deg):
+    return sysconfig._changeConfigFile('display_rotate', '%d' % int(deg/90))

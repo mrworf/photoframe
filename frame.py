@@ -143,6 +143,11 @@ if user is not None:
       return user['password']
     return None
 
+def quit_server():
+  func = request.environ.get('werkzeug.server.shutdown')
+  if func:
+    func()
+
 @app.after_request
 def nocache(r):
     r.headers["Pragma"] = "no-cache"
@@ -349,6 +354,17 @@ def cfg_rotation(orient):
       return jsonify({'rotation' : sysconfig.getDisplayOrientation()})
   abort(500)
 
+@app.route('/overscan', methods=['GET'], defaults={'overscan':None})
+@app.route('/overscan/<overscan>', methods=['PUT'])
+@auth.login_required
+def cfg_overscan(overscan):
+  if overscan is None:
+    return jsonify({'overscan' : sysconfig.isDisplayOverscan()})
+  else:
+    sysconfig.setDisplayOverscan(overscan == 'true')
+    return jsonify({'overscan' : sysconfig.isDisplayOverscan()})
+  abort(500)
+
 @app.route('/maintenance/<cmd>')
 @auth.login_required
 def cfg_reset(cmd):
@@ -359,15 +375,26 @@ def cfg_reset(cmd):
     if os.path.exists(settings.CONFIGFOLDER):
       shutil.rmtree(settings.CONFIGFOLDER, True)
     # Reboot
-    subprocess.call(['/sbin/reboot'], stderr=void);
+    if not cmdline.emulate:
+      subprocess.call(['/sbin/reboot'], stderr=void);
+    else:
+      quit_server()
     return jsonify({'reset': True})
   elif cmd == 'reboot':
-    subprocess.call(['/sbin/reboot'], stderr=void);
+    if not cmdline.emulate:
+      subprocess.call(['/sbin/reboot'], stderr=void);
+    else:
+      quit_server()
     return jsonify({'reboot' : True})
   elif cmd == 'shutdown':
-    subprocess.call(['/sbin/poweroff'], stderr=void);
+    if not cmdline.emulate:
+      subprocess.call(['/sbin/poweroff'], stderr=void);
+    else:
+      quit_server()
     return jsonify({'shutdown': True})
   elif cmd == 'update':
+    if cmdline.emulate:
+      return 'Cannot run update from emulation mode', 200
     if os.path.exists('/root/photoframe/update.sh'):
       p = subprocess.Popen('/bin/bash /root/photoframe/update.sh 2>&1 | logger -t forced_update', shell=True)
       return 'Update in process', 200
@@ -379,7 +406,6 @@ def cfg_reset(cmd):
   elif cmd == 'forgetMemory':
     slideshow.createEvent("memoryForget")
     return jsonify({'forgetMemory': True})
-
 
 @app.route('/details/<about>')
 @auth.login_required
