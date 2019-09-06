@@ -557,6 +557,14 @@ def control_slideshow(cmd):
   slideshow.createEvent(cmd)
   return jsonify({'control': True})
 
+@app.route('/options/<cmd>')
+@auth.login_required
+def options_change(cmd):
+  if cmd == 'DEBUG':
+    settings.app_opt_set('POSTCMD', '"--debug"')
+  elif cmd == 'NODEBUG':
+    settings.app_opt_set('POSTCMD', '')
+  return 'Options changed', 200
 
 settings = settings()
 drivers = drivers()
