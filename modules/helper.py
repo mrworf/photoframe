@@ -330,6 +330,7 @@ class helper:
 				funcNoNetwork()
 				if not shownError:
 					logging.error('You must have functional internet connection to use this app')
+					shownError = True
 				time.sleep(10)
 			else:
 				logging.info('Network connection reestablished')

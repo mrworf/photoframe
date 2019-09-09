@@ -29,6 +29,7 @@ import subprocess
 from modules.remember import remember
 from modules.helper import helper
 from modules.cachemanager import CacheManager
+from modules.path import path
 
 class slideshow:
   SHOWN_IP = False
@@ -123,7 +124,7 @@ class slideshow:
         self.services.memoryForget(forgetHistory=True)
         self.doMemoryForget = False
       if self.doClearCache:
-        CacheManager.empty(self.settings.CACHEFOLDER)
+        CacheManager.empty(path.CACHEFOLDER)
         self.doClearCache = False
       if self.imageCurrent:
         self.imageCurrent = None
@@ -242,7 +243,7 @@ class slideshow:
     self.skipPreloadedImage = False
 
   def presentation(self):
-    cacheFolder = self.settings.CACHEFOLDER
+    cacheFolder = path.CACHEFOLDER
     lessImportantDirs = ["blurred", "zoomed"]
     CacheManager.createDirs(cacheFolder, subDirs=lessImportantDirs)
     CacheManager.garbageCollect(cacheFolder, lessImportantDirs)
