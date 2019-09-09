@@ -587,9 +587,9 @@ def control_slideshow(cmd):
 @auth.login_required
 def options_change(cmd):
   if cmd == 'DEBUG':
-    settings.app_opt_set('POSTCMD', '"--debug"')
+    sysconfig.setOption('POSTCMD', '"--debug"')
   elif cmd == 'NODEBUG':
-    settings.app_opt_set('POSTCMD', '')
+    sysconfig.setOption('POSTCMD', '')
   return 'Options changed', 200
 
 settings = settings()

@@ -194,32 +194,3 @@ class settings:
       return self.settings[key]
     logging.warning('Trying to access non-existent config key "%s"' % key)
     return None
-
-  def app_opt_load(self):
-    if os.path.exists(settings.OPTIONSFILE):
-      lines = {}
-      with open(settings.OPTIONSFILE, 'r') as f:
-        for line in f:
-          key, value = line.strip().split('=',1)
-          lines[key.strip()] = value.strip()
-      return lines
-    return None
-
-  def app_opt_save(self, lines):
-    with open(settings.OPTIONSFILE, 'w') as f:
-      for key in lines:
-        f.write('%s=%s\n' % (key, lines[key]))
-
-  def app_opt_set(self, key, value):
-    lines = self.app_opt_load()
-    if lines is None:
-      lines = {}
-    lines[key] = value
-    self.app_opt_save(lines)
-
-  def apt_opt_remove(self, key):
-    lines = self.app_opt_load()
-    if lines is None:
-      return
-    lines.pop(key, False)
-    self.app_opt_save(lines)
