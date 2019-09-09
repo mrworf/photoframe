@@ -24,11 +24,12 @@ import re
 import importlib
 
 from modules.helper import helper
+from modules.path import path
 
 class ServiceManager:
   def __init__(self, settings):
     self._SETTINGS = settings
-    svc_folder = os.path.join(settings.CONFIGFOLDER, 'services')
+    svc_folder = os.path.join(path.CONFIGFOLDER, 'services')
     if not os.path.exists(svc_folder):
       os.mkdir(svc_folder)
 
@@ -283,20 +284,20 @@ class ServiceManager:
     return serviceStates
 
   def _migrate(self):
-    if os.path.exists(self._SETTINGS.CONFIGFOLDER + '/oauth.json'):
+    if os.path.exists(path.CONFIGFOLDER + '/oauth.json'):
       logging.info('Migrating old setup to new service layout')
       id = self.addService(PicasaWeb.SERVICE_ID, 'PicasaWeb')
       svc = self._SERVICES[id]['service']
 
       # Migrate the oauth configuration
-      with open(self._SETTINGS.CONFIGFOLDER + '/oauth.json') as f:
+      with open(path.CONFIGFOLDER + '/oauth.json') as f:
         data = json.load(f)
       if 'web' in data: # if someone added it via command-line
         data = data['web']
       svc.setOAuthConfig(data)
       svc.migrateOAuthToken(self._SETTINGS.get('oauth_token'))
 
-      os.unlink(self._SETTINGS.CONFIGFOLDER + '/oauth.json')
+      os.unlink(path.CONFIGFOLDER + '/oauth.json')
       self._SETTINGS.set('oauth_token', '')
 
       # Migrate keywords

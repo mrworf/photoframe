@@ -20,6 +20,7 @@ import os
 import shutil
 import re
 import random
+import time
 
 # A regular expression to determine whether a url is valid or not (e.g. "www.example.de/someImg.jpg" is missing "http://")
 VALID_URL_REGEX = re.compile(
@@ -314,3 +315,24 @@ class helper:
 			logging.exception('Unable to change timezone')
 			pass
 		return result == 0
+
+	@staticmethod
+	def hasNetwork():
+		return helper.getIP() is not None
+
+	@staticmethod
+	def waitForNetwork(funcNoNetwork):
+		shownError = False
+		while True:
+			ip = helper.getIP()
+
+			if ip is None:
+				funcNoNetwork()
+				if not shownError:
+					logging.error('You must have functional internet connection to use this app')
+				time.sleep(10)
+			else:
+				logging.info('Network connection reestablished')
+				settings.set('local-ip', ip)
+				break
+

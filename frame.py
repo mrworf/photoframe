@@ -45,6 +45,8 @@ from modules.drivers import drivers
 from modules.servicemanager import ServiceManager
 from modules.sysconfig import sysconfig
 from modules.cachemanager import CacheManager
+from modules.path import path
+import modules.debug as debug
 
 parser = argparse.ArgumentParser(description="PhotoFrame - A RaspberryPi based digital photoframe", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--logfile', default=None, help="Log to file instead of stdout")
@@ -65,8 +67,8 @@ if cmdline.emulate:
   logging.info('Running in emulation mode, settings are stored in /tmp/photoframe/')
   if not os.path.exists('/tmp/photoframe'):
     os.mkdir('/tmp/photoframe')
-  settings().reassignBase('/tmp/photoframe/')
-  settings().reassignConfigTxt('extras/config.txt')
+  path().reassignBase('/tmp/photoframe/')
+  path().reassignConfigTxt('extras/config.txt')
 
 if cmdline.basedir is not None:
   newpath = cmdline.basedir + '/'
@@ -76,14 +78,7 @@ if cmdline.basedir is not None:
 void = open(os.devnull, 'wb')
 
 # Supercritical, since we store all photoframe files in a subdirectory, make sure to create it
-if not os.path.exists(settings.CONFIGFOLDER):
-  try:
-    os.mkdir(settings.CONFIGFOLDER)
-  except:
-    logging.exception('Unable to create configuration directory, cannot start')
-    sys.exit(255)
-elif not os.path.isdir(settings.CONFIGFOLDER):
-  logging.error('%s isn\'t a folder, cannot start', settings.CONFIGFOLDER)
+if not path().validate():
   sys.exit(255)
 
 import requests
@@ -112,27 +107,8 @@ class NoAuth:
 
 app = Flask(__name__, static_url_path='')
 app.config['UPLOAD_FOLDER'] = '/tmp/'
-user = None
+user = sysconfig.getHTTPAuth()
 services = None
-
-userfiles = ['/boot/http-auth.json', settings.CONFIGFOLDER + '/http-auth.json']
-for userfile in userfiles:
-  if os.path.exists(userfile):
-    logging.debug('Found "%s", loading the data' % userfile)
-    try:
-      with open(userfile, 'rb') as f:
-        user = json.load(f)
-        if 'user' not in user or 'password' not in user:
-          logging.warning("\"%s\" doesn't contain a user and password key" % userfile)
-          user = None
-        else:
-          break
-    except:
-      logging.exception('Unable to load JSON from "%s"' % userfile)
-      user = None
-
-if user is None:
-  logging.info('No http-auth.json found, disabling http authentication')
 
 auth = NoAuth()
 if user is not None:
@@ -142,6 +118,8 @@ if user is not None:
     if user['user'] == username:
       return user['password']
     return None
+else:
+  logging.info('No http-auth.json found, disabling http authentication')
 
 def quit_server():
   func = request.environ.get('werkzeug.server.shutdown')
@@ -180,48 +158,16 @@ def show_error(e):
     '''
   return message, code
 
-def debug_stacktrace():
-    title = 'Stacktrace of all running threads'
-    lines = []
-    for threadId, stack in sys._current_frames().items():
-        lines.append("\n# ThreadID: %s" % threadId)
-        for filename, lineno, name, line in traceback.extract_stack(stack):
-            lines.append('File: "%s", line %d, in %s' % (filename, lineno, name))
-            if line:
-                lines.append("  %s" % (line.strip()))
-    return (title, lines, None)
-
-def debug_logfile(all=False):
-    stats = os.stat('/var/log/syslog')
-    cmd = 'grep -a "photoframe\[" /var/log/syslog | tail -n 100'
-    title = 'Last 100 lines from the photoframe log'
-    if all:
-      title = 'Last 100 lines from the system log (/var/log/syslog)'
-      cmd = 'tail -n 100 /var/log/syslog'
-    lines = subprocess.check_output(cmd, shell=True)
-    if lines:
-      lines = lines.splitlines()
-    suffix = '(size of logfile %d bytes, created %s)' % (stats.st_size, datetime.datetime.fromtimestamp(stats.st_ctime).strftime('%c'))
-    return (title, lines, suffix)
-
-
-def debug_version():
-    title = 'Running version'
-    lines = subprocess.check_output('git log HEAD~1..HEAD ; echo "" ; git status', shell=True)
-    if lines:
-      lines = lines.splitlines()
-    return (title, lines, None)
-
 @app.route('/debug', methods=['GET'])
 def show_logs():
   # Special URL, we simply try to extract latest 100 lines from syslog
   # and filter out frame messages. These are shown so the user can
   # add these to issues.
   report = []
-  report.append(debug_version())
-  report.append(debug_logfile(False))
-  report.append(debug_logfile(True))
-  report.append(debug_stacktrace())
+  report.append(debug.version())
+  report.append(debug.logfile(False))
+  report.append(debug.logfile(True))
+  report.append(debug.stacktrace())
 
   message = '<html><head><title>Photoframe Log Report</title></head><body style="font-family: Verdana">'
   message = '''<h1>Photoframe Log report</h1><div style="margin: 15pt; padding 10pt">This page is intended to be used when you run into issues which cannot be resolved by the messages displayed on the frame. Please save and attach this information
@@ -350,7 +296,7 @@ def cfg_rotation(orient):
   else:
     if orient >= 0 and orient < 360:
       sysconfig.setDisplayOrientation(orient)
-      CacheManager.empty(settings.CACHEFOLDER)
+      CacheManager.empty(path.CACHEFOLDER)
       return jsonify({'rotation' : sysconfig.getDisplayOrientation()})
   abort(500)
 
@@ -372,8 +318,8 @@ def cfg_reset(cmd):
     # Remove driver if active
     drivers.activate(None)
     # Delete configuration data
-    if os.path.exists(settings.CONFIGFOLDER):
-      shutil.rmtree(settings.CONFIGFOLDER, True)
+    if os.path.exists(path.CONFIGFOLDER):
+      shutil.rmtree(path.CONFIGFOLDER, True)
     # Reboot
     if not cmdline.emulate:
       subprocess.call(['/sbin/reboot'], stderr=void);
@@ -628,15 +574,8 @@ display.enable(True, True)
 services = ServiceManager(settings)
 
 # Spin until we have internet, check every 10s
-while True:
-  settings.set('local-ip', helper.getIP())
-
-  if settings.get('local-ip') is None:
-    logging.error('You must have functional internet connection to use this app')
-    display.message('No internet\n\nCheck wifi-config.txt or cable')
-    time.sleep(10)
-  else:
-    break
+if not helper.hasNetwork():
+  helper.waitForNetwork(lambda: display.message('No internet\n\nCheck wifi-config.txt or cable'))
 
 # Let the display know the URL to use
 display.setConfigPage('http://%s:%d/' % (settings.get('local-ip'), 7777))

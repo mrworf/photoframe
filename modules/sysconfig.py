@@ -16,14 +16,14 @@
 import os
 import sys
 import subprocess
-from settings import settings
+from path import path
 import logging
 
 class sysconfig:
   @staticmethod
   def _getConfigFileState(key):
-    if os.path.exists(settings.CONFIG_TXT):
-      with open(settings.CONFIG_TXT, 'r') as f:
+    if os.path.exists(path.CONFIG_TXT):
+      with open(path.CONFIG_TXT, 'r') as f:
         for line in f:
           clean = line.strip()
           if clean == '':
@@ -37,9 +37,9 @@ class sysconfig:
   def _changeConfigFile(key, value):
     configline = '%s=%s\n' % (key, value)
     found = False
-    if os.path.exists(settings.CONFIG_TXT):
-      with open(settings.CONFIG_TXT, 'r') as ifile:
-        with open(settings.CONFIG_TXT + '.new', 'w') as ofile:
+    if os.path.exists(path.CONFIG_TXT):
+      with open(path.CONFIG_TXT, 'r') as ifile:
+        with open(path.CONFIG_TXT + '.new', 'w') as ofile:
           for line in ifile:
             clean = line.strip()
             if clean.startswith('%s=' % key):
@@ -49,13 +49,13 @@ class sysconfig:
           if not found:
             ofile.write(configline)
       try:
-        os.rename(settings.CONFIG_TXT, settings.CONFIG_TXT + '.old')
-        os.rename(settings.CONFIG_TXT + '.new', settings.CONFIG_TXT)
+        os.rename(path.CONFIG_TXT, path.CONFIG_TXT + '.old')
+        os.rename(path.CONFIG_TXT + '.new', path.CONFIG_TXT)
         # Keep the first version of the config.txt just-in-case
-        if os.path.exists(settings.CONFIG_TXT + '.original'):
-          os.unlink(settings.CONFIG_TXT + '.old')
+        if os.path.exists(path.CONFIG_TXT + '.original'):
+          os.unlink(path.CONFIG_TXT + '.old')
         else:
-          os.rename(settings.CONFIG_TXT + '.old', settings.CONFIG_TXT + '.original')
+          os.rename(path.CONFIG_TXT + '.old', path.CONFIG_TXT + '.original')
         return True
       except:
         logging.exception('Failed to activate new config.txt, you may need to restore the config.txt')
@@ -95,9 +95,9 @@ class sysconfig:
 
   @staticmethod
   def _app_opt_load():
-    if os.path.exists(settings.OPTIONSFILE):
+    if os.path.exists(path.OPTIONSFILE):
       lines = {}
-      with open(settings.OPTIONSFILE, 'r') as f:
+      with open(path.OPTIONSFILE, 'r') as f:
         for line in f:
           key, value = line.strip().split('=',1)
           lines[key.strip()] = value.strip()
@@ -106,7 +106,7 @@ class sysconfig:
 
   @staticmethod
   def _app_opt_save(lines):
-    with open(settings.OPTIONSFILE, 'w') as f:
+    with open(path.OPTIONSFILE, 'w') as f:
       for key in lines:
         f.write('%s=%s\n' % (key, lines[key]))
 
@@ -125,3 +125,23 @@ class sysconfig:
       return
     lines.pop(key, False)
     self.app_opt_save(lines)
+
+  @staticmethod
+  def getHTTPAuth():
+    user = None
+    userfiles = ['/boot/http-auth.json', path.CONFIGFOLDER + '/http-auth.json']
+    for userfile in userfiles:
+      if os.path.exists(userfile):
+        logging.debug('Found "%s", loading the data' % userfile)
+        try:
+          with open(userfile, 'rb') as f:
+            user = json.load(f)
+            if 'user' not in user or 'password' not in user:
+              logging.warning("\"%s\" doesn't contain a user and password key" % userfile)
+              user = None
+            else:
+              break
+        except:
+          logging.exception('Unable to load JSON from "%s"' % userfile)
+          user = None
+    return user
