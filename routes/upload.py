@@ -20,12 +20,11 @@ import os
 from modules.sysconfig import sysconfig
 from baseroute import BaseRoute
 
-#@auth.login_required
 class RouteUpload(BaseRoute):
   def setupex(self, settingsmgr, drivermgr):
     self.settingsmgr = settingsmgr
     self.drivermgr = drivermgr
-    
+
     self.addUrl('/upload/<item>').clearMethods().addMethod('POST')
 
   def handle(self, app, item):

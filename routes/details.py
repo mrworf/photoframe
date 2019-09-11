@@ -21,6 +21,7 @@ import shutil
 
 from modules.sysconfig import sysconfig
 from modules.path import path
+from modules.helper import helper
 
 from baseroute import BaseRoute
 
@@ -30,6 +31,8 @@ class RouteDetails(BaseRoute):
     self.drivermgr = drivermgr
     self.colormatch = colormatch
     self.slideshow = slideshow
+
+    self.void = open(os.devnull, 'wb')
 
     self.addUrl('/details/<about>')
 
@@ -51,11 +54,11 @@ class RouteDetails(BaseRoute):
       result = helper.timezoneList()
       return self.jsonify(result)
     elif about == 'version':
-      output = subprocess.check_output(['git', 'log', '-n1'], stderr=void)
+      output = subprocess.check_output(['git', 'log', '-n1'], stderr=self.void)
       lines = output.split('\n')
       infoDate = lines[2][5:].strip()
       infoCommit = lines[0][7:].strip()
-      output = subprocess.check_output(['git', 'status'], stderr=void)
+      output = subprocess.check_output(['git', 'status'], stderr=self.void)
       lines = output.split('\n')
       infoBranch = lines[0][10:].strip()
       return self.jsonify({'date':infoDate, 'commit':infoCommit, 'branch': infoBranch})

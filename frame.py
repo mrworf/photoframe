@@ -82,95 +82,6 @@ void = open(os.devnull, 'wb')
 if not path().validate():
   sys.exit(255)
 
-
-#@app.route("/callback", methods=["GET"])
-#@auth.login_required
-def oauth_callback():
-  # Figure out who should get this result...
-  old = services.hasReadyServices()
-  if services.oauthCallback(request):
-    # Request handled
-    if old != services.hasReadyServices():
-      slideshow.trigger()
-    return redirect('/')
-  else:
-    abort(500)
-
-#@app.route('/service/<service>/oauth', methods=['POST'])
-#@auth.login_required
-def services_oauth(service):
-  j = request.json
-  # This one is special, this is a file upload of the JSON config data
-  # and since we don't need a physical file for it, we should just load
-  # the data. For now... ignore
-  if 'filename' not in request.files:
-    logging.error('No file part')
-    abort(405)
-  file = request.files['filename']
-  data = json.load(file)
-  if 'web' in data:
-    data = data['web']
-  if 'redirect_uris' in data and 'https://photoframe.sensenet.nu' not in data['redirect_uris']:
-    return 'The redirect uri is not set to https://photoframe.sensenet.nu', 405
-  if not services.oauthConfig(service, data):
-    return 'Configuration was invalid', 405
-  return 'Configuration set', 200
-
-#@app.route('/service/<service>/link', methods=['GET'])
-#@auth.login_required
-def service_link(service):
-  return redirect(services.oauthStart(service))
-
-#@app.route('/service/<action>',  methods=['GET', 'POST'])
-#@auth.login_required
-def services_operations(action):
-  j = request.json
-  if action == 'available':
-    return jsonify(services.listServices())
-  if action == 'list':
-    return jsonify(services.getServices())
-  if action == 'add' and j is not None:
-    if 'name' in j and 'id' in j:
-      old = services.hasReadyServices()
-      svcid = services.addService(int(j['id']), j['name'])
-      if old != services.hasReadyServices():
-        slideshow.trigger()
-      return jsonify({'id':svcid})
-  if action == 'remove' and j is not None:
-    if 'id' in j:
-      services.deleteService(j['id'])
-      slideshow.trigger() # Always trigger since we don't know who was on-screen
-      return jsonify({'status':'Done'})
-  if action == 'rename' and j is not None:
-    if 'name' in j and 'id' in j:
-      if services.renameService(j['id'], j['name']):
-        return jsonify({'status':'Done'})
-  if request.url.endswith('/config/fields'):
-    return jsonify(services.getServiceConfigurationFields(id))
-  if request.url.endswith('/config'):
-    if request.method == 'POST' and j is not None and 'config' in j:
-      if services.setServiceConfiguration(id, j['config']):
-        return 'Configuration saved', 200
-    elif request.method == 'GET':
-      return jsonify(services.getServiceConfiguration(id))
-
-  abort(500)
-
-#@app.route('/control/<cmd>')
-#@auth.login_required
-def control_slideshow(cmd):
-  slideshow.createEvent(cmd)
-  return jsonify({'control': True})
-
-#@app.route('/options/<cmd>')
-#@auth.login_required
-def options_change(cmd):
-  if cmd == 'DEBUG':
-    sysconfig.setOption('POSTCMD', '"--debug"')
-  elif cmd == 'NODEBUG':
-    sysconfig.setOption('POSTCMD', '')
-  return 'Options changed', 200
-
 settings = settings()
 drivers = drivers()
 
@@ -237,6 +148,9 @@ from routes.overscan import RouteOverscan
 from routes.maintenance import RouteMaintenance
 from routes.details import RouteDetails
 from routes.upload import RouteUpload
+from routes.oauthlink import RouteOAuthLink
+from routes.service import RouteService
+from routes.control import RouteControl
 
 route = RouteSettings()
 route.setupex(powermanagement, settings, drivers, timekeeper, display, CacheManager, slideshow)
@@ -264,6 +178,18 @@ test.registerHandler(route)
 
 route = RouteUpload()
 route.setupex(settings, drivers)
+test.registerHandler(route)
+
+route = RouteOAuthLink()
+route.setupex(services, slideshow)
+test.registerHandler(route)
+
+route = RouteService()
+route.setupex(services, slideshow)
+test.registerHandler(route)
+
+route = RouteControl()
+route.setupex(slideshow)
 test.registerHandler(route)
 
 test.start();
