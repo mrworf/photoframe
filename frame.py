@@ -40,6 +40,7 @@ from modules.server import WebServer
 parser = argparse.ArgumentParser(description="PhotoFrame - A RaspberryPi based digital photoframe", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--logfile', default=None, help="Log to file instead of stdout")
 parser.add_argument('--port', default=7777, type=int, help="Port to listen on")
+parser.add_argument('--countdown', default=10, type=int, help="Set seconds to countdown before starting slideshow")
 parser.add_argument('--listen', default="0.0.0.0", help="Address to listen on")
 parser.add_argument('--debug', action='store_true', default=False, help='Enable loads more logging')
 parser.add_argument('--basedir', default=None, help='Change the root folder of photoframe')
@@ -86,6 +87,7 @@ class Photoframe:
 
     self.slideshow.setQueryPower(self.timekeeperMgr.getDisplayOn)
     self.slideshow.setServiceManager(self.serviceMgr)
+    self.slideshow.setCountdown(cmdline.countdown)
 
     # Prep the webserver
     self.setupWebserver(cmdline.listen, cmdline.port)

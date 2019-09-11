@@ -20,6 +20,7 @@ from oauthlib.oauth2 import TokenExpiredError
 from requests_oauthlib import OAuth2Session
 
 from modules.helper import helper
+from modules.network import RequestResult
 
 class OAuth:
 	def __init__(self, setToken, getToken, scope, extras=''):
@@ -50,14 +51,19 @@ class OAuth:
 		return auth
 
 	def request(self, uri, destination=None, params=None, data=None, usePost=False):
+		ret = RequestResult()
 		result = None
 		stream = destination != None
 		tries = 0
 
-		while tries < 1:
+		while tries < 5:
 			try:
 				try:
 					auth = self.getSession()
+					if auth is None:
+						logging.error('Unable to get OAuth session, probably expired')
+						ret.setResult(RequestResult.OAUTH_INVALID)
+						return ret
 					if usePost:
 						result = auth.post(uri, stream=stream, params=params, json=data)
 					else:
@@ -66,6 +72,11 @@ class OAuth:
 						break
 				except TokenExpiredError as e:
 					auth = self.getSession(True)
+					if auth is None:
+						logging.error('Unable to get OAuth session, probably expired')
+						ret.setResult(RequestResult.OAUTH_INVALID)
+						return ret
+
 					if usePost:
 						result = auth.post(uri, stream=stream, params=params, json=data)
 					else:
@@ -79,24 +90,25 @@ class OAuth:
 
 		if tries == 5:
 			logging.error('Failed to download due to network issues')
-			return False
+			ret.setResult(RequestResult.NO_NETWORK) # Not necessarily true, need to properly handle it
+			return ret
 
-		if result is not None and destination is not None:
-			ret = {'status' : result.status_code, 'content' : None, 'mimetype' : result.headers['Content-Type'], 'headers' : result.headers}
+		if destination is not None:
 			try:
 				with open(destination, 'wb') as handle:
 					for chunk in result.iter_content(chunk_size=512):
 						if chunk:  # filter out keep-alive new chunks
 							handle.write(chunk)
+				ret.setResult(RequestResult.SUCCESS).setHTTPCode(result.status_code)
+				ret.setHeaders(result.headers)
 			except:
 				logging.exception('Failed to download %s' % uri)
-				ret['status'] = 600
-			return ret
+				ret.setResult(RequestResult.FAILED_SAVING)
 		else:
-			if result is None:
-				return {'status':500, 'content':'Unable to download URL using OAuth', 'mimetype': None, 'headers': None}
-			else:
-				return {'status':result.status_code, 'content':result.content, 'mimetype' : result.headers['Content-Type'], 'headers' : result.headers}
+			ret.setResult(RequestResult.SUCCESS).setHTTPCode(result.status_code)
+			ret.setHeaders(result.headers)
+			ret.setContent(result.content)
+		return ret
 
 	def getRedirectId(self):
 		r = requests.get('%s/?register' % self.ridURI)

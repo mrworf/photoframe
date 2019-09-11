@@ -68,11 +68,11 @@ class SimpleUrl(BaseService):
     if result is None:
       return None
     # catch broken urls
-    if result["error"] is not None and result["source"] is not None:
-      logging.warning("broken url detected. You should remove '.../%s' from keywords" % (self.getUrlFilename(result["source"])))
+    if result.error is not None and result.source is not None:
+      logging.warning("broken url detected. You should remove '.../%s' from keywords" % (self.getUrlFilename(result.source)))
     # catch unsupported mimetypes (can only be done after downloading the image)
-    elif result["error"] is None and result["mimetype"] not in supportedMimeTypes:
-      logging.warning("unsupported mimetype '%s'. You should remove '.../%s' from keywords" % (result["mimetype"], self.getUrlFilename(result["source"])))
+    elif result.error is None and result.mimetype not in supportedMimeTypes:
+      logging.warning("unsupported mimetype '%s'. You should remove '.../%s' from keywords" % (result.mimetype, self.getUrlFilename(result.source)))
     else:
       return result
 
@@ -81,13 +81,13 @@ class SimpleUrl(BaseService):
     # retry (with another image)
     if retry > 0:
       return self.selectImageFromAlbum(destinationDir, supportedMimeTypes, displaySize, randomize, retry=retry-1)
-    return {'id': None, 'mimetype': None, 'error': '%s uses broken urls / unsupported images!' % self.SERVICE_NAME, 'source': None}
+    return BaseService.createImageHolder(self).setError('%s uses broken urls / unsupported images!' % self.SERVICE_NAME)
 
   def getImagesFor(self, keyword):
     url = keyword
     if url in self.brokenUrls:
       return []
-    image = {"id": self.hashString(url), "url": url, "source": url, "mimetype": None, "size": None, "filename": self.getUrlFilename(url)}
+    image = BaseService.createImageHolder(self).setId(self.hashString(url)).setUrl(url).setSource(url).setFilename(self.getUrlFilename(url))
     return [image]
 
   def addUrlParams(self, url, _recommendedSize, displaySize):

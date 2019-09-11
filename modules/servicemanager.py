@@ -399,7 +399,7 @@ class ServiceManager:
     if svc is None:
       return None
     result = svc.prepareNextItem(destinationDir, supportedMimeTypes, displaySize, randomize)
-    if result['error'] is not None:
+    if result.error is not None:
       # If we end up here, two things can have happened
       # 1. All images have been shown for this service
       # 2. No image or data was able to download from this service
@@ -417,7 +417,8 @@ class ServiceManager:
         return None
       result = svc.prepareNextItem(destinationDir, supportedMimeTypes, displaySize, randomize)
 
-      if result['error'] is not None:
+      if result.error is not None:
+        logging.error('Service returned: ' + result.error)
         state = svc.updateState()
         if state == svc.STATE_READY and randomize and svc not in self._OUT_OF_IMAGES:
           self._OUT_OF_IMAGES.append(svc)

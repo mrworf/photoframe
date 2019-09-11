@@ -36,6 +36,7 @@ class slideshow:
   EVENTS = ["nextImage", "prevImage", "nextAlbum", "prevAlbum", "settingsChange", "memoryForget", "clearCache"]
 
   def __init__(self, display, settings, colormatch):
+    self.countdown = 0
     self.queryPowerFunc = None
     self.thread = None
     self.services = None
@@ -62,6 +63,12 @@ class slideshow:
         'image/bmp'
         # HEIF to be added once I get ImageMagick running with support
     ]
+
+  def setCountdown(self, seconds):
+    if seconds < 1:
+      self.countdown = 0
+    else:
+      self.countdown = seconds
 
   def getCurrentImage(self):
     return self.imageCurrent, self.imageMime
@@ -154,7 +161,7 @@ class slideshow:
   def startupScreen(self):
     slideshow.SHOWN_IP = True
     # Once we have IP, show for 10s
-    cd = 10
+    cd = self.countdown
     while (cd > 0):
       time_process = time.time()
       self.display.message('Starting in %d' % (cd))
@@ -189,9 +196,9 @@ class slideshow:
       self.imageOnScreen = False
       return True
 
-    if result['error'] is not None:
-      logging.debug('%s failed:\n\n%s' % (self.services.getLastUsedServiceName(), result['error']))
-      self.display.message('%s failed:\n\n%s' % (self.services.getLastUsedServiceName(), result['error']))
+    if result.error is not None:
+      logging.debug('%s failed:\n\n%s' % (self.services.getLastUsedServiceName(), result.error))
+      self.display.message('%s failed:\n\n%s' % (self.services.getLastUsedServiceName(), result.error))
       self.imageOnScreen = False
       return True
     return False
@@ -224,6 +231,8 @@ class slideshow:
     delay = self.settings.getUser('interval')
     if time_process < delay and self.imageOnScreen:
       self.delayer.wait(delay - time_process)
+    elif not self.imageOnScreen:
+      self.delayer.wait(1) # Always wait ONE second to avoid busy waiting)
     self.delayer.clear()
 
   def showPreloadedImage(self, filename, mimetype, imageId):
@@ -275,7 +284,7 @@ class slideshow:
       if self.handleErrors(result):
         continue
 
-      filenameOriginal = os.path.join(cacheFolder, result["id"])
+      filenameOriginal = os.path.join(cacheFolder, result.id)
       filenameProcessed = self.process(filenameOriginal)
       if filenameProcessed is None:
         continue
@@ -283,6 +292,6 @@ class slideshow:
       time_process = time.time() - time_process
       self.delayNextImage(time_process)
       self.handleEvents()
-      self.showPreloadedImage(filenameProcessed, result["mimetype"], result["id"])
+      self.showPreloadedImage(filenameProcessed, result.mimetype, result.id)
 
     self.thread = None
