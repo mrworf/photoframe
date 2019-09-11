@@ -30,9 +30,9 @@ class RouteSettings(BaseRoute):
     self.cachemgr = cachemgr
     self.slideshow = slideshow
 
-    self.addUrl('/settings').addDefault('key', None).addDefault('value', None)
-    self.addUrl('/settings/<key>').addDefault('value', None)
-    self.addUrl('/settings/<key>/<value>').clearMethods().addMethod('PUT')
+    self.addUrl('/setting').addDefault('key', None).addDefault('value', None)
+    self.addUrl('/setting/<key>').addDefault('value', None)
+    self.addUrl('/setting/<key>/<value>').clearMethods().addMethod('PUT')
 
   def handle(self, app, key, value):
     # Depending on PUT/GET we will either change or read

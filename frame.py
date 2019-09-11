@@ -15,38 +15,26 @@
 # You should have received a copy of the GNU General Public License
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
-import json
 import sys
 import os
 import random
-import hashlib
-import datetime
 import time
-import math
-import subprocess
 import logging
-import socket
-import threading
 import argparse
-import shutil
-import traceback
 import re
+import importlib
 
-from modules.remember import remember
 from modules.shutdown import shutdown
 from modules.timekeeper import timekeeper
 from modules.settings import settings
 from modules.helper import helper
 from modules.display import display
-from modules.oauth import OAuth
 from modules.slideshow import slideshow
 from modules.colormatch import colormatch
 from modules.drivers import drivers
 from modules.servicemanager import ServiceManager
-from modules.sysconfig import sysconfig
 from modules.cachemanager import CacheManager
 from modules.path import path
-import modules.debug as debug
 from modules.server import WebServer
 
 parser = argparse.ArgumentParser(description="PhotoFrame - A RaspberryPi based digital photoframe", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -64,140 +52,114 @@ if cmdline.debug:
 else:
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-if cmdline.emulate:
-  logging.info('Running in emulation mode, settings are stored in /tmp/photoframe/')
-  if not os.path.exists('/tmp/photoframe'):
-    os.mkdir('/tmp/photoframe')
-  path().reassignBase('/tmp/photoframe/')
-  path().reassignConfigTxt('extras/config.txt')
+class Photoframe:
+  def __init__(self, cmdline):
+    self.void = open(os.devnull, 'wb')
+    random.seed(long(time.clock()))
 
-if cmdline.basedir is not None:
-  newpath = cmdline.basedir + '/'
-  logging.info('Altering basedir to %s', newpath)
-  settings().reassignBase(newpath)
+    self.emulator = cmdline.emulate
+    if self.emulator:
+      self.enableEmulation()
+    if cmdline.basedir is not None:
+      self.changeRoot(cmdline.basedir)
+    if not path().validate():
+      sys.exit(255)
 
-void = open(os.devnull, 'wb')
+    self.settingsMgr = settings()
+    self.driverMgr = drivers()
+    self.displayMgr = display(self.emulator)
+    self.serviceMgr = ServiceManager(self.settingsMgr)
 
-# Supercritical, since we store all photoframe files in a subdirectory, make sure to create it
-if not path().validate():
-  sys.exit(255)
+    self.colormatch = colormatch(self.settingsMgr.get('colortemp-script'), 2700) # 2700K = Soft white, lowest we'll go
+    self.slideshow = slideshow(self.displayMgr, self.settingsMgr, self.colormatch)
+    self.timekeeperMgr = timekeeper(self.displayMgr.enable, self.slideshow.start)
+    self.powerMgr = shutdown(self.settingsMgr.getUser('shutdown-pin'))
 
-settings = settings()
-drivers = drivers()
+    # Validate all settings, prepopulate with defaults if needed
+    self.validateSettings()
 
-m = re.search('([0-9]+)x([0-9]+)', cmdline.size)
-if m is None:
-    logging.error('--size has to be WIDTHxHEIGHT')
-    sys.exit(1)
+    # Tie all the services together as needed
+    self.timekeeperMgr.setConfiguration(self.settingsMgr.getUser('display-on'), self.settingsMgr.getUser('display-off'))
+    self.timekeeperMgr.setAmbientSensitivity(self.settingsMgr.getUser('autooff-lux'), self.settingsMgr.getUser('autooff-time'))
+    self.timekeeperMgr.setPowermode(self.settingsMgr.getUser('powersave'))
+    self.colormatch.setUpdateListener(self.timekeeperMgr.sensorListener)
 
-display = display(cmdline.emulate, int(m.group(1)), int(m.group(2)))
+    self.slideshow.setQueryPower(self.timekeeperMgr.getDisplayOn)
+    self.slideshow.setServiceManager(self.serviceMgr)
 
-if not settings.load():
-  # First run, grab display settings from current mode
-  current = display.current()
-  if current is not None:
-    logging.info('No display settings, using: %s' % repr(current))
-    settings.setUser('tvservice', '%s %s HDMI' % (current['mode'], current['code']))
-    settings.save()
-  else:
-    logging.info('No display attached?')
-if settings.getUser('timezone') == '':
-  settings.setUser('timezone', helper.timezoneCurrent())
-  settings.save()
+    # Prep the webserver
+    self.setupWebserver(cmdline.listen, cmdline.port)
 
-width, height, tvservice = display.setConfiguration(settings.getUser('tvservice'), settings.getUser('display-special'))
-settings.setUser('tvservice', tvservice)
-settings.setUser('width',  width)
-settings.setUser('height', height)
-settings.save()
+    # Force display to desired user setting
+    self.displayMgr.enable(True, True)
 
-# Force display to desired user setting
-display.enable(True, True)
+  def _loadRoute(self, module, klass, *vargs):
+    module = importlib.import_module('routes.' + module)
+    klass = getattr(module, klass)
+    route = eval('klass()')
+    route.setupex(*vargs)
+    self.webServer.registerHandler(route)
 
-# Load services
-services = ServiceManager(settings)
+  def setupWebserver(self, listen, port):
+    test = WebServer(port=port, listen=listen)
+    self.webServer = test
+
+    self._loadRoute('settings', 'RouteSettings', self.powerMgr, self.settingsMgr, self.driverMgr, self.timekeeperMgr, self.displayMgr, CacheManager, self.slideshow)
+    self._loadRoute('keywords', 'RouteKeywords', self.serviceMgr, self.slideshow)
+    self._loadRoute('orientation', 'RouteOrientation', CacheManager)
+    self._loadRoute('overscan', 'RouteOverscan', CacheManager)
+    self._loadRoute('maintenance', 'RouteMaintenance', self.emulator, self.driverMgr, self.slideshow)
+    self._loadRoute('details', 'RouteDetails', self.displayMgr, self.driverMgr, self.colormatch, self.slideshow)
+    self._loadRoute('upload', 'RouteUpload', self.settingsMgr, self.driverMgr)
+    self._loadRoute('oauthlink', 'RouteOAuthLink', self.serviceMgr, self.slideshow)
+    self._loadRoute('service', 'RouteService', self.serviceMgr, self.slideshow)
+    self._loadRoute('control', 'RouteControl', self.slideshow)
+
+  def validateSettings(self):
+    if not self.settingsMgr.load():
+      # First run, grab display settings from current mode
+      current = self.displayMgr.current()
+      if current is not None:
+        logging.info('No display settings, using: %s' % repr(current))
+        self.settingsMgr.setUser('tvservice', '%s %s HDMI' % (current['mode'], current['code']))
+        self.settingsMgr.save()
+      else:
+        logging.info('No display attached?')
+    if self.settingsMgr.getUser('timezone') == '':
+      self.settingsMgr.setUser('timezone', helper.timezoneCurrent())
+      self.settingsMgr.save()
+
+    width, height, tvservice = self.displayMgr.setConfiguration(self.settingsMgr.getUser('tvservice'), self.settingsMgr.getUser('display-special'))
+    self.settingsMgr.setUser('tvservice', tvservice)
+    self.settingsMgr.setUser('width',  width)
+    self.settingsMgr.setUser('height', height)
+    self.settingsMgr.save()
+
+  def changeRoot(self, newRoot):
+    if newRoot is None: return
+    newpath = os.path.join(newRoot, '/')
+    logging.info('Altering basedir to %s', newpath)
+    self.settings().reassignBase(newpath)
+
+  def enableEmulation(self):
+    logging.info('Running in emulation mode, settings are stored in /tmp/photoframe/')
+    if not os.path.exists('/tmp/photoframe'):
+      os.mkdir('/tmp/photoframe')
+    path().reassignBase('/tmp/photoframe/')
+    path().reassignConfigTxt('extras/config.txt')
+
+  def start(self):
+    self.slideshow.start()
+    self.webServer.start()
 
 # Spin until we have internet, check every 10s
-if not helper.hasNetwork():
-  helper.waitForNetwork(lambda: display.message('No internet\n\nCheck wifi-config.txt or cable'))
+#if not helper.hasNetwork():
+#  helper.waitForNetwork(lambda: display.message('No internet\n\nCheck wifi-config.txt or cable'))
 
 # Let the display know the URL to use
-display.setConfigPage('http://%s:%d/' % (settings.get('local-ip'), 7777))
+#display.setConfigPage('http://%s:%d/' % (settings.get('local-ip'), 7777))
 
-# Prep random
-random.seed(long(time.clock()))
-colormatch = colormatch(settings.get('colortemp-script'), 2700) # 2700K = Soft white, lowest we'll go
-slideshow = slideshow(display, settings, colormatch)
-timekeeper = timekeeper(display.enable, slideshow.start)
-slideshow.setQueryPower(timekeeper.getDisplayOn)
-slideshow.setServiceManager(services)
-
-timekeeper.setConfiguration(settings.getUser('display-on'), settings.getUser('display-off'))
-timekeeper.setAmbientSensitivity(settings.getUser('autooff-lux'), settings.getUser('autooff-time'))
-timekeeper.setPowermode(settings.getUser('powersave'))
-colormatch.setUpdateListener(timekeeper.sensorListener)
-
-powermanagement = shutdown(settings.getUser('shutdown-pin'))
-
-test = WebServer(port=cmdline.port, listen=cmdline.listen)
-
-from routes.settings import RouteSettings
-from routes.keywords import RouteKeywords
-from routes.orientation import RouteOrientation
-from routes.overscan import RouteOverscan
-from routes.maintenance import RouteMaintenance
-from routes.details import RouteDetails
-from routes.upload import RouteUpload
-from routes.oauthlink import RouteOAuthLink
-from routes.service import RouteService
-from routes.control import RouteControl
-
-route = RouteSettings()
-route.setupex(powermanagement, settings, drivers, timekeeper, display, CacheManager, slideshow)
-test.registerHandler(route)
-
-route = RouteKeywords()
-route.setupex(services, slideshow)
-test.registerHandler(route)
-
-route = RouteOrientation()
-route.setupex(CacheManager)
-test.registerHandler(route)
-
-route = RouteOverscan()
-route.setupex(CacheManager)
-test.registerHandler(route)
-
-route = RouteMaintenance()
-route.setupex(cmdline.emulate, drivers, slideshow)
-test.registerHandler(route)
-
-route = RouteDetails()
-route.setupex(display, drivers, colormatch, slideshow)
-test.registerHandler(route)
-
-route = RouteUpload()
-route.setupex(settings, drivers)
-test.registerHandler(route)
-
-route = RouteOAuthLink()
-route.setupex(services, slideshow)
-test.registerHandler(route)
-
-route = RouteService()
-route.setupex(services, slideshow)
-test.registerHandler(route)
-
-route = RouteControl()
-route.setupex(slideshow)
-test.registerHandler(route)
-
-test.start();
-#if __name__ == "__main__":
-# This allows us to use a plain HTTP callback
-#  os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-#  app.secret_key = os.urandom(24)
-#  slideshow.start()
-#  app.run(debug=False, port=cmdline.port, host=cmdline.listen )
-
+frame = Photoframe(cmdline)
+frame.start()
+#test.start();
 sys.exit(0)

@@ -23,13 +23,8 @@ from threading import Thread
 
 from modules.sysconfig import sysconfig
 
-
-import requests
-from requests_oauthlib import OAuth2Session
-from flask import Flask, request, redirect, session, url_for, abort, flash
-from flask.json import jsonify
+from flask import Flask, request
 from flask_httpauth import HTTPBasicAuth
-from werkzeug.utils import secure_filename
 from werkzeug.exceptions import HTTPException
 
 # used if we don't find authentication json
@@ -130,7 +125,10 @@ class WebServer(Thread):
   def registerHandler(self, route):
     route._assignServer(self)
     for mapping in route._MAPPINGS:
-      logging.info('Registering %s to %s', mapping._URL, route.__class__.__name__)
+      if route.SIMPLE:
+        logging.info('Registering URL %s to %s (simple)', mapping._URL, route.__class__.__name__)
+      else:
+        logging.info('Registering URL %s to %s', mapping._URL, route.__class__.__name__)
       self.app.add_url_rule(mapping._URL, mapping._URL, route, methods=mapping._METHODS, defaults=mapping._DEFAULTS)
 
   def _registerHandlers(self):
@@ -144,7 +142,6 @@ class WebServer(Thread):
               if m is not None:
                 klass = self._instantiate(item[0:-3], m.group(1))
                 if klass.SIMPLE:
-                  logging.info('Importing route %s' % item)
                   try:
                     route = eval('klass()')
                     self.registerHandler(route)

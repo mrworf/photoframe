@@ -39,6 +39,7 @@ class display:
     self.url = None
     if self.emulate:
       logging.info('Using framebuffer emulation')
+    self.lastMessage = None
 
   def setConfigPage(self, url):
     self.url = url
@@ -172,6 +173,8 @@ class display:
         pip.communicate()
     else:
       logging.error('Do not know how to render this, depth is %d', self.depth)
+      
+    self.lastMessage = None
 
   def message(self, message):
     if not self.enabled:
@@ -214,7 +217,9 @@ class display:
       '%s:-' % self.format
     ]
 
-    self._to_display(args)
+    if self.lastMessage != message:
+      self._to_display(args)
+      self.lastMessage = message
 
   def image(self, filename):
     if not self.enabled:

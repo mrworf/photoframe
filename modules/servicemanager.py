@@ -72,8 +72,8 @@ class ServiceManager:
             if line.startswith('class ') and line.endswith('(BaseService):'):
               m = re.search('class +([^\(]+)\(', line)
               if m is not None:
-                print('Importing %s' % item)
                 klass = self._instantiate(item[0:-3], m.group(1))
+                logging.info('Loading service %s from %s', klass.__name__, item)
                 self._SVC_INDEX[m.group(1)] = {'id' : klass.SERVICE_ID, 'name' : klass.SERVICE_NAME, 'module' : item[0:-3], 'class' : m.group(1)}
               break
 

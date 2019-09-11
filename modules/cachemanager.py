@@ -17,9 +17,9 @@
 import logging
 import os
 import time
-import shutil
 
 from modules.helper import helper
+from modules.path import path
 
 ### CONSTANTS ###
 
@@ -75,20 +75,20 @@ class CacheManager:
 
   # delete all files but keep directory structure intact
   @staticmethod
-  def empty(path):
+  def empty(directory = path.CACHEFOLDER):
     freedUpSpace = 0
-    if not os.path.isdir(path):
-      logging.exception('Failed to delete "%s". Directory does not exist!' % path)
+    if not os.path.isdir(directory):
+      logging.exception('Failed to delete "%s". Directory does not exist!' % directory)
       return freedUpSpace
 
-    for p, _dirs, files in os.walk(path):
+    for p, _dirs, files in os.walk(directory):
       for filename in [os.path.join(p, f) for f in files]:
         freedUpSpace += os.stat(filename).st_size
         try:
           os.unlink(filename)
         except:
           logging.exception('Failed to delete "%s"' % filename)
-    logging.info("'%s' has been emptied"%path)
+    logging.info("'%s' has been emptied"%directory)
     return freedUpSpace
 
 
