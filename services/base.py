@@ -544,7 +544,7 @@ class BaseService:
       else:
         r = requests.get(url, params=params)
 
-      result.setHTTPCode(r.status_code).setHeaders(r.headers)
+      result.setHTTPCode(r.status_code).setHeaders(r.headers).setArgs(r.args)
 
       if destination is None:
         result.setContent(r.content)

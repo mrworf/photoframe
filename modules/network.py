@@ -28,6 +28,7 @@ class RequestResult:
         self.mimetype = 'none/none'
         self.headers = []
         self.httpcode = 0
+        self.args = None
 
     def setResult(self, result):
         self.result = result
@@ -53,6 +54,10 @@ class RequestResult:
 
     def setHTTPCode(self, code):
         self.httpcode = code
+        return self
+
+    def setArgs(self, args):
+        self.args = args
         return self
 
     def isSuccess(self):

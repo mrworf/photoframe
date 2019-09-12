@@ -72,10 +72,10 @@ class BaseRoute:
     return flask.request
 
   def setAbort(self, code):
-    flask.abort(code)
+    return flask.abort(code)
 
   def redirect(self, url):
-    flask.redirect(url)
+    return flask.redirect(url)
 
   def jsonify(self, data):
     return flask.json.jsonify(data)

@@ -177,17 +177,17 @@ class slideshow:
       if len(serviceStates) == 0:
         msg = 'Photoframe isn\'t ready yet\n\nPlease direct your webbrowser to\n\nhttp://%s:7777/\n\nand add one or more photo providers' % self.settings.get('local-ip')
       else:
-        msg = 'Please direct your webbrowser to\n\nhttp://%s:7777/\n\nto complete the setup process:' % self.settings.get('local-ip')
+        msg = 'Please direct your webbrowser to\n\nhttp://%s:7777/\n\nto complete the setup process' % self.settings.get('local-ip')
         for svcName, state, additionalInfo in serviceStates:
-          msg += "\n\n'"+svcName+"' --> "
+          msg += "\n\n"+svcName+": "
           if state == 'OAUTH':
-            msg += "Authorization required!"
+            msg += "Authorization required"
           elif state == 'CONFIG':
-            msg += "Configuration required!"
+            msg += "Configuration required"
           elif state == 'NEED_KEYWORDS':
-            msg += "Add one or more keywords (album names)!"
+            msg += "Add one or more keywords (album names)"
           elif state == 'NO_IMAGES':
-            msg += "No images could be found!"
+            msg += "No images could be found"
           
           if additionalInfo is not None:
             msg += "\n"+additionalInfo

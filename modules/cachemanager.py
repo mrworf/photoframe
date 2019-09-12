@@ -129,9 +129,9 @@ class CacheManager:
     total = float(stat.f_blocks*stat.f_bsize)
     free = float(stat.f_bfree*stat.f_bsize)
 
-    logging.debug("'%s' takes up %s" % (path, CacheManager.formatBytes(dirSize)))
-    logging.debug("free space on partition: %s" % CacheManager.formatBytes(free))
-    logging.debug("total space on partition: %s" % CacheManager.formatBytes(total))
+    #logging.debug("'%s' takes up %s" % (path, CacheManager.formatBytes(dirSize)))
+    #logging.debug("free space on partition: %s" % CacheManager.formatBytes(free))
+    #logging.debug("total space on partition: %s" % CacheManager.formatBytes(total))
 
     if free < 50*MB:
       return CacheManager.STATE_FULL
@@ -149,7 +149,7 @@ class CacheManager:
   # Of course a manual cache reset is possible via the photoframe web interface
   @staticmethod
   def garbageCollect(path, lessImportantDirs):
-    logging.debug("Garbage Collector started!")
+    #logging.debug("Garbage Collector started!")
     state = CacheManager.getDiskSpaceState(path)
     freedUpSpace = 0
     if state == CacheManager.STATE_FULL:
@@ -163,9 +163,9 @@ class CacheManager:
       freedUpSpace = CacheManager.deleteOldFiles(path, MONTH)
     else:
       freedUpSpace = CacheManager.deleteOldFiles(path, 6*MONTH)
-
+    '''
     if freedUpSpace:
       logging.info("Garbage Collector was able to free up %s of disk space!" % CacheManager.formatBytes(freedUpSpace))
     else:
       logging.debug("Garbage Collector was able to free up %s of disk space!" % CacheManager.formatBytes(freedUpSpace))
-
+    '''

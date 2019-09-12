@@ -16,6 +16,7 @@
 
 import logging
 import os
+import json
 
 from modules.sysconfig import sysconfig
 from baseroute import BaseRoute
@@ -30,34 +31,35 @@ class RouteOAuthLink(BaseRoute):
         self.addUrl('/service/<service>/oauth').clearMethods().addMethod('POST')
 
     def handle(self, app, **kwargs):
-      if '/callback' in self.getRequest():
+      print(self.getRequest().url)
+      if '/callback?' in self.getRequest().url:
           # Figure out who should get this result...
           old = self.servicemgr.hasReadyServices()
-          if self.servicemgr.oauthCallback(request):
+          if self.servicemgr.oauthCallback(self.getRequest()):
             # Request handled
             if old != self.servicemgr.hasReadyServices():
               self.slideshow.trigger()
             return self.redirect('/')
           else:
             self.setAbort(500)
-      elif '/link' in self.getRequest().url:
+      elif self.getRequest().url.endswith('/link'):
         return self.redirect(self.servicemgr.oauthStart(kwargs['service']))
-      elif '/oauth' in self.getRequest().url:
-        j = self.getRequest().json
+      elif self.getRequest().url.endswith('/oauth'):
+        #j = self.getRequest().json
         # This one is special, this is a file upload of the JSON config data
         # and since we don't need a physical file for it, we should just load
         # the data. For now... ignore
         if 'filename' not in self.getRequest().files:
           logging.error('No file part')
-          return setAbort(405)
+          return self.setAbort(405)
         file = self.getRequest().files['filename']
         data = json.load(file)
         if 'web' in data:
           data = data['web']
         if 'redirect_uris' in data and 'https://photoframe.sensenet.nu' not in data['redirect_uris']:
           return 'The redirect uri is not set to https://photoframe.sensenet.nu', 405
-        if not self.ervicemgr.oauthConfig(kwargs['service'], data):
+        if not self.servicemgr.oauthConfig(kwargs['service'], data):
           return 'Configuration was invalid', 405
         return 'Configuration set', 200
       else:
-        setAbort(500)
+        self.setAbort(500)

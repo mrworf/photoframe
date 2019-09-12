@@ -99,13 +99,13 @@ class OAuth:
 					for chunk in result.iter_content(chunk_size=512):
 						if chunk:  # filter out keep-alive new chunks
 							handle.write(chunk)
-				ret.setResult(RequestResult.SUCCESS).setHTTPCode(result.status_code)
+				ret.setResult(RequestResult.SUCCESS).setHTTPCode(result.status_code).setArgs(result.args)
 				ret.setHeaders(result.headers)
 			except:
 				logging.exception('Failed to download %s' % uri)
 				ret.setResult(RequestResult.FAILED_SAVING)
 		else:
-			ret.setResult(RequestResult.SUCCESS).setHTTPCode(result.status_code)
+			ret.setResult(RequestResult.SUCCESS).setHTTPCode(result.status_code).setArgs(result.args)
 			ret.setHeaders(result.headers)
 			ret.setContent(result.content)
 		return ret
@@ -129,15 +129,19 @@ class OAuth:
 		return authorization_url
 
 	def complete(self, url):
-		auth = OAuth2Session(self.oauth['client_id'],
-		                     scope=self.scope, # ['https://www.googleapis.com/auth/photos'],
-		                     redirect_uri=self.ridURI,
-		                     state='%s-%s-%s' % (self.rid, self.ip, self.extras))
+		try:
+			auth = OAuth2Session(self.oauth['client_id'],
+			                     scope=self.scope, # ['https://www.googleapis.com/auth/photos'],
+			                     redirect_uri=self.ridURI,
+			                     state='%s-%s-%s' % (self.rid, self.ip, self.extras))
 
-		token = auth.fetch_token(self.oauth['token_uri'],
-		                         client_secret=self.oauth['client_secret'],
-		                         authorization_response=url)
+			token = auth.fetch_token(self.oauth['token_uri'],
+			                         client_secret=self.oauth['client_secret'],
+			                         authorization_response=url)
 
-		self.cbSetToken(token)
-		return
+			self.cbSetToken(token)
+			return True
+		except:
+			logging.exception('Failed to complete OAuth')
+		return False
 
