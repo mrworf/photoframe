@@ -190,7 +190,7 @@ class slideshow:
             msg += "No images could be found"
           
           if additionalInfo is not None:
-            msg += "\n"+additionalInfo
+            msg += "\n\n"+additionalInfo
           
       self.display.message(msg)
       self.imageOnScreen = False

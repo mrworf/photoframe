@@ -498,7 +498,7 @@ class BaseService:
           image.setMimetype(result.mimetype)
         return image
       else:
-        return ImageHolder().setError('%d: Unable to download image!' % result.code)
+        return ImageHolder().setError('%d: Unable to download image!' % result.httpcode)
 
     self.resetIndices()
     return None

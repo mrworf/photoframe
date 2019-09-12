@@ -19,17 +19,67 @@ import random
 import subprocess
 import os
 import logging
+import json
 
 from modules.helper import helper
-
+from modules.network import RequestResult
 
 class USB_Photos(BaseService):
   SERVICE_NAME = 'USB-Photos'
   SERVICE_ID = 4
 
+  SUPPORTED_FILESYSTEMS = ['exfat', 'vfat', 'ntfs', 'ext2', 'ext3', 'ext4']
   SUBSTATE_NOT_CONNECTED = 404
 
   INDEX = 0
+
+  class StorageUnit:
+    def __init__(self):
+      self.device = None
+      self.uuid = None
+      self.size = 0
+      self.fs = None
+      self.hotplug = False
+      self.mountpoint = None
+      self.freshness = 0
+      self.label = None
+
+    def setLabel(self, label):
+      self.label = label
+      return self
+
+    def setDevice(self, device):
+      self.device = device
+      return self
+
+    def setUUID(self, uuid):
+      self.uuid = uuid
+      return self
+
+    def setSize(self, size):
+      self.size = int(size)
+      return self
+
+    def setFilesystem(self, fs):
+      self.fs = fs
+      return self
+
+    def setHotplug(self, hotplug):
+      self.hotplug = hotplug
+      return self
+
+    def setMountpoint(self, mountpoint):
+      self.mountpoint = mountpoint
+      return self
+
+    def setFreshness(self, freshness):
+      self.freshness = int(freshness)
+      return self
+
+    def getName(self):
+      if self.label is None:
+        return self.device
+      return self.label
 
   def __init__(self, configDir, id, name):
     BaseService.__init__(self, configDir, id, name, needConfig=False, needOAuth=False)
@@ -47,10 +97,10 @@ class USB_Photos(BaseService):
       self.mountStorageDevice()
     else:
       self.checkForInvalidKeywords()
-      for device, mountPath in self.detectAllStorageDevices(onlyMounted=True):
-        if mountPath == self.usbDir:
+      for device in self.detectAllStorageDevices(onlyMounted=True):
+        if device.mountpoint == self.usbDir:
           self.device = device
-          logging.info("USB-Service has detected device '%s'" % self.device)
+          logging.info("USB-Service has detected device '%s'" % self.device.device)
           break
       if self.device is None:
         # Service should still be working fine
@@ -117,9 +167,9 @@ class USB_Photos(BaseService):
   def explainState(self):
     if self._CURRENT_STATE == BaseService.STATE_NO_IMAGES:
       if self.subState == USB_Photos.SUBSTATE_NOT_CONNECTED:
-        return "No storage device (e.g. USB-stick) has been detected!"
+        return "No storage device (e.g. USB-stick) has been detected"
       else:
-        return "Place images and/or albums inside a '/photoframe'-directory on your storage device!"
+        return 'Place images and/or albums inside a "photoframe"-directory on your storage device'
     return None
 
   def getMessages(self):
@@ -128,7 +178,7 @@ class USB_Photos(BaseService):
       msgs = [
           {
               'level': 'SUCCESS',
-              'message': 'Storage device "%s" is mounted to "%s"' % (self.device if self.device is not None else "unknown", self.usbDir),
+              'message': 'Storage device "%s" is connected' % self.device.getName(),
               'link': None
           }
       ]
@@ -144,64 +194,76 @@ class USB_Photos(BaseService):
     return msgs
 
   def detectAllStorageDevices(self, onlyMounted=False, onlyUnmounted=False, reverse=False):
-    storageDevices = []
-    try:
-      fdisk = subprocess.Popen(["lsblk", "-p", "--noheadings", "--raw", "-o", "NAME,MOUNTPOINT"], stdout=subprocess.PIPE)
-      grep = subprocess.Popen(["grep", "/dev/sd.1"], stdin=fdisk.stdout, stdout=subprocess.PIPE)
-      fdisk.stdout.close()
-      output = grep.communicate()[0].strip()
-      if output != "":
-        devices = [d.strip() for d in output.split("\n") if d.strip() != ""]
-        for sd, mountPath in map(lambda d: d.split(" ", 1) if d.find(" ") != -1 else (d, None), devices):
-          if onlyMounted and mountPath is not None:
-            storageDevices.append((sd, mountPath))
-          elif onlyUnmounted:
-            if mountPath is not None:
-              logging.debug("'%s' is already mounted to '%s'" % (sd, mountPath))
-            else:
-              storageDevices.append(sd)
-    except subprocess.CalledProcessError as e:
-      logging.exception('USB-Service: unable to detect storage devices!')
-      logging.error('Output: %s' % repr(e.output))
+    candidates = []
+    for root, dirs, files in os.walk('/sys/block/'):
+      for device in dirs:
+        result = subprocess.check_output(['udevadm', 'info', '--query=property', '/sys/block/' + device])
+        if result and 'ID_BUS=usb' in result:
+          values = {}
+          for line in result.split('\n'):
+            line = line.strip()
+            if line == '': continue
+            k,v = line.split('=', 1)
+            values[k] = v
+          if 'DEVNAME' in values:
+            #logging.info('Found USB device: ' + values['DEVNAME'])
+            # Now, locate the relevant partition
+            result = subprocess.check_output(['lsblk', '-bOJ', values['DEVNAME']])
+            if result is not None:
+              partitions = json.loads(result)['blockdevices'][0]['children']
+              for partition in partitions:
+                if partition['fstype'] in USB_Photos.SUPPORTED_FILESYSTEMS:
+                  # Final test
+                  if (partition['mountpoint'] is None and onlyMounted) or (partition['mountpoint'] is not None and onlyUnmounted):
+                    continue
 
-    # reverse list, because last plugged in storage device is probably the one we are looking for
-    if reverse:
-      storageDevices.reverse()
-    return storageDevices
+                  # Convert this into candidate info
+                  candidate = USB_Photos.StorageUnit()
+                  candidate.setDevice(os.path.join(os.path.dirname(values['DEVNAME']), partition['name']))
+                  if partition['label'] is not None and partition['label'].strip() != '':
+                    candidate.setLabel(partition['label'].strip())
+                  candidate.setUUID(partition['uuid'])
+                  candidate.setSize(partition['size'])
+                  candidate.setFilesystem(partition['fstype'])
+                  candidate.setHotplug(partition['hotplug'] == '1')
+                  candidate.setMountpoint(partition['mountpoint'])
+                  candidate.setFreshness(values['USEC_INITIALIZED'])
+                  candidates.append(candidate)
+    # Return a list with the freshest device first (ie, last mounted)
+    candidates.sort(key=lambda x: x.freshness, reverse=True)
+    return candidates
 
-  def mountStorageDevice(self, storageDevices=None):
+  def mountStorageDevice(self):
     if not os.path.exists(self.usbDir):
-      cmd = ["sudo", "mkdir", self.usbDir]
+      cmd = ["mkdir", self.usbDir]
       try:
         subprocess.check_output(cmd, stderr=subprocess.STDOUT)
       except subprocess.CalledProcessError as e:
         logging.exception('Unable to create directory: %s' % cmd[-1])
         logging.error('Output: %s' % repr(e.output))
 
-    if storageDevices is None:
-      storageDevices = self.detectAllStorageDevices(onlyUnmounted=True, reverse=True)
-    elif isinstance(storageDevices, basestring):
-      storageDevices = list(storageDevices)
+    candidates = self.detectAllStorageDevices(onlyUnmounted=True)
 
     # unplugging/replugging usb-stick causes system to detect it as a new storage device!
-    for device in storageDevices:
-      cmd = ["sudo", "mount", device, self.usbDir]
+    for candidate in candidates:
+      cmd = ['sudo', '-n', 'mount', candidate.device, self.usbDir]
       try:
         subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         logging.info("USB-device '%s' successfully mounted to '%s'!" % (cmd[-2], cmd[-1]))
         if os.path.exists(self.baseDir):
-          self.device = device
+          self.device = candidate
           self.checkForInvalidKeywords()
           return True
       except subprocess.CalledProcessError as e:
-        logging.warning('Unable to mount storage device "%s" to "%s"!' % (device, self.usbDir))
+        logging.warning('Unable to mount storage device "%s" to "%s"!' % (candidate.device, self.usbDir))
         logging.warning('Output: %s' % repr(e.output))
+      self.unmountBaseDir()
 
-    logging.debug("unable to mount any storage device %s to '%s'" % (storageDevices, self.usbDir))
+    logging.debug("unable to mount any storage device to '%s'" % (self.usbDir))
     return False
 
   def unmountBaseDir(self):
-    cmd = ["sudo", "umount", self.usbDir]
+    cmd = ['sudo', '-n', 'umount', self.usbDir]
     try:
       subprocess.check_output(cmd, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
@@ -220,9 +282,9 @@ class USB_Photos(BaseService):
       return result
 
     if os.path.exists(self.usbDir):
-      return {'id': None, 'mimetype': None, 'error': 'No images could be found on storage device "%s"!\n\nPlease place albums inside /photoframe/{album_name} directory and add each {album_name} as keyword.\n\nAlternatively, put images directly inside the "/photoframe/"-directory on your storage device.' % self.device}
+      return BaseService.createImageHolder(self).setError('No images could be found on storage device "%s"!\n\nPlease place albums inside /photoframe/{album_name} directory and add each {album_name} as keyword.\n\nAlternatively, put images directly inside the "/photoframe/"-directory on your storage device.' % self.device.getName())
     else:
-      return {'id': None, 'mimetype': None, 'error': 'No external storage device detected! Please connect a USB-stick!\n\n Place albums inside /photoframe/{album_name} directory and add each {album_name} as keyword.\n\nAlternatively, put images directly inside the "/photoframe/"-directory on your storage device.'}
+      return BaseService.createImageHolder(self).setError('No external storage device detected! Please connect a USB-stick!\n\n Place albums inside /photoframe/{album_name} directory and add each {album_name} as keyword.\n\nAlternatively, put images directly inside the "/photoframe/"-directory on your storage device.')
 
   def getImagesFor(self, keyword):
     if not os.path.isdir(self.baseDir):
@@ -243,14 +305,15 @@ class USB_Photos(BaseService):
     images = []
     for filename in files:
       fullFilename = os.path.join(path, filename)
-      images.append({
-          "id": self.hashString(fullFilename),
-          "url": fullFilename,
-          "source": fullFilename,
-          "mimetype": helper.getMimeType(fullFilename),
-          "size": helper.getImageSize(fullFilename),
-          "filename": filename
-      })
+      item = BaseService.createImageHolder(self)
+      item.setId(self.hashString(fullFilename))
+      item.setUrl(fullFilename).setSource(fullFilename)
+      item.setMimetype(helper.getMimeType(fullFilename))
+      dim = helper.getImageSize(fullFilename)
+      item.setDimensions(dim['width'], dim['height'])
+      item.setFilename(filename)
+
+      images.append(item)
     return images
 
   def addUrlParams(self, url, recommendedSize, displaySize):
@@ -261,6 +324,7 @@ class USB_Photos(BaseService):
   def requestUrl(self, url, destination=None, params=None, data=None, usePost=False):
     # pretend to download the file (for compatability with 'selectImageFromAlbum' of baseService)
     # instead just cache a scaled version of the file and return {status: 200}
+    result = RequestResult()
     if url.count("||") == 2:
       filename, width, height = url.split("||", 2)
       recSize = {"width": width, "height": height}
@@ -269,11 +333,13 @@ class USB_Photos(BaseService):
       recSize = None
 
     if destination is None or not os.path.isfile(filename):
-      return {"status": 400}
-    if recSize is not None:
-      if helper.scaleImage(filename, destination, recSize):
-        return {"status": 200}
+      result.setState(RequestResult.SUCCESS).setHTTPCode(400)
+    elif recSize is not None and helper.scaleImage(filename, destination, recSize):
+      result.setFilename(destination)
+      result.setState(RequestResult.SUCCESS).setHTTPCode(200)
+    elif helper.copyFile(filename, destination):
+      result.setFilename(destination)
+      result.setState(RequestResult.SUCCESS).setHTTPCode(200)
     else:
-      if helper.copyFile(filename, destination):
-        return {"status": 200}
-    return {"status": 418}
+      result.setState(RequestResult.SUCCESS).setHTTPCode(418)
+    return result
