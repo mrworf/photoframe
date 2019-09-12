@@ -599,7 +599,7 @@ class BaseService:
     return self._DIR_PRIVATE
 
   def hashString(self, text):
-    return hashlib.sha1(text.encode('ascii', 'ignore')).hexdigest()
+    return hashlib.sha1(text).hexdigest()
 
   def createImageHolder(self):
     return ImageHolder()

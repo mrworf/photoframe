@@ -91,13 +91,14 @@ class helper:
 		if not os.path.isfile(filename):
 			return None
 
+		mimetype = ''
 		cmd = ["/usr/bin/file", "--mime", filename]
 		with open(os.devnull, 'wb') as void:
 			try:
 				output = subprocess.check_output(cmd, stderr=void).strip("\n")
-				mimetype = output.lstrip(filename+":").strip()
-				if "; charset=" in mimetype:
-					mimetype = mimetype.split("; charset=")[0]
+				m = re.match('[^\:]+\: *([^;]+)', output)
+				if m:
+					mimetype = m.group(1)
 			except subprocess.CalledProcessError:
 				logging.debug("unable to determine mimetype of file: %s" % filename)
 				return None
