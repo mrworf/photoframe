@@ -21,9 +21,9 @@ from baseroute import BaseRoute
 from modules.helper import helper
 
 class RouteSettings(BaseRoute):
-  def setupex(self, powermanagement, settings, drivermgr, timekeeper, display, cachemgr, slideshow):
+  def setupex(self, powermanagement, settingsMgr, drivermgr, timekeeper, display, cachemgr, slideshow):
     self.powermanagement = powermanagement
-    self.settings = settings
+    self.settingsMgr = settingsMgr
     self.drivermgr = drivermgr
     self.timekeeper = timekeeper
     self.display = display
@@ -38,7 +38,7 @@ class RouteSettings(BaseRoute):
     # Depending on PUT/GET we will either change or read
     # values. If key is unknown, then this call fails with 404
     if key is not None:
-      if self.settings.getUser(key) is None:
+      if self.settingsMgr.getUser(key) is None:
         self.abort(404)
         return
 
@@ -48,46 +48,46 @@ class RouteSettings(BaseRoute):
         # Keywords has its own API
         self.setAbort(404)
         return
-      self.settings.setUser(key, value)
+      self.settingsMgr.setUser(key, value)
       if key in ['display-driver']:
-        drv = self.settings.getUser('display-driver')
+        drv = self.settingsMgr.getUser('display-driver')
         if drv == 'none':
           drv = None
         special = self.drivermngt.activate(drv)
         if special is None:
-          self.settings.setUser('display-driver', 'none')
-          self.settings.setUser('display-special', None)
+          self.settingsMgr.setUser('display-driver', 'none')
+          self.settingsMgr.setUser('display-special', None)
           status = False
         else:
-          self.settings.setUser('display-special', special)
+          self.settingsMgr.setUser('display-special', special)
       if key in ['timezone']:
         # Make sure we convert + to /
-        self.settings.setUser('timezone', value.replace('+', '/'))
-        helper.timezoneSet(settings.getUser('timezone'))
+        self.settingsMgr.setUser('timezone', value.replace('+', '/'))
+        helper.timezoneSet(self.settingsMgr.getUser('timezone'))
       if key in ['resolution', 'tvservice']:
-        width, height, tvservice = self.display.setConfiguration(value, self.settings.getUser('display-special'))
-        self.settings.setUser('tvservice', tvservice)
-        self.settings.setUser('width',  width)
-        self.settings.setUser('height', height)
+        width, height, tvservice = self.display.setConfiguration(value, self.settingsMgr.getUser('display-special'))
+        self.settingsMgr.setUser('tvservice', tvservice)
+        self.settingsMgr.setUser('width',  width)
+        self.settingsMgr.setUser('height', height)
         self.display.enable(True, True)
         self.cachemgr.empty()
       if key in ['display-on', 'display-off']:
-        self.timekeeper.setConfiguration(self.settings.getUser('display-on'), self.settings.getUser('display-off'))
+        self.timekeeper.setConfiguration(self.settingsMgr.getUser('display-on'), self.settingsMgr.getUser('display-off'))
       if key in ['autooff-lux', 'autooff-time']:
-        self.timekeeper.setAmbientSensitivity(self.settings.getUser('autooff-lux'), self.settings.getUser('autooff-time'))
+        self.timekeeper.setAmbientSensitivity(self.settingsMgr.getUser('autooff-lux'), self.settingsMgr.getUser('autooff-time'))
       if key in ['powersave']:
-        self.timekeeper.setPowermode(self.settings.getUser('powersave'))
+        self.timekeeper.setPowermode(self.settingsMgr.getUser('powersave'))
       if key in ['shutdown-pin']:
         self.powermanagement.stopmonitor()
-        self.powermanagement = shutdown(self.settings.getUser('shutdown-pin'))
+        self.powermanagement = shutdown(self.settingsMgr.getUser('shutdown-pin'))
       if key in ['imagesizing', 'randomize_images']:
         self.slideshow.createEvent("settingsChange")
-      self.settings.save()
+      self.settingsMgr.save()
       return self.jsonify({'status':status})
 
     elif self.getRequest().method == 'GET':
       if key is None:
-        return self.jsonify(self.settings.getUser())
+        return self.jsonify(self.settingsMgr.getUser())
       else:
-        return self.jsonify({key : self.settings.getUser(key)})
+        return self.jsonify({key : self.settingsMgr.getUser(key)})
     self.setAbort(404)

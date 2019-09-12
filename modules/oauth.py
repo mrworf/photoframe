@@ -99,13 +99,13 @@ class OAuth:
 					for chunk in result.iter_content(chunk_size=512):
 						if chunk:  # filter out keep-alive new chunks
 							handle.write(chunk)
-				ret.setResult(RequestResult.SUCCESS).setHTTPCode(result.status_code).setArgs(result.args)
+				ret.setResult(RequestResult.SUCCESS).setHTTPCode(result.status_code)
 				ret.setHeaders(result.headers)
 			except:
 				logging.exception('Failed to download %s' % uri)
 				ret.setResult(RequestResult.FAILED_SAVING)
 		else:
-			ret.setResult(RequestResult.SUCCESS).setHTTPCode(result.status_code).setArgs(result.args)
+			ret.setResult(RequestResult.SUCCESS).setHTTPCode(result.status_code)
 			ret.setHeaders(result.headers)
 			ret.setContent(result.content)
 		return ret

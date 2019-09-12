@@ -189,9 +189,9 @@ class GooglePhotos(BaseService):
     params={'pageSize':50} #50 is api max
     while True:
       data = self.requestUrl(url, params=params)
-      if data['status'] != 200:
+      if not data.isSuccess():
         return None
-      data = json.loads(data['content'])
+      data = json.loads(data.content)
       for i in range(len(data['albums'])):
         if 'title' in data['albums'][i]:
           logging.debug('Album: %s' % data['albums'][i]['title'])
@@ -212,9 +212,9 @@ class GooglePhotos(BaseService):
       params = {'pageSize':50}#50 is api max
       while True:
         data = self.requestUrl(url, params=params)
-        if data['status'] != 200:
+        if not data.isSuccess():
           return None
-        data = json.loads(data['content'])
+        data = json.loads(data.content)
         if 'sharedAlbums' not in data:
           logging.debug('User has no shared albums')
           break
@@ -242,9 +242,9 @@ class GooglePhotos(BaseService):
       return result
 
     if not self.isGooglePhotosEnabled():
-      return {'id': None, 'mimetype': None, 'source': None, 'error': '"Photos Library API" is not enabled on\nhttps://console.developers.google.com\n\nCheck the Photoframe Wiki for details'}
+      return BaseService.createImageHolder(self).setError('"Photos Library API" is not enabled on\nhttps://console.developers.google.com\n\nCheck the Photoframe Wiki for details')
     else:
-      return {'id': None, 'mimetype': None, 'source': None, 'error': 'No (new) images could be found.\nCheck spelling or make sure you have added albums'}
+      return BaseService.createImageHolder(self).setError('No (new) images could be found.\nCheck spelling or make sure you have added albums')
     
   def getImagesFor(self, keyword):
     images = None
@@ -255,19 +255,19 @@ class GooglePhotos(BaseService):
       params = self.getQueryForKeyword(keyword)
       if params is None:
         logging.error('Unable to create query the keyword "%s"', keyword)
-        return [{'error':'Unable to get photos using keyword "%s"' % keyword}]
+        return [BaseService.createImageHolder(self).setError('Unable to get photos using keyword "%s"' % keyword)]
 
       url = 'https://photoslibrary.googleapis.com/v1/mediaItems:search'
       maxItems = 1000 # Should be configurable
 
       while len(result) < maxItems:
         data = self.requestUrl(url, data=params, usePost=True)
-        if data['status'] != 200:
+        if not data.isSuccess():
           logging.warning('Requesting photo failed with status code %d', data['status'])
           logging.warning('More details: ' + repr(data['content']))
           break
         else:
-          data = json.loads(data['content'])
+          data = json.loads(data.content)
           if 'mediaItems' not in data:
             break
           logging.debug('Got %d entries, adding it to existing %d entries', len(data['mediaItems']), len(result))
@@ -288,7 +288,7 @@ class GooglePhotos(BaseService):
     if os.path.exists(filename):
       try:
         with open(filename, 'r') as f:
-          images = json.load(f)
+          albumdata = json.load(f)
       except:
         logging.exception('Failed to decode JSON file, maybe it was corrupted? Size is %d', os.path.getsize(filename))
         logging.error('Since file is corrupt, we try to save a copy for later analysis (%s.corrupt)', filename)
@@ -299,23 +299,21 @@ class GooglePhotos(BaseService):
         except:
           logging.exception('Failed to save copy of corrupt file, deleting instead')
           os.unlink(filename)
-        images = None
-    return self.parseAlbumInfo(images)
+        albumdata = None
+    return self.parseAlbumInfo(albumdata)
 
-  def parseAlbumInfo(self, images):
+  def parseAlbumInfo(self, data):
     # parse GooglePhoto specific keys into a format that the base service can understand
-    if images is None:
+    if data is None:
       return None
     parsedImages = []
-    for image in images:
-      parsedImages.append({
-        "id": image["id"],
-        "url": image["baseUrl"],
-        "source": image["productUrl"],
-        "mimetype": image["mimeType"],
-        "size": dict((k, image["mediaMetadata"][k]) for k in ["width", "height"]),
-        "filename": image["filename"]
-      })
+    for entry in data:
+      item = BaseService.createImageHolder(self)
+      item.setId(entry['id']).setUrl(entry['baseUrl'])
+      item.setSource(entry['productUrl']).setMimetype(entry['mimeType'])
+      item.setDimensions(entry['mediaMetadata']['width'], entry['mediaMetadata']['height'])
+      item.setFilename(entry['filename'])
+      parsedImages.append(item)
     return parsedImages
 
   def addUrlParams(self, url, recommendedSize, _displaySize):

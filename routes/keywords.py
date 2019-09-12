@@ -36,7 +36,7 @@ class RouteKeywords(BaseRoute):
       if 'source' in self.getRequest().url:
         return self.redirect(self.servicemgr.sourceServiceKeywords(service, index))
       elif 'help' in self.getRequest().url:
-        return self.jsonify({'message' : services.helpServiceKeywords(service)})
+        return self.jsonify({'message' : self.servicemgr.helpServiceKeywords(service)})
       else:
         return self.jsonify({'keywords' : self.servicemgr.getServiceKeywords(service)})
     elif self.getRequest().method == 'POST' and self.getRequest().json is not None:
