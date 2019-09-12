@@ -87,7 +87,7 @@ class SimpleUrl(BaseService):
     url = keyword
     if url in self.brokenUrls:
       return []
-    image = BaseService.createImageHolder(self).setId(self.hashString(url)).setUrl(url).setSource(url).setFilename(self.getUrlFilename(url))
+    image = BaseService.createImageHolder(self).setId(self.hashString(url)).setUrl(url).setSource(url).allowCache(True) #.setFilename(self.getUrlFilename(url))
     return [image]
 
   def addUrlParams(self, url, _recommendedSize, displaySize):

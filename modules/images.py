@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
+import hashlib
 
 class ImageHolder:
   def __init__(self):
@@ -31,6 +32,8 @@ class ImageHolder:
     self.url = None
     self.filename = None
     self.dimensions = None
+    self.cacheAllow = False
+    self.cacheUsed = False
 
   def setId(self, id):
     self.id = id
@@ -59,3 +62,12 @@ class ImageHolder:
   def setDimensions(self, width, height):
     self.dimensions = {'width': int(width), 'height': int(height)}
     return self
+
+  def allowCache(self, allow):
+    self.cacheAllow = allow
+    return self
+
+  def getCacheId(self):
+    if self.url is None:
+      return None
+    return hashlib.sha1(self.url).hexdigest()

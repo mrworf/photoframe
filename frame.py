@@ -66,10 +66,11 @@ class Photoframe:
     if not path().validate():
       sys.exit(255)
 
+    self.cacheMgr = CacheManager()
     self.settingsMgr = settings()
     self.driverMgr = drivers()
     self.displayMgr = display(self.emulator)
-    self.serviceMgr = ServiceManager(self.settingsMgr)
+    self.serviceMgr = ServiceManager(self.settingsMgr, self.cacheMgr)
 
     self.colormatch = colormatch(self.settingsMgr.get('colortemp-script'), 2700) # 2700K = Soft white, lowest we'll go
     self.slideshow = slideshow(self.displayMgr, self.settingsMgr, self.colormatch)
@@ -78,6 +79,7 @@ class Photoframe:
 
     # Validate all settings, prepopulate with defaults if needed
     self.validateSettings()
+    self.cacheMgr.validate()
 
     # Tie all the services together as needed
     self.timekeeperMgr.setConfiguration(self.settingsMgr.getUser('display-on'), self.settingsMgr.getUser('display-off'))
@@ -87,6 +89,7 @@ class Photoframe:
 
     self.slideshow.setQueryPower(self.timekeeperMgr.getDisplayOn)
     self.slideshow.setServiceManager(self.serviceMgr)
+    self.slideshow.setCacheManager(self.cacheMgr)
     self.slideshow.setCountdown(cmdline.countdown)
 
     # Prep the webserver
@@ -106,10 +109,10 @@ class Photoframe:
     test = WebServer(port=port, listen=listen)
     self.webServer = test
 
-    self._loadRoute('settings', 'RouteSettings', self.powerMgr, self.settingsMgr, self.driverMgr, self.timekeeperMgr, self.displayMgr, CacheManager, self.slideshow)
+    self._loadRoute('settings', 'RouteSettings', self.powerMgr, self.settingsMgr, self.driverMgr, self.timekeeperMgr, self.displayMgr, self.cacheMgr, self.slideshow)
     self._loadRoute('keywords', 'RouteKeywords', self.serviceMgr, self.slideshow)
-    self._loadRoute('orientation', 'RouteOrientation', CacheManager)
-    self._loadRoute('overscan', 'RouteOverscan', CacheManager)
+    self._loadRoute('orientation', 'RouteOrientation', self.cacheMgr)
+    self._loadRoute('overscan', 'RouteOverscan', self.cacheMgr)
     self._loadRoute('maintenance', 'RouteMaintenance', self.emulator, self.driverMgr, self.slideshow)
     self._loadRoute('details', 'RouteDetails', self.displayMgr, self.driverMgr, self.colormatch, self.slideshow)
     self._loadRoute('upload', 'RouteUpload', self.settingsMgr, self.driverMgr)

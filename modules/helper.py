@@ -32,6 +32,8 @@ VALID_URL_REGEX = re.compile(
 	r'(?:/?|[/?]\S+)$', re.IGNORECASE)
 
 class helper:
+	TOOL_ROTATE = '/usr/bin/jpegtran'
+
 	@staticmethod
 	def isValidUrl(url):
 		# Catches most invalid URLs
@@ -87,7 +89,7 @@ class helper:
 		return None
 
 	@staticmethod
-	def getMimeType(filename):
+	def getMimetype(filename):
 		if not os.path.isfile(filename):
 			return None
 
@@ -161,6 +163,9 @@ class helper:
 		width = imageSize["width"]
 		height = imageSize["height"]
 
+		p, f = os.path.split(filename)
+		filenameProcessed = os.path.join(p, "framed_" + f)
+
 		width_border = 15
 		width_spacing = 3
 		border = None
@@ -218,12 +223,6 @@ class helper:
 		try:
 			# Time to process
 			if zoomOnly:
-				p, f = os.path.split(filename)
-				filenameProcessed = os.path.join(p, "zoomed", f)
-				if helper.getImageSize(filenameProcessed):
-					logging.debug("using cached processed image: %s" % filenameProcessed)
-					return filenameProcessed
-
 				cmd = [
 					'convert',
 					filename + '[0]',
@@ -237,12 +236,6 @@ class helper:
 					filenameProcessed
 				]
 			else:
-				p, f = os.path.split(filename)
-				filenameProcessed = os.path.join(p, "blurred", f)
-				if helper.getImageSize(filenameProcessed):
-					logging.debug("using cached processed image: %s"%filenameProcessed)
-					return filenameProcessed
-
 				cmd = [
 					'convert',
 					filename + '[0]',
@@ -285,14 +278,15 @@ class helper:
 			logging.debug('filenameProcessed: ' + repr(filenameProcessed))
 			logging.debug('border: ' + repr(border))
 			logging.debug('spacing: ' + repr(spacing))
-			return None
+			return filename
 
 		try:
 			subprocess.check_output(cmd, stderr=subprocess.STDOUT)
 		except subprocess.CalledProcessError as e:
 			logging.exception('Unable to reframe the image')
 			logging.error('Output: %s' % repr(e.output))
-			return None
+			return filename
+		os.unlink(filename)
 		return filenameProcessed
 
 	@staticmethod
@@ -338,3 +332,26 @@ class helper:
 				settings.set('local-ip', ip)
 				break
 
+	@staticmethod
+	def autoRotate(ifile):
+		p, f = os.path.split(ifile)
+		ofile = os.path.join(p, "rotated_" + f)
+
+		# First, use jpegexiftran to determine orientation
+		parameters = ['', '-flip horizontal', '-rotate 180', '-flip vertical', '-transpose', '-rotate 90', '-transverse', '-rotate 270']
+		with open(os.devnull, 'wb') as void:
+			result = subprocess.check_output(['/usr/bin/jpegexiforient', ifile]) #, stderr=void)
+		if result:
+			orient = int(result)-1
+			if orient < 0 or orient >= len(parameters):
+				logging.info('Orientation was %d, not transforming it', orient)
+				return ifile
+			cmd = [helper.TOOL_ROTATE]
+			cmd.extend(parameters[orient].split())
+			cmd.extend(['-outfile', ofile, ifile])
+			with open(os.devnull, 'wb') as void:
+				result = subprocess.check_call(cmd, stderr=void)
+			if result == 0:
+				os.unlink(ifile)
+				return ofile
+		return ifile

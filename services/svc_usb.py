@@ -308,7 +308,7 @@ class USB_Photos(BaseService):
       item = BaseService.createImageHolder(self)
       item.setId(self.hashString(fullFilename))
       item.setUrl(fullFilename).setSource(fullFilename)
-      item.setMimetype(helper.getMimeType(fullFilename))
+      item.setMimetype(helper.getMimetype(fullFilename))
       dim = helper.getImageSize(fullFilename)
       item.setDimensions(dim['width'], dim['height'])
       item.setFilename(filename)
@@ -319,12 +319,14 @@ class USB_Photos(BaseService):
   def addUrlParams(self, url, recommendedSize, displaySize):
     if recommendedSize is None:
       return url
-    return "%s||%d||%d" % (url, recommendedSize["width"], recommendedSize["height"])
+    return url
+    #return "%s||%d||%d" % (url, recommendedSize["width"], recommendedSize["height"])
 
   def requestUrl(self, url, destination=None, params=None, data=None, usePost=False):
     # pretend to download the file (for compatability with 'selectImageFromAlbum' of baseService)
     # instead just cache a scaled version of the file and return {status: 200}
     result = RequestResult()
+
     if url.count("||") == 2:
       filename, width, height = url.split("||", 2)
       recSize = {"width": width, "height": height}

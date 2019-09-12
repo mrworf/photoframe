@@ -43,6 +43,7 @@ class slideshow:
     self.display = display
     self.settings = settings
     self.colormatch = colormatch
+    self.cacheMgr = None
     self.void = open(os.devnull, 'wb')
     self.delayer = threading.Event()
 
@@ -81,6 +82,9 @@ class slideshow:
 
   def setServiceManager(self, services):
     self.services = services
+
+  def setCacheManager(self, cacheMgr):
+    self.cacheMgr = cacheMgr
 
   def setQueryPower(self, func):
     self.queryPowerFunc = func
@@ -207,23 +211,40 @@ class slideshow:
     if self.colormatch.hasSensor():
       # For Now: Always process original image (no caching of colormatch-adjusted images)
       # 'colormatched_tmp.jpg' will be deleted after the image is displayed
-      filenameTemp = os.path.join(self.settings.get('tempfolder'), "colormatched_tmp.jpg")
-      if self.colormatch.adjust(filenameProcessed, filenameTemp):
-        return filenameTemp
+      p, f = os.path.split(filenameProcessed)
+      ofile = os.path.join(p, "colormatch_" + f)
+      if self.colormatch.adjust(filenameProcessed, ofile):
+        os.unlink(filenameProcessed)
+        return ofile
       logging.warning('Unable to adjust image to colormatch, using original')
     return filenameProcessed
 
-  def process(self, filename):
+  def process(self, image):
+
+    logging.info('Processing %s', image.url)
+
     imageSizing = self.settings.getUser('imagesizing')
-    if imageSizing == None or imageSizing == "none":
-      return self._colormatch(filename)
+
+    # Get the starting point
+    filename = os.path.join(self.settings.get('tempfolder'), image.id)
+
+    # Make sure it's oriented correctly
+    filename = helper.autoRotate(filename)
+
+    # At this point, we have a good image, store it if allowed
+    if image.cacheAllow and not image.cacheUsed:
+      self.cacheMgr.setCachedImage(filename, image.getCacheId())
+
+    # Frame it
     if imageSizing == 'blur':
-      filenameProcessed = helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'))
+      filename = helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'))
     elif imageSizing == 'zoom':
-      filenameProcessed = helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'), zoomOnly=True)
+      filename = helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'), zoomOnly=True)
     elif imageSizing == 'auto':
-      filenameProcessed = helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'), autoChoose=True)
-    return self._colormatch(filenameProcessed)
+      filename = helper.makeFullframe(filename, self.settings.getUser('width'), self.settings.getUser('height'), autoChoose=True)
+
+    # Color match it
+    return self._colormatch(filename)
 
   def delayNextImage(self, time_process):
     # Delay before we show the image (but take processing into account)
@@ -246,17 +267,11 @@ class slideshow:
       self.imageMime = mimetype
       self.imageOnScreen = True
       self.services.memoryRemember(imageId)
-      if "colormatched_tmp.jpg" in filename:
-        os.unlink(filename)
+      os.unlink(filename)
     
     self.skipPreloadedImage = False
 
   def presentation(self):
-    cacheFolder = path.CACHEFOLDER
-    lessImportantDirs = ["blurred", "zoomed"]
-    CacheManager.createDirs(cacheFolder, subDirs=lessImportantDirs)
-    CacheManager.garbageCollect(cacheFolder, lessImportantDirs)
-
     self.services.getServices(readyOnly=True)
 
     if not slideshow.SHOWN_IP:
@@ -273,19 +288,18 @@ class slideshow:
         logging.info("Display is off, exit quietly")
         break
       
-      if (i % 100) == 0:
-        CacheManager.garbageCollect(cacheFolder, lessImportantDirs)
+      #if (i % 100) == 0:
+      #  CacheManager.garbageCollect(cacheFolder)
   
       displaySize = {'width': self.settings.getUser('width'), 'height': self.settings.getUser('height'), 'force_orientation': self.settings.getUser('force_orientation')}
       randomize = (not self.ignoreRandomize) and bool(self.settings.getUser('randomize_images'))
       self.ignoreRandomize = False
 
-      result = self.services.servicePrepareNextItem(cacheFolder, self.supportedFormats, displaySize, randomize)
+      result = self.services.servicePrepareNextItem(self.settings.get('tempfolder'), self.supportedFormats, displaySize, randomize)
       if self.handleErrors(result):
         continue
 
-      filenameOriginal = os.path.join(cacheFolder, result.id)
-      filenameProcessed = self.process(filenameOriginal)
+      filenameProcessed = self.process(result)
       if filenameProcessed is None:
         continue
 

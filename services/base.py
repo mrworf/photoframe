@@ -22,7 +22,6 @@ import requests
 
 from modules.oauth import OAuth
 from modules.helper import helper
-from modules.cachemanager import CacheManager
 from modules.network import RequestResult
 from modules.images import ImageHolder
 
@@ -53,6 +52,7 @@ class BaseService:
     self._ID = id
     self._NAME = name
     self._OAUTH = None
+    self._CACHEMGR = None
 
     self._CURRENT_STATE = BaseService.STATE_UNINITIALIZED
     self._ERROR = None
@@ -91,6 +91,9 @@ class BaseService:
 
     self.loadState()
     self.preSetup()
+
+  def _setCacheManager(self, cacheMgr):
+    self._CACHEMGR = cacheMgr
 
   def _prepareFolders(self, configDir):
     basedir = os.path.join(configDir, self._ID)
@@ -478,27 +481,31 @@ class BaseService:
         continue
 
       filename = os.path.join(destinationDir, image.id)
-      if CacheManager.useCachedImage(filename):
-        if image.mimetype is None:
-          image.setMimetype(helper.getMimeType(filename))
-        return image
 
       # you should implement 'addUrlParams' if the provider allows 'width' / 'height' parameters!
       recommendedSize = self.calcRecommendedSize(image.dimensions, displaySize)
       url = self.addUrlParams(image.url, recommendedSize, displaySize)
-
-      try:
-        result = self.requestUrl(url, destination=filename)
-      except requests.exceptions.RequestException as e:
-        logging.exception('request to download image failed')
-        result = RequestResult().setResult(RequestResult.NO_NETWORK)
       
-      if result.isSuccess():
-        if image.mimetype is None:
-          image.setMimetype(result.mimetype)
-        return image
-      else:
-        return ImageHolder().setError('%d: Unable to download image!' % result.httpcode)
+      if image.cacheAllow:
+        # Look it up in the cache mgr
+        cacheFile = self._CACHEMGR.getCachedImage(image.getCacheId(), filename)
+        if cacheFile:
+          image.setFilename(cacheFile)
+          image.cacheUsed = True
+
+      if not image.cacheUsed:
+        try:
+          result = self.requestUrl(url, destination=filename)
+        except requests.exceptions.RequestException as e:
+          logging.exception('request to download image failed')
+          result = RequestResult().setResult(RequestResult.NO_NETWORK)
+        
+        if not result.isSuccess():
+          return ImageHolder().setError('%d: Unable to download image!' % result.httpcode)
+        else:
+          image.setFilename(filename)
+      image.setMimetype(helper.getMimetype(image.filename))
+      return image
 
     self.resetIndices()
     return None
@@ -544,15 +551,16 @@ class BaseService:
       else:
         r = requests.get(url, params=params)
 
-      result.setHTTPCode(r.status_code).setHeaders(r.headers)
+      if r:
+        result.setHTTPCode(r.status_code).setHeaders(r.headers).setResult(RequestResult.SUCCESS)
 
-      if destination is None:
-        result.setContent(r.content)
-      else:
-        with open(destination, 'wb') as f:
-          for chunk in r.iter_content(chunk_size=1024):
-            f.write(chunk)
-        result.setFilename(destination)
+        if destination is None:
+          result.setContent(r.content)
+        else:
+          with open(destination, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=1024):
+              f.write(chunk)
+          result.setFilename(destination)
     return result
 
   def calcRecommendedSize(self, imageSize, displaySize):
