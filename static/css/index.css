@@ -71,6 +71,10 @@ h1 {
 
 }
 
+span#tiny {
+  font-size: 10pt;
+}
+
 body > div {
   display: flex;
   margin-top: auto;
