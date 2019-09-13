@@ -145,7 +145,7 @@ class GooglePhotos(BaseService):
     '''
 {\n  "error": {\n    "code": 403,\n    "message": "Photos Library API has not been used in project 742138104895 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/photoslibrary.googleapis.com/overview?project=742138104895 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.",\n    "status": "PERMISSION_DENIED",\n    "details": [\n      {\n        "@type": "type.googleapis.com/google.rpc.Help",\n        "links": [\n          {\n            "description": "Google developers console API activation",\n            "url": "https://console.developers.google.com/apis/api/photoslibrary.googleapis.com/overview?project=742138104895"\n          }\n        ]\n      }\n    ]\n  }\n}\n'
     '''
-    return not (data['status'] == 403 and 'Enable it by visiting' in data['content'])
+    return not (data.httpcode == 403 and 'Enable it by visiting' in data.content)
 
   def getQueryForKeyword(self, keyword):
     result = None
@@ -263,8 +263,8 @@ class GooglePhotos(BaseService):
       while len(result) < maxItems:
         data = self.requestUrl(url, data=params, usePost=True)
         if not data.isSuccess():
-          logging.warning('Requesting photo failed with status code %d', data['status'])
-          logging.warning('More details: ' + repr(data['content']))
+          logging.warning('Requesting photo failed with status code %d', data.httpcode)
+          logging.warning('More details: ' + repr(data.content))
           break
         else:
           data = json.loads(data.content)
@@ -312,6 +312,7 @@ class GooglePhotos(BaseService):
       item.setId(entry['id']).setUrl(entry['baseUrl'])
       item.setSource(entry['productUrl']).setMimetype(entry['mimeType'])
       item.setDimensions(entry['mediaMetadata']['width'], entry['mediaMetadata']['height'])
+      item.allowCache(True)
       #item.setFilename(entry['filename'])
       parsedImages.append(item)
     return parsedImages

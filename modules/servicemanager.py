@@ -126,7 +126,7 @@ class ServiceManager:
         continue
       klass = self._instantiate(self._SVC_INDEX[svcname]['module'], self._SVC_INDEX[svcname]['class'])
       svc = eval("klass(self._BASEDIR, entry['id'], entry['name'])")
-      svc._setCacheManager(self._CACHEMGR)
+      svc.setCacheManager(self._CACHEMGR)
       self._SERVICES[svc.getId()] = {'service' : svc, 'id' : svc.getId(), 'name' : svc.getName()}
 
   def _hash(self, text):

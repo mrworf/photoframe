@@ -19,10 +19,12 @@ import json
 import random
 import logging
 import requests
+import time
 
 from modules.oauth import OAuth
 from modules.helper import helper
 from modules.network import RequestResult
+from modules.network import RequestNoNetwork
 from modules.images import ImageHolder
 
 # This is the base implementation of a service. It provides all the
@@ -92,7 +94,7 @@ class BaseService:
     self.loadState()
     self.preSetup()
 
-  def _setCacheManager(self, cacheMgr):
+  def setCacheManager(self, cacheMgr):
     self._CACHEMGR = cacheMgr
 
   def _prepareFolders(self, configDir):
@@ -546,10 +548,23 @@ class BaseService:
       # Use OAuth path
       result = self._OAUTH.request(url, destination, params, data=data, usePost=usePost)
     else:
-      if usePost:
-        r = requests.post(url, params=params, json=data)
-      else:
-        r = requests.get(url, params=params)
+      tries = 0
+      while tries < 5:
+        try:
+          if usePost:
+            r = requests.post(url, params=params, json=data)
+          else:
+            r = requests.get(url, params=params)
+          break
+        except:
+          logging.exception('Issues downloading')
+        time.sleep(tries / 10) # Back off 10, 20, ... depending on tries
+        tries += 1
+        logging.warning('Retrying again, attempt #%d', tries)
+
+      if tries == 5:
+        logging.error('Failed to download due to network issues')
+        raise RequestNoNetwork
 
       if r:
         result.setHTTPCode(r.status_code).setHeaders(r.headers).setResult(RequestResult.SUCCESS)

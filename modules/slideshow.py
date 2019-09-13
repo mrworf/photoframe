@@ -30,6 +30,7 @@ from modules.remember import remember
 from modules.helper import helper
 from modules.cachemanager import CacheManager
 from modules.path import path
+from modules.network import RequestNoNetwork
 
 class slideshow:
   SHOWN_IP = False
@@ -175,6 +176,12 @@ class slideshow:
         time.sleep(1.0 - time_process)
     self.display.clear()
 
+  def waitForNetwork(self):
+    self.imageOnScreen = False
+    newIp = helper.waitForNetwork(lambda: self.display.message('No network connection\n\nCheck wifi-config.txt or cable'))
+    self.settings.set('local-ip', newIp)
+    self.display.setConfigPage('http://%s:%d/' % (newIp, 7777))
+
   def handleErrors(self, result):
     if result is None:
       serviceStates = self.services.getAllServiceStates()
@@ -274,6 +281,9 @@ class slideshow:
   def presentation(self):
     self.services.getServices(readyOnly=True)
 
+    # Make sure we have network
+    self.waitForNetwork()
+
     if not slideshow.SHOWN_IP:
       self.startupScreen()
 
@@ -295,8 +305,12 @@ class slideshow:
       randomize = (not self.ignoreRandomize) and bool(self.settings.getUser('randomize_images'))
       self.ignoreRandomize = False
 
-      result = self.services.servicePrepareNextItem(self.settings.get('tempfolder'), self.supportedFormats, displaySize, randomize)
-      if self.handleErrors(result):
+      try:
+        result = self.services.servicePrepareNextItem(self.settings.get('tempfolder'), self.supportedFormats, displaySize, randomize)
+        if self.handleErrors(result):
+          continue
+      except RequestNoNetwork:
+        self.waitForNetwork()
         continue
 
       filenameProcessed = self.process(result)

@@ -21,6 +21,7 @@ from requests_oauthlib import OAuth2Session
 
 from modules.helper import helper
 from modules.network import RequestResult
+from modules.network import RequestNoNetwork
 
 class OAuth:
 	def __init__(self, setToken, getToken, scope, extras=''):
@@ -85,13 +86,13 @@ class OAuth:
 						break
 			except:
 				logging.exception('Issues downloading')
-			time.sleep(tries * 10) # Back off 10, 20, ... depending on tries
+			time.sleep(tries / 10) # Back off 10, 20, ... depending on tries
 			tries += 1
+			logging.warning('Retrying again, attempt #%d', tries)
 
 		if tries == 5:
 			logging.error('Failed to download due to network issues')
-			ret.setResult(RequestResult.NO_NETWORK) # Not necessarily true, need to properly handle it
-			return ret
+			raise RequestNoNetwork
 
 		if destination is not None:
 			try:

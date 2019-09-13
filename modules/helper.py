@@ -318,6 +318,7 @@ class helper:
 	@staticmethod
 	def waitForNetwork(funcNoNetwork):
 		shownError = False
+		ip = None
 		while True:
 			ip = helper.getIP()
 
@@ -329,8 +330,8 @@ class helper:
 				time.sleep(10)
 			else:
 				logging.info('Network connection reestablished')
-				settings.set('local-ip', ip)
 				break
+		return ip
 
 	@staticmethod
 	def autoRotate(ifile):

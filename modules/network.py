@@ -57,3 +57,9 @@ class RequestResult:
 
     def isSuccess(self):
         return self.result == RequestResult.SUCCESS and self.httpcode == 200
+
+    def isNoNetwork(self):
+        return self.result == RequestResult.NO_NETWORK
+
+class RequestNoNetwork(Exception):
+    pass
