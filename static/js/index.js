@@ -197,6 +197,7 @@ function loadSettings(funcOk)
   loadConfigData("/details/version", "version", funcTmp);
   loadConfigData("/rotation", "rotation", funcTmp);
   loadConfigData("/overscan", "overscan", funcTmp);
+  loadConfigData("/details/network", "network", funcTmp);
   
 	loadConfigData("/service/available", 'service-available', funcTmp);
 	loadConfigData("/service/list", 'service-defined', funcTmp);

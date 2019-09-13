@@ -3,6 +3,12 @@ body {
 	font-size: 12pt;
 }
 
+span.nointernet {
+  font-weight: bold;
+  font-style: italic;
+  color: red;
+}
+
 span.normal {
   font-size: 12pt;
   font-style: normal;

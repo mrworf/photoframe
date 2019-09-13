@@ -68,5 +68,7 @@ class RouteDetails(BaseRoute):
       return self.jsonify({'sensor' : self.colormatch.hasSensor()})
     elif about == 'display':
       return self.jsonify({'display' : self.displaymgr.isEnabled()})
+    elif about == 'network':
+      return self.jsonify({'network' : helper.hasNetwork()})
 
     self.setAbort(404)

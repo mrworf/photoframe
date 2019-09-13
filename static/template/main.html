@@ -121,6 +121,10 @@
 			<option value="ignore">ignore and continue</option>
 			{{/select}}
 		</select>
+		{{#if network.network}}
+		{{else}}
+		<span class="nointernet">[No internet connection detected]</span>
+		{{/if}}
 		<br>
 		Use image cache to minimize network traffic
 		<select name="enable-cache">
