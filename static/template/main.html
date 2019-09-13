@@ -205,7 +205,10 @@
 	<input type="button" id="new-service" value="Add photo provider">
 	<select id="new-service-type">
 		{{#each service-available}}
+			{{#if this.deprecated}}
+			{{else}}
 			<option value="{{this.id}}">{{this.name}}</option>
+			{{/if}}
 		{{/each}}
 		</select>
 	</div>

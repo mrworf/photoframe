@@ -76,7 +76,7 @@ class ServiceManager:
               if m is not None:
                 klass = self._instantiate(item[0:-3], m.group(1))
                 logging.info('Loading service %s from %s', klass.__name__, item)
-                self._SVC_INDEX[m.group(1)] = {'id' : klass.SERVICE_ID, 'name' : klass.SERVICE_NAME, 'module' : item[0:-3], 'class' : m.group(1)}
+                self._SVC_INDEX[m.group(1)] = {'id' : klass.SERVICE_ID, 'name' : klass.SERVICE_NAME, 'module' : item[0:-3], 'class' : m.group(1), 'deprecated' : klass.SERVICE_DEPRECATED}
               break
 
   def _deletefolder(self, folder):

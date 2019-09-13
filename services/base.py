@@ -39,6 +39,8 @@ from modules.images import ImageHolder
 # Use the exposed functions as needed to get the data you want.
 #
 class BaseService:
+  SERVICE_DEPRECATED = False
+
   STATE_ERROR = -1
   STATE_UNINITIALIZED = 0
 

@@ -22,6 +22,7 @@ import logging
 class PicasaWeb(BaseService):
   SERVICE_NAME = 'PicasaWeb'
   SERVICE_ID = 1
+  SERVICE_DEPRECATED = True
 
   def __init__(self, configDir, id, name):
     BaseService.__init__(self, configDir, id, name, needConfig=False, needOAuth=True)
