@@ -45,7 +45,11 @@ class CacheManager:
   STATE_FULL = 4
 
   def __init__(self):
-    pass
+    self.enable = True
+
+  def enableCache(self, enable):
+    self.enable = enable
+    logging.info('Cache is set to %s' + repr(enable))
 
   def validate(self):
     self.createDirs()
@@ -61,6 +65,9 @@ class CacheManager:
     return "%dB" % size
 
   def getCachedImage(self, cacheId, destination):
+    if not self.enable:
+      return None
+
     filename = os.path.join(path.CACHEFOLDER, cacheId)
     if os.path.isfile(filename):
       try:
@@ -72,6 +79,9 @@ class CacheManager:
     return None
 
   def setCachedImage(self, filename, cacheId):
+    if not self.enable:
+      return None
+
     # Will copy the file if possible, otherwise
     # copy/delete it.
     cacheFile = os.path.join(path.CACHEFOLDER, cacheId)

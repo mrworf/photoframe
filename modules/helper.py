@@ -316,10 +316,10 @@ class helper:
 		return helper.getIP() is not None
 
 	@staticmethod
-	def waitForNetwork(funcNoNetwork):
+	def waitForNetwork(funcNoNetwork, funcExit):
 		shownError = False
 		ip = None
-		while True:
+		while True and not funcExit():
 			ip = helper.getIP()
 
 			if ip is None:

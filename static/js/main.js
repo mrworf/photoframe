@@ -171,6 +171,22 @@ $("select[name=randomize_images]").change(function () {
   });
 });
 
+$("select[name=enable-cache]").change(function () {
+  $.ajax({
+    url: "/setting/" + $(this).attr('name') + "/" + encodeURIComponent($(this).val()),
+    type: "PUT"
+  }).done(function () {
+  });
+});
+
+$("select[name=offline-behavior]").change(function () {
+  $.ajax({
+    url: "/setting/" + $(this).attr('name') + "/" + encodeURIComponent($(this).val()),
+    type: "PUT"
+  }).done(function () {
+  });
+});
+
 $("select[name=tvservice]").change(function() {
   $.ajax({
     url:"/setting/tvservice/" + encodeURIComponent($(this).val()),

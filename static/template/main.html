@@ -113,6 +113,22 @@
 			<option value="1">yes</option>
 			{{/select}}
 		</select>
+		<br>
+		When internet and/or network is lost
+		<select name="offline-behavior">
+			{{#select settings.offline-behavior}}
+			<option value="wait">wait for network</option>
+			<option value="ignore">ignore and continue</option>
+			{{/select}}
+		</select>
+		<br>
+		Use image cache to minimize network traffic
+		<select name="enable-cache">
+			{{#select settings.enable-cache}}
+			<option value="1">yes</option>
+			<option value="0">no, never cache images</option>
+			{{/select}}
+		</select>
 	</div>
 </div>
 <br>

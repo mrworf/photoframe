@@ -54,6 +54,8 @@ class settings:
       'imagesizing' : 'blur',
       'force_orientation' : 0,
       'randomize_images' : 1,
+      'enable-cache' : 1,
+      'offline-behavior' : 'wait', # wait = wait for network, ignore = try next (rely on cache or non-internet connections)
     }
 
   def load(self):

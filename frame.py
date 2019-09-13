@@ -79,7 +79,9 @@ class Photoframe:
 
     # Validate all settings, prepopulate with defaults if needed
     self.validateSettings()
+
     self.cacheMgr.validate()
+    self.cacheMgr.enableCache(self.settingsMgr.getUser('enable-cache') == 1)
 
     # Tie all the services together as needed
     self.timekeeperMgr.setConfiguration(self.settingsMgr.getUser('display-on'), self.settingsMgr.getUser('display-off'))

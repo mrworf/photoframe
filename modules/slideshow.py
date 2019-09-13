@@ -178,9 +178,13 @@ class slideshow:
 
   def waitForNetwork(self):
     self.imageOnScreen = False
-    newIp = helper.waitForNetwork(lambda: self.display.message('No network connection\n\nCheck wifi-config.txt or cable'))
-    self.settings.set('local-ip', newIp)
-    self.display.setConfigPage('http://%s:%d/' % (newIp, 7777))
+    newIp = helper.waitForNetwork(
+      lambda: self.display.message('No internet connection\n\nCheck router, wifi-config.txt or cable'), 
+      lambda: self.settings.getUser('offline-behavior') != 'wait'
+    )
+    if newIp is not None:
+      self.settings.set('local-ip', newIp)
+      self.display.setConfigPage('http://%s:%d/' % (newIp, 7777))
 
   def handleErrors(self, result):
     if result is None:
@@ -282,7 +286,8 @@ class slideshow:
     self.services.getServices(readyOnly=True)
 
     # Make sure we have network
-    self.waitForNetwork()
+    if not helper.hasNetwork() and self.settings.getUser('offline-behavior') == 'wait':
+      self.waitForNetwork()
 
     if not slideshow.SHOWN_IP:
       self.startupScreen()
@@ -310,8 +315,12 @@ class slideshow:
         if self.handleErrors(result):
           continue
       except RequestNoNetwork:
-        self.waitForNetwork()
-        continue
+        offline = self.settings.getUser('offline-behavior') 
+        if offline == 'wait':
+          self.waitForNetwork()
+          continue
+        elif offline == 'ignore':
+          pass
 
       filenameProcessed = self.process(result)
       if filenameProcessed is None:
