@@ -15,7 +15,6 @@
 #
 
 from base import BaseService
-import random
 import subprocess
 import os
 import logging
@@ -254,7 +253,7 @@ class USB_Photos(BaseService):
           self.device = candidate
           self.checkForInvalidKeywords()
           return True
-      except subprocess.CalledProcessError as e:
+      except subprocess.CalledProcessError:
         logging.warning('Unable to mount storage device "%s" to "%s"!' % (candidate.device, self.usbDir))
         logging.warning('Output: %s' % repr(e.output))
       self.unmountBaseDir()
@@ -266,7 +265,7 @@ class USB_Photos(BaseService):
     cmd = ['sudo', '-n', 'umount', self.usbDir]
     try:
       subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError as e:
+    except subprocess.CalledProcessError:
       logging.debug("unable to UNMOUNT '%s'" % self.usbDir)
 
   # All images directly inside '/photoframe' directory will be displayed without any keywords

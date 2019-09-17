@@ -14,8 +14,6 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 from base import BaseService
-import os
-import re
 import logging
 
 from modules.helper import helper

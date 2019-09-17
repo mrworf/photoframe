@@ -489,7 +489,7 @@ class BaseService:
       # you should implement 'addUrlParams' if the provider allows 'width' / 'height' parameters!
       recommendedSize = self.calcRecommendedSize(image.dimensions, displaySize)
       url = self.addUrlParams(image.url, recommendedSize, displaySize)
-      
+
       if image.cacheAllow:
         # Look it up in the cache mgr
         cacheFile = self._CACHEMGR.getCachedImage(image.getCacheId(), filename)
@@ -500,10 +500,10 @@ class BaseService:
       if not image.cacheUsed:
         try:
           result = self.requestUrl(url, destination=filename)
-        except requests.exceptions.RequestException as e:
+        except requests.exceptions.RequestException:
           logging.exception('request to download image failed')
           result = RequestResult().setResult(RequestResult.NO_NETWORK)
-        
+
         if not result.isSuccess():
           return ImageHolder().setError('%d: Unable to download image!' % result.httpcode)
         else:

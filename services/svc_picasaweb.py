@@ -89,7 +89,7 @@ class PicasaWeb(BaseService):
       if images is None:
         continue
 
-      mimeType, imageUrl = self.getUrlFromImages(supportedMimeTypes, displaySize['width'], images)
+      mimeType, imageUrl = self.getUrlFromImages(supportedMimeTypes, displaySize['width'], images, displaySize)
       if imageUrl is None:
         continue
       result = self.requestUrl(imageUrl, destination=destinationFile)
@@ -97,7 +97,7 @@ class PicasaWeb(BaseService):
         return {'mimetype' : mimeType, 'error' : None, 'source':None}
     return {'mimetype' : None, 'error' : 'Could not download images from Google Photos', 'source':None}
 
-  def getUrlFromImages(self, types, width, images):
+  def getUrlFromImages(self, types, width, images, displaySize):
     # Next, pick an image
     count = len(images['feed']['entry'])
     offset = random.SystemRandom().randint(0,count-1)

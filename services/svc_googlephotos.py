@@ -14,7 +14,6 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 from base import BaseService
-import random
 import os
 import json
 import logging
@@ -245,9 +244,8 @@ class GooglePhotos(BaseService):
       return BaseService.createImageHolder(self).setError('"Photos Library API" is not enabled on\nhttps://console.developers.google.com\n\nCheck the Photoframe Wiki for details')
     else:
       return BaseService.createImageHolder(self).setError('No (new) images could be found.\nCheck spelling or make sure you have added albums')
-    
+
   def getImagesFor(self, keyword):
-    images = None
     filename = os.path.join(self.getStoragePath(), self.hashString(keyword) + '.json')
     result = []
     if not os.path.exists(filename):
