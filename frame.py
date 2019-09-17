@@ -21,7 +21,6 @@ import random
 import time
 import logging
 import argparse
-import re
 import importlib
 
 from modules.shutdown import shutdown
