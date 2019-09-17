@@ -107,7 +107,7 @@ class timekeeper(Thread):
 		while True:
 			time.sleep(60) # every minute
 
-			scheduleOff = False
+			self.scheduleOff = False
 
 			if self.hourOn is not None and self.hourOff is not None:
 				if self.hourOn > self.hourOff:

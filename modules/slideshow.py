@@ -16,17 +16,8 @@
 import threading
 import logging
 import os
-import shutil
-import random
-import datetime
-import hashlib
 import time
-import json
-import math
-import re
-import subprocess
 
-from modules.remember import remember
 from modules.helper import helper
 from modules.cachemanager import CacheManager
 from modules.path import path

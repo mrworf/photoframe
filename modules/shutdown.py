@@ -15,7 +15,6 @@
 #
 from threading import Thread
 import select
-import time
 import subprocess
 import os
 import socket
@@ -51,7 +50,7 @@ class shutdown(Thread):
 		with open('/sys/class/gpio/gpio%d/edge' % self.gpio, 'wb') as f:
 			f.write('both')
 		with open('/sys/class/gpio/gpio%d/value' % self.gpio, 'rb') as f:
-			data = f.read()
+			f.read()
 			poller.register(f, select.POLLPRI)
 			poller.register(self.server, select.POLLHUP)
 			i = poller.poll(None)

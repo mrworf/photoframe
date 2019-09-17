@@ -71,7 +71,7 @@ class OAuth:
 						result = auth.get(uri, stream=stream, params=params)
 					if result is not None:
 						break
-				except TokenExpiredError as e:
+				except TokenExpiredError:
 					auth = self.getSession(True)
 					if auth is None:
 						logging.error('Unable to get OAuth session, probably expired')

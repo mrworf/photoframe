@@ -14,8 +14,8 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 import os
-import sys
-import subprocess
+import json
+
 from path import path
 import logging
 
@@ -112,19 +112,19 @@ class sysconfig:
 
   @staticmethod
   def setOption(key, value):
-    lines = self.app_opt_load()
+    lines = sysconfig._app_opt_load()
     if lines is None:
       lines = {}
     lines[key] = value
-    self.app_opt_save(lines)
+    sysconfig._app_opt_save(lines)
 
   @staticmethod
   def removeOption(key):
-    lines = self.app_opt_load()
+    lines = sysconfig._app_opt_load()
     if lines is None:
       return
     lines.pop(key, False)
-    self.app_opt_save(lines)
+    sysconfig._app_opt_save(lines)
 
   @staticmethod
   def getHTTPAuth():

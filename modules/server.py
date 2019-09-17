@@ -53,8 +53,8 @@ class WebServer(Thread):
       self.auth = HTTPBasicAuth()
       @self.auth.get_password
       def check_password(username):
-        if user['user'] == username:
-          return user['password']
+        if self.user['user'] == username:
+          return self.user['password']
         return None
     else:
       logging.info('No http-auth.json found, disabling http authentication')
@@ -101,7 +101,7 @@ class WebServer(Thread):
       code = 500
       #exc_type, exc_value, exc_traceback = sys.exc_info()
       lines = traceback.format_exc().splitlines()
-      issue = lines[-1]
+      #issue = lines[-1]
       message = '''
       <html><head><title>Internal error</title></head><body style="font-family: Verdana"><h1>Uh oh, something went wrong...</h1>
       Please go to <a href="https://github.com/mrworf/photoframe/issues">github</a>

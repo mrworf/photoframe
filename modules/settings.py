@@ -121,6 +121,7 @@ class settings:
     logging.warning('Trying to access non-existent user config key "%s"' % key)
     try:
       a = 1 /0
+      a += 1
     except:
       logging.exception('Where did this come from??')
     return None

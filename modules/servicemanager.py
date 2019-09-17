@@ -289,6 +289,8 @@ class ServiceManager:
   def _migrate(self):
     if os.path.exists(path.CONFIGFOLDER + '/oauth.json'):
       logging.info('Migrating old setup to new service layout')
+      from services.svc_picasaweb import PicasaWeb
+
       id = self.addService(PicasaWeb.SERVICE_ID, 'PicasaWeb')
       svc = self._SERVICES[id]['service']
 

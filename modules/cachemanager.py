@@ -19,7 +19,6 @@ import os
 import time
 import shutil
 
-from modules.helper import helper
 from modules.path import path
 
 ### CONSTANTS ###

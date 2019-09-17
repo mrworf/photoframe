@@ -23,8 +23,6 @@ import debug
 
 from sysconfig import sysconfig
 
-from threading import Thread
-
 class display:
   def __init__(self, use_emulator=False, emulate_width=1280, emulate_height=720):
     self.void = open(os.devnull, 'wb')
@@ -163,7 +161,7 @@ class display:
 
     if self.depth in [24, 32]:
       with open(device, 'wb') as f:
-        ret = debug.subprocess_call(arguments, stdout=f, stderr=self.void)
+        debug.subprocess_call(arguments, stdout=f, stderr=self.void)
     elif self.depth == 16: # Typically RGB565
       # For some odd reason, cannot pipe the output directly to the framebuffer, use temp file
       with open(device, 'wb') as fb:
