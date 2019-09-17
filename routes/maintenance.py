@@ -69,3 +69,6 @@ class RouteMaintenance(BaseRoute):
     elif cmd == 'forgetMemory':
       self.slideshow.createEvent("memoryForget")
       return self.jsonify({'forgetMemory': True})
+    elif cmd == 'ssh':
+      subprocess.call(['systemctl', 'restart', 'ssh'], stderr=void)
+      return self.jsonify({'ssh': True})

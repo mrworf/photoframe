@@ -33,4 +33,3 @@ class RouteOptions(BaseRoute):
     elif cmd == 'NODEBUG':
       sysconfig.setOption('POSTCMD', '')
     return 'Options changed', 200
-
