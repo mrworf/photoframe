@@ -15,10 +15,8 @@
 #
 
 import logging
-import os
 import json
 
-from modules.sysconfig import sysconfig
 from baseroute import BaseRoute
 
 class RouteOAuthLink(BaseRoute):

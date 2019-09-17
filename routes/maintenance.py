@@ -14,19 +14,20 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import logging
 import os
 import subprocess
-
-from modules.helper import helper
+import shutil
 
 from baseroute import BaseRoute
+from modules.path import path
+
 
 class RouteMaintenance(BaseRoute):
   def setupex(self, emulator, drivermgr, slideshow):
     self.drivermgr = drivermgr
     self.emulator = emulator
     self.slideshow = slideshow
+    self.void = open(os.devnull, 'wb')
 
     self.addUrl('/maintenance/<cmd>')
 
@@ -38,28 +39,28 @@ class RouteMaintenance(BaseRoute):
       if os.path.exists(path.CONFIGFOLDER):
         shutil.rmtree(path.CONFIGFOLDER, True)
       # Reboot
-      if not emulator:
-        subprocess.call(['/sbin/reboot'], stderr=void);
+      if not self.emulator:
+        subprocess.call(['/sbin/reboot'], stderr=self.void);
       else:
         self.server.stop()
       return self.jsonify({'reset': True})
     elif cmd == 'reboot':
-      if not emulator:
-        subprocess.call(['/sbin/reboot'], stderr=void);
+      if not self.emulator:
+        subprocess.call(['/sbin/reboot'], stderr=self.void);
       else:
         self.server.stop()
       return self.jsonify({'reboot' : True})
     elif cmd == 'shutdown':
-      if not emulator:
-        subprocess.call(['/sbin/poweroff'], stderr=void);
+      if not self.emulator:
+        subprocess.call(['/sbin/poweroff'], stderr=self.void);
       else:
         self.server.stop()
       return self.jsonify({'shutdown': True})
     elif cmd == 'update':
-      if emulator:
+      if self.emulator:
         return 'Cannot run update from emulation mode', 200
       if os.path.exists('/root/photoframe/update.sh'):
-        p = subprocess.Popen('/bin/bash /root/photoframe/update.sh 2>&1 | logger -t forced_update', shell=True)
+        subprocess.Popen('/bin/bash /root/photoframe/update.sh 2>&1 | logger -t forced_update', shell=True)
         return 'Update in process', 200
       else:
         return 'Cannot find update tool', 404
@@ -70,5 +71,5 @@ class RouteMaintenance(BaseRoute):
       self.slideshow.createEvent("memoryForget")
       return self.jsonify({'forgetMemory': True})
     elif cmd == 'ssh':
-      subprocess.call(['systemctl', 'restart', 'ssh'], stderr=void)
+      subprocess.call(['systemctl', 'restart', 'ssh'], stderr=self.void)
       return self.jsonify({'ssh': True})

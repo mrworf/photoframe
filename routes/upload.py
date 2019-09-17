@@ -17,7 +17,7 @@
 import logging
 import os
 
-from modules.sysconfig import sysconfig
+from werkzeug.utils import secure_filename
 from baseroute import BaseRoute
 
 class RouteUpload(BaseRoute):

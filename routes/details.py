@@ -14,13 +14,9 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import logging
 import os
 import subprocess
-import shutil
 
-from modules.sysconfig import sysconfig
-from modules.path import path
 from modules.helper import helper
 
 from baseroute import BaseRoute

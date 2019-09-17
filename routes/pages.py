@@ -1,3 +1,4 @@
+
 # This file is part of photoframe (https://github.com/mrworf/photoframe).
 #
 # photoframe is free software: you can redistribute it and/or modify
@@ -13,16 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
-import logging
 import os
-import modules.debug as debug
 from flask import send_from_directory
 
 from baseroute import BaseRoute
 
 class RoutePages(BaseRoute):
     SIMPLE = True
-    
+
     def setup(self):
         self.addUrl('/<path:file>')
         self.addUrl('/').addDefault('file', None)

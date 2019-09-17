@@ -14,11 +14,9 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import logging
-import os
-
 from baseroute import BaseRoute
 from modules.helper import helper
+from modules.shutdown import shutdown
 
 class RouteSettings(BaseRoute):
   def setupex(self, powermanagement, settingsMgr, drivermgr, timekeeper, display, cachemgr, slideshow):

@@ -14,9 +14,6 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import logging
-import os
-
 from modules.sysconfig import sysconfig
 from baseroute import BaseRoute
 

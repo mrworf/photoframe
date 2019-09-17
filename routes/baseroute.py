@@ -14,9 +14,7 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 import logging
-import modules.debug as debug
 import flask
-#from flask import request, redirect, session, url_for, abort, flash
 
 class BaseRoute:
   SIMPLE = False
