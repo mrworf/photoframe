@@ -45,6 +45,10 @@ if [ "$1" = "post" ]; then
 		mv /root/${FILE} /root/photoframe_config/ >/dev/null 2>/dev/null
 	done
 
+	# We also have added more dependencies, so add more software
+	apt update
+	apt install -y libjpeg-turbo-progs
+
 	# Copy new service and reload systemd
 	cp frame.service /etc/systemd/system/
 	systemctl daemon-reload
