@@ -45,13 +45,13 @@
 	  {{/select}}
 	</select>
 		<br>
-		Use display overscan
 		<select name="display-overscan">
       {{#select overscan.overscan}}
-      <option value="true">Yes</option>
-      <option value="false">No</option>
+      <option value="true">Use overscan</option>
+      <option value="false">Don't use overscan</option>
 	  {{/select}}
 	</select>
+  	(overscan will add a black border to the image)
 	<br>
 	Only show images that match display orientation
 	<select name="force_orientation">
@@ -100,11 +100,12 @@
 		<select name="imagesizing">
 			{{#select settings.imagesizing}}
 			<option value="none">Do nothing</option>
-			<option value="blur">Show blurred image</option>
-			<option value="zoom">Zoom to fill</option>
-			<option value="auto">Blur/Zoom as necessary</option>
+			<option value="blur">Blur</option>
+			<option value="zoom">Fill</option>
+			<option value="auto">Auto</option>
 			{{/select}}
 		</select>
+		<button id='explain_imagesizing'>Explain</button>
 		<br>
 		Randomize image order
 		<select name="randomize_images">
@@ -218,4 +219,20 @@
 		<img src="/img/busy.gif">
 	</div>
 </div>
+<div class="help" style="display: none" id="help_imagesizing">
+	<div>
+		<h3>Do nothing</h3>
+		Like the option indicates, will simply show the image, leaving the unused screen area blank
+		<h3>Blur</h3>
+		Will fill unused screen area with a zoomed and blurred version of the image shown. It's also darker to avoid distracting from the image shown.
+		<h3>Fill</h3>
+		Zoom the image so that it will fill the entire screen. This will cause the image to be cropped.
+		<h3>Auto</h3>
+		Will choose between blur and fill. The selection is based on how much screen area would be blank. If the area is very small, blur looks odd (you get a VERY small stripe of the blurred image), instead
+		it will use fill, since very little of the image will be cropped.
+		<hr>
+		<button name="help_close">Dismiss</button>
+	</div>
+</div>
+
 <script type="text/javascript" src="/js/main.js"></script>

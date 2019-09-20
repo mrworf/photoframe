@@ -127,6 +127,29 @@ div.busy div:first-child {
   display: inline-block;
 }
 
+div.help {
+  position:fixed;
+  width:100%;
+  height:100%;
+  top:0px;
+  left:0px;
+  z-index:1000;
+}
+
+div.help div:first-child {
+  opacity: 1;
+  background-color: #ffffff;
+  margin: auto;
+  display: inline-block;
+  border: 2px solid;
+  width: 75%;
+  padding: 10pt;
+}
+
+div.help div:first-child h3:first-child {
+  margin-top: 0pt;
+}
+
 p.message {
   margin: 2pt;
   font-weight: bold;
