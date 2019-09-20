@@ -147,7 +147,7 @@ class CacheManager:
   # classify disk space usage into five differnt states based on free/total ratio
   def getDiskSpaceState(self, path):
     # all values are in bytes!
-    dirSize = float(self.getDirSize(path))
+    #dirSize = float(self.getDirSize(path))
 
     stat = os.statvfs(path)
     total = float(stat.f_blocks*stat.f_bsize)
