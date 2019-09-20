@@ -67,7 +67,16 @@ class WebServer(Thread):
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
     self.app.secret_key = os.urandom(24)
     self._registerHandlers()
+    self.authmethod = self.auth.login_required(lambda: None)
     self.app.after_request(self._nocache)
+    self.app.before_request(self._logincheck)
+
+  def _logincheck(self):
+    if not request.endpoint:
+      return
+
+    view = self.app.view_functions[request.endpoint]
+    return self.authmethod()
 
   def start(self):
     if self.async:
