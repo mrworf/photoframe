@@ -81,7 +81,7 @@ if ! diff /tmp/server.txt /tmp/client.txt >/dev/null ; then
 	/root/photoframe/update.sh post
 
 	# Skip service restart if we were running an update only
-  if [ "$1" != "updateonly" ]; then
+	if [ "$1" != "updateonly" ]; then
 		systemctl restart frame.service
 	fi
 else
