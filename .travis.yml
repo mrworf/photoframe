@@ -1,0 +1,7 @@
+language: bash
+dist: xenial
+before_install:
+ - sudo apt-get update
+install:
+- sudo apt-get install pyflakes
+script: "./travis/validate-source.sh"
