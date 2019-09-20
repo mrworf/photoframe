@@ -75,7 +75,6 @@ class WebServer(Thread):
     if not request.endpoint:
       return
 
-    view = self.app.view_functions[request.endpoint]
     return self.authmethod()
 
   def start(self):
