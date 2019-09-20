@@ -19,7 +19,7 @@ import os
 import time
 import shutil
 
-from modules.path import path
+from modules.path import path as syspath
 
 ### CONSTANTS ###
 
@@ -67,7 +67,7 @@ class CacheManager:
     if not self.enable:
       return None
 
-    filename = os.path.join(path.CACHEFOLDER, cacheId)
+    filename = os.path.join(syspath.CACHEFOLDER, cacheId)
     if os.path.isfile(filename):
       try:
         shutil.copy(filename, destination)
@@ -83,7 +83,7 @@ class CacheManager:
 
     # Will copy the file if possible, otherwise
     # copy/delete it.
-    cacheFile = os.path.join(path.CACHEFOLDER, cacheId)
+    cacheFile = os.path.join(syspath.CACHEFOLDER, cacheId)
     try:
       if os.path.exists(cacheFile):
         os.unlink(cacheFile)
@@ -95,14 +95,14 @@ class CacheManager:
       return None
 
   def createDirs(self, subDirs=[]):
-    if not os.path.exists(path.CACHEFOLDER):
-      os.mkdir(path.CACHEFOLDER)
-    for subDir in[os.path.join(path.CACHEFOLDER, d) for d in subDirs]:
+    if not os.path.exists(syspath.CACHEFOLDER):
+      os.mkdir(syspath.CACHEFOLDER)
+    for subDir in[os.path.join(syspath.CACHEFOLDER, d) for d in subDirs]:
       if not os.path.exists(subDir):
         os.mkdir(subDir)
 
   # delete all files but keep directory structure intact
-  def empty(directory = path.CACHEFOLDER):
+  def empty(directory = syspath.CACHEFOLDER):
     freedUpSpace = 0
     if not os.path.isdir(directory):
       logging.exception('Failed to delete "%s". Directory does not exist!' % directory)
@@ -173,19 +173,19 @@ class CacheManager:
   # Of course a manual cache reset is possible via the photoframe web interface
   def garbageCollect(self, lessImportantDirs=[]):
     #logging.debug("Garbage Collector started!")
-    state = self.getDiskSpaceState(path.CACHEFOLDER)
+    state = self.getDiskSpaceState(syspath.CACHEFOLDER)
     freedUpSpace = 0
     if state == CacheManager.STATE_FULL:
-      freedUpSpace = self.empty(path.CACHEFOLDER)
+      freedUpSpace = self.empty(syspath.CACHEFOLDER)
     elif state == CacheManager.STATE_CRITICAL:
-      for subDir in [os.path.join(path.CACHEFOLDER, d) for d in lessImportantDirs]:
+      for subDir in [os.path.join(syspath.CACHEFOLDER, d) for d in lessImportantDirs]:
         freedUpSpace += self.empty(subDir)
     elif state == CacheManager.STATE_WORRISOME:
-      freedUpSpace = self.deleteOldFiles(path.CACHEFOLDER, 7*DAY)
+      freedUpSpace = self.deleteOldFiles(syspath.CACHEFOLDER, 7*DAY)
     elif state == CacheManager.STATE_ENOUGH:
-      freedUpSpace = self.deleteOldFiles(path.CACHEFOLDER, MONTH)
+      freedUpSpace = self.deleteOldFiles(syspath.CACHEFOLDER, MONTH)
     else:
-      freedUpSpace = self.deleteOldFiles(path.CACHEFOLDER, 6*MONTH)
+      freedUpSpace = self.deleteOldFiles(syspath.CACHEFOLDER, 6*MONTH)
     '''
     if freedUpSpace:
       logging.info("Garbage Collector was able to free up %s of disk space!" % CacheManager.formatBytes(freedUpSpace))

@@ -125,9 +125,10 @@ class ServiceManager:
         logging.error('Cannot resolve service type %d, skipping', entry['type'])
         continue
       klass = self._instantiate(self._SVC_INDEX[svcname]['module'], self._SVC_INDEX[svcname]['class'])
-      svc = eval("klass(self._BASEDIR, entry['id'], entry['name'])")
-      svc.setCacheManager(self._CACHEMGR)
-      self._SERVICES[svc.getId()] = {'service' : svc, 'id' : svc.getId(), 'name' : svc.getName()}
+      if klass:
+        svc = eval("klass(self._BASEDIR, entry['id'], entry['name'])")
+        svc.setCacheManager(self._CACHEMGR)
+        self._SERVICES[svc.getId()] = {'service' : svc, 'id' : svc.getId(), 'name' : svc.getName()}
 
   def _hash(self, text):
     return hashlib.sha1(text).hexdigest()
@@ -139,10 +140,12 @@ class ServiceManager:
 
     genid = self._hash("%s-%f-%d" % (name, time.time(), len(self._SERVICES)))
     klass = self._instantiate(self._SVC_INDEX[svcname]['module'], self._SVC_INDEX[svcname]['class'])
-    svc = eval("klass(self._BASEDIR, genid, name)")
-    self._SERVICES[genid] = {'service' : svc, 'id' : svc.getId(), 'name' : svc.getName()}
-    self._save()
-    return genid
+    if klass:
+      svc = eval("klass(self._BASEDIR, genid, name)")
+      self._SERVICES[genid] = {'service' : svc, 'id' : svc.getId(), 'name' : svc.getName()}
+      self._save()
+      return genid
+    return None
 
   def renameService(self, id, newName):
     if id not in self._SERVICES:
