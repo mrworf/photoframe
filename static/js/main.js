@@ -33,8 +33,23 @@ $("#driver-button").click(function() {
 });
 
 function rebootWatch() {
-  $(document.body).html('<h1>Rebooting</h1>')
-  setTimeout(document.location.reload.bind(document.location), 60000);
+  $(document.body).html('<h1>Rebooting<span id="reboot"></span></h1>Please be patient, this can take anywhere from 30s to several minutes depending on device and network.<br><br>Page will automatically refresh once photoframe is available again')
+  rebootWatchCheck();
+}
+
+function rebootWatchCheck() {
+  $.ajax({
+    url:"/setting",
+    type:"GET",
+  }).done(function(e, data){
+    document.location.reload();
+  }).fail(function(e, data) {
+    setTimeout(rebootWatchCheck, 5000);
+    if ($('#reboot').text() == '...')
+      $('#reboot').text('');
+    else
+      $('#reboot').append('.');
+  });
 }
 
 // Refresh image every 30s
@@ -131,6 +146,20 @@ $("select[name=display-rotation]").change(function() {
   });
 });
 
+$("select[name=display-overscan]").change(function() {
+  $.ajax({
+    url:"/overscan/" + $(this).val(),
+         type:"PUT"
+  }).done(function(){
+    if(confirm('In order to fully enable this change, you must reboot the photoframe. Do you wish to do this now?')) {
+      $.ajax({
+        url:"/maintenance/reboot"
+      });
+      rebootWatch();
+    }
+  });
+});
+
 $("select[name=force_orientation]").change(function () {
   var value = $(this).val()
   $.ajax({
@@ -154,6 +183,22 @@ $("select[name=randomize_images]").change(function () {
     type: "PUT"
   }).done(function () {
     disableSlideshowControls();
+  });
+});
+
+$("select[name=enable-cache]").change(function () {
+  $.ajax({
+    url: "/setting/" + $(this).attr('name') + "/" + encodeURIComponent($(this).val()),
+    type: "PUT"
+  }).done(function () {
+  });
+});
+
+$("select[name=offline-behavior]").change(function () {
+  $.ajax({
+    url: "/setting/" + $(this).attr('name') + "/" + encodeURIComponent($(this).val()),
+    type: "PUT"
+  }).done(function () {
   });
 });
 
@@ -367,3 +412,13 @@ $(".service-delete").click(function() {
     });
   }
 });
+
+$('#explain_imagesizing').click(function() {
+  console.log('Show help');
+  $('#help_imagesizing').show();
+});
+
+$("button[name=help_close]").click(function() {
+  $(this).parent().parent().hide();
+});
+ 

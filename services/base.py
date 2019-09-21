@@ -19,10 +19,13 @@ import json
 import random
 import logging
 import requests
+import time
 
 from modules.oauth import OAuth
 from modules.helper import helper
-from modules.cachemanager import CacheManager
+from modules.network import RequestResult
+from modules.network import RequestNoNetwork
+from modules.images import ImageHolder
 
 # This is the base implementation of a service. It provides all the
 # basic features like OAuth and Authentication as well as state and
@@ -36,6 +39,8 @@ from modules.cachemanager import CacheManager
 # Use the exposed functions as needed to get the data you want.
 #
 class BaseService:
+  SERVICE_DEPRECATED = False
+
   STATE_ERROR = -1
   STATE_UNINITIALIZED = 0
 
@@ -51,6 +56,7 @@ class BaseService:
     self._ID = id
     self._NAME = name
     self._OAUTH = None
+    self._CACHEMGR = None
 
     self._CURRENT_STATE = BaseService.STATE_UNINITIALIZED
     self._ERROR = None
@@ -89,6 +95,9 @@ class BaseService:
 
     self.loadState()
     self.preSetup()
+
+  def setCacheManager(self, cacheMgr):
+    self._CACHEMGR = cacheMgr
 
   def _prepareFolders(self, configDir):
     basedir = os.path.join(configDir, self._ID)
@@ -141,9 +150,13 @@ class BaseService:
   def loadState(self):
     # Load any stored state data from storage
     # Normally you don't override this
-    if os.path.exists(self._FILE_STATE):
-      with open(self._FILE_STATE, 'r') as f:
-        self._STATE.update( json.load(f) )
+      if os.path.exists(self._FILE_STATE):
+        try:
+          with open(self._FILE_STATE, 'r') as f:
+            self._STATE.update( json.load(f) )
+        except:
+          logging.exception('Unable to load state for service')
+          os.unlink(self._FILE_STATE)
 
   def saveState(self):
     # Stores the state data under the unique ID for
@@ -396,9 +409,9 @@ class BaseService:
     if self.needKeywords():
       result = self.selectImageFromAlbum(destinationFile, supportedMimeTypes, displaySize, randomize)
       if result is None:
-        result = {'id': None, 'mimetype': None, 'source': None, 'error': 'No (new) images could be found!'}
+        result = ImageHolder().setError('No (new) images could be found')
     else:
-      result = {'id': None, 'mimetype': None, 'source': None, 'error': 'You haven\'t implemented this yet!'}
+      result = ImageHolder().setError('prepareNextItem() not implemented')
 
     return result
 
@@ -417,7 +430,7 @@ class BaseService:
     # "filename": the original filename of the image or None if unknown (only used for debugging purposes)
     # "error":    If present, will generate an error shown to the user with the text within this key as the message
 
-    return [{'error':'You haven\'t implemented getImagesFor'}]
+    return ImageHolder().setError('getImagesFor() not implemented')
 
 
   def addUrlParams(self, url, recommendedSize, displaySize):
@@ -437,7 +450,7 @@ class BaseService:
     keywordList = list(self.getKeywords())
     keywordCount = len(keywordList)
     if keywordCount == 0:
-      return {'id': None, 'mimetype': None, 'source': None, 'error': 'No albums have been specified'}
+      return ImageHolder().setError('No albums have been specified')
 
     if randomize:
       index = self.getRandomKeywordIndex()
@@ -458,14 +471,12 @@ class BaseService:
         logging.warning('Function returned None, this is used sometimes when a temporary error happens. Still logged')
         self.imageIndex = 0
         continue
-      if len(images) > 0 and 'error' in images[0]:
+      if len(images) > 0 and images[0].error is not None:
         return images[0]
       self._STATE["_NUM_IMAGES"][keyword] = len(images)
       if len(images) == 0:
         self.imageIndex = 0
         continue
-      elif any(key not in images[0].keys() for key in ['id', 'url', 'mimetype', 'source', 'filename']):
-        return {'id': None, 'mimetype': None, 'source': None, 'error': 'You haven\'t implemented "getImagesFor" correctly (some keys are missing)'}
       self.saveState()
 
       image = self.selectImage(images, supportedMimeTypes, displaySize, randomize)
@@ -473,30 +484,32 @@ class BaseService:
         self.imageIndex = 0
         continue
 
-      filename = os.path.join(destinationDir, image['id'])
-      if CacheManager.useCachedImage(filename):
-        if image['mimetype'] is None:
-          image['mimetype'] = helper.getMimeType(filename)
-        return {'id': image['id'], 'mimetype': image['mimetype'], 'source': image['source'], 'error': None}
+      filename = os.path.join(destinationDir, image.id)
 
       # you should implement 'addUrlParams' if the provider allows 'width' / 'height' parameters!
-      recommendedSize = self.calcRecommendedSize(image['size'], displaySize)
-      url = self.addUrlParams(image['url'], recommendedSize, displaySize)
+      recommendedSize = self.calcRecommendedSize(image.dimensions, displaySize)
+      url = self.addUrlParams(image.url, recommendedSize, displaySize)
 
-      try:
-        result = self.requestUrl(url, destination=filename)
-      except requests.exceptions.RequestException as e:
-        # catch any exception caused by malformed url, unstable internet connection, ... that would otherwise break the entire photoframe
-        logging.debug(str(e))
-        if helper.getIP() is None:
-          return {'id': None, 'mimetype': None, 'source': None, 'error': "No internet connection!"}
-        return {'id': None, 'mimetype': None, 'source': url, 'error': "Unable to download image!\nServer might be unavailable or URL could be broken:\n%s" % url}
-      if result['status'] == 200:
-        if image['mimetype'] is None:
-          image['mimetype'] = result['mimetype']
-        return {'id': image['id'], 'mimetype': image['mimetype'], 'source': image['source'], 'error': None}
-      else:
-        return {'id': None, 'mimetype': None, 'source': None, 'error': "%d: Unable to download image!" % result['status']}
+      if image.cacheAllow:
+        # Look it up in the cache mgr
+        cacheFile = self._CACHEMGR.getCachedImage(image.getCacheId(), filename)
+        if cacheFile:
+          image.setFilename(cacheFile)
+          image.cacheUsed = True
+
+      if not image.cacheUsed:
+        try:
+          result = self.requestUrl(url, destination=filename)
+        except requests.exceptions.RequestException:
+          logging.exception('request to download image failed')
+          result = RequestResult().setResult(RequestResult.NO_NETWORK)
+
+        if not result.isSuccess():
+          return ImageHolder().setError('%d: Unable to download image!' % result.httpcode)
+        else:
+          image.setFilename(filename)
+      image.setMimetype(helper.getMimetype(image.filename))
+      return image
 
     self.resetIndices()
     return None
@@ -515,47 +528,56 @@ class BaseService:
       self.imageIndex = (index + i) % imageCount
       image = images[self.imageIndex]
 
-      orgFilename = image['filename'] if image['filename'] is not None else image['id']
-      if randomize and self.memorySeen(image['id']):
+      orgFilename = image.filename if image.filename is not None else image.id
+      if randomize and self.memorySeen(image.id):
         logging.debug("Skipping already displayed image '%s'!" % orgFilename)
         continue
-      if not self.isCorrectOrientation(image['size'], displaySize):
+      if not self.isCorrectOrientation(image.dimensions, displaySize):
         logging.debug("Skipping image '%s' due to wrong orientation!" % orgFilename)
         continue
-      if image['mimetype'] is not None and image['mimetype'] not in supportedMimeTypes:
+      if image.mimetype is not None and image.mimetype not in supportedMimeTypes:
         # Make sure we don't get a video, unsupported for now (gif is usually bad too)
-        logging.debug('Unsupported media: %s' % (image['mimetype']))
+        logging.debug('Unsupported media: %s' % (image.mimetype))
         continue
 
       return image
     return None
 
   def requestUrl(self, url, destination=None, params=None, data=None, usePost=False):
-    result = {'status':500, 'content' : None}
+    result = RequestResult()
 
     if self._OAUTH is not None:
       # Use OAuth path
       result = self._OAUTH.request(url, destination, params, data=data, usePost=usePost)
     else:
-      if usePost:
-        r = requests.post(url, params=params, json=data)
-      else:
-        r = requests.get(url, params=params)
+      tries = 0
+      while tries < 5:
+        try:
+          if usePost:
+            r = requests.post(url, params=params, json=data)
+          else:
+            r = requests.get(url, params=params)
+          break
+        except:
+          logging.exception('Issues downloading')
+        time.sleep(tries / 10) # Back off 10, 20, ... depending on tries
+        tries += 1
+        logging.warning('Retrying again, attempt #%d', tries)
 
-      result['status'] = r.status_code
-      result['mimetype'] = None
-      result['headers'] = r.headers
+      if tries == 5:
+        logging.error('Failed to download due to network issues')
+        raise RequestNoNetwork
 
-      if 'Content-Type' in r.headers:
-        result['mimetype'] = r.headers['Content-Type']
+      if r:
+        result.setHTTPCode(r.status_code).setHeaders(r.headers).setResult(RequestResult.SUCCESS)
 
-      if destination is None:
-        result['content'] = r.content
-      else:
-        result['content'] = None
-        with open(destination, 'wb') as f:
-          for chunk in r.iter_content(chunk_size=1024):
-            f.write(chunk)
+        if destination is None:
+          result.setContent(r.content)
+        else:
+          with open(destination, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=1024):
+              f.write(chunk)
+          result.setFilename(destination)
     return result
 
   def calcRecommendedSize(self, imageSize, displaySize):
@@ -602,7 +624,10 @@ class BaseService:
     return self._DIR_PRIVATE
 
   def hashString(self, text):
-    return hashlib.sha1(text.encode('ascii', 'ignore')).hexdigest()
+    return hashlib.sha1(text).hexdigest()
+
+  def createImageHolder(self):
+    return ImageHolder()
 
   ###[ Memory management ]=======================================================
 
@@ -709,4 +734,3 @@ class BaseService:
       self.keywordIndex = len(self._STATE['_KEYWORDS']) - 1
       return False
     return True
-

@@ -17,33 +17,11 @@ import os
 import json
 import logging
 import random
+from path import path
 
 class settings:
-  CONFIGFOLDER = '/root/photoframe_config'
-  CONFIGFILE = '/root/photoframe_config/settings.json'
-  COLORMATCH = '/root/photoframe_config/colortemp.sh'
-
-  DRV_BUILTIN = '/root/photoframe/display-drivers'
-  DRV_EXTERNAL = '/root/photoframe_config/display-drivers/'
-
-  CONFIG_TXT = '/boot/config.txt'
-
-  CACHEFOLDER = '/root/cache/'
-
-
   DEPRECATED_USER = ['resolution']
   DEPRECATED_SYSTEM = ['colortemp-script']
-
-  def reassignConfigTxt(self, newconfig):
-    settings.CONFIG_TXT = newconfig
-    
-  def reassignBase(self, newbase):
-    settings.CONFIGFOLDER = settings.CONFIGFOLDER.replace('/root/', newbase)
-    settings.CONFIGFILE = settings.CONFIGFILE.replace('/root/', newbase)
-    settings.COLORMATCH = settings.COLORMATCH.replace('/root/', newbase)
-    settings.DRV_BUILTIN = settings.DRV_BUILTIN.replace('/root/', newbase)
-    settings.DRV_EXTERNAL = settings.DRV_EXTERNAL.replace('/root/', newbase)
-    settings.CACHEFOLDER = settings.CACHEFOLDER.replace('/root/', newbase)
 
   def __init__(self):
     self.settings = {
@@ -76,11 +54,13 @@ class settings:
       'imagesizing' : 'blur',
       'force_orientation' : 0,
       'randomize_images' : 1,
+      'enable-cache' : 1,
+      'offline-behavior' : 'wait', # wait = wait for network, ignore = try next (rely on cache or non-internet connections)
     }
 
   def load(self):
-    if os.path.exists(settings.CONFIGFILE):
-      with open(settings.CONFIGFILE) as f:
+    if os.path.exists(path.CONFIGFILE):
+      with open(path.CONFIGFILE) as f:
         try:
           # A bit messy, but it should allow new defaults to be added
           # to old configurations.
@@ -112,13 +92,13 @@ class settings:
           return False
       # make sure old settings.json files are still compatible and get updated with new keys
       if "cachefolder" not in self.settings.keys():
-        self.settings["cachefolder"] = '/root/cache/'
+        self.settings["cachefolder"] = path.CACHEFOLDER
       return True
     else:
       return False
 
   def save(self):
-    with open(settings.CONFIGFILE, 'w') as f:
+    with open(path.CONFIGFILE, 'w') as f:
       json.dump(self.settings, f)
 
   def convertToNative(self, value):
@@ -141,6 +121,7 @@ class settings:
     logging.warning('Trying to access non-existent user config key "%s"' % key)
     try:
       a = 1 /0
+      a += 1
     except:
       logging.exception('Where did this come from??')
     return None
@@ -187,7 +168,7 @@ class settings:
 
   def get(self, key):
     if key == 'colortemp-script':
-      return settings.COLORMATCH
+      return path.COLORMATCH
     if key in self.settings:
       return self.settings[key]
     logging.warning('Trying to access non-existent config key "%s"' % key)

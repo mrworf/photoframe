@@ -45,6 +45,10 @@ if [ "$1" = "post" ]; then
 		mv /root/${FILE} /root/photoframe_config/ >/dev/null 2>/dev/null
 	done
 
+	# We also have added more dependencies, so add more software
+	apt update
+	apt install -y libjpeg-turbo-progs
+
 	# Copy new service and reload systemd
 	cp frame.service /etc/systemd/system/
 	systemctl daemon-reload
@@ -77,7 +81,7 @@ if ! diff /tmp/server.txt /tmp/client.txt >/dev/null ; then
 	/root/photoframe/update.sh post
 
 	# Skip service restart if we were running an update only
-  if [ "$1" != "updateonly" ]; then
+	if [ "$1" != "updateonly" ]; then
 		systemctl restart frame.service
 	fi
 else

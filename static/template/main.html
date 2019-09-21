@@ -1,4 +1,4 @@
-<h1><a href="https://github.com/mrworf/photoframe">PhotoFrame Configuration</a></h1>
+<h1><a href="https://github.com/mrworf/photoframe">PhotoFrame Configuration</a> <span id="tiny"><a href="https://mrworf.github.io/">news / blog</a></span></h1>
 <img class="thumbnail" alt="On screen now" title="Realtime view, updates every 30s" src="/details/current" id="screen">
 <div class="controls">
 	<button class="slideshowControl" id="prevAlbum">Prev Album</button>
@@ -44,6 +44,14 @@
       <option value="270">90 degrees counter-clockwise</option>
 	  {{/select}}
 	</select>
+		<br>
+		<select name="display-overscan">
+      {{#select overscan.overscan}}
+      <option value="true">Use overscan</option>
+      <option value="false">Don't use overscan</option>
+	  {{/select}}
+	</select>
+  	(overscan will add a black border to the image)
 	<br>
 	Only show images that match display orientation
 	<select name="force_orientation">
@@ -92,17 +100,38 @@
 		<select name="imagesizing">
 			{{#select settings.imagesizing}}
 			<option value="none">Do nothing</option>
-			<option value="blur">Show blurred image</option>
-			<option value="zoom">Zoom to fill</option>
-			<option value="auto">Blur/Zoom as necessary</option>
+			<option value="blur">Blur</option>
+			<option value="zoom">Fill</option>
+			<option value="auto">Auto</option>
 			{{/select}}
 		</select>
+		<button id='explain_imagesizing'>Explain</button>
 		<br>
 		Randomize image order
 		<select name="randomize_images">
 			{{#select settings.randomize_images}}
 			<option value="0">no</option>
 			<option value="1">yes</option>
+			{{/select}}
+		</select>
+		<br>
+		When internet and/or network is lost
+		<select name="offline-behavior">
+			{{#select settings.offline-behavior}}
+			<option value="wait">wait for network</option>
+			<option value="ignore">ignore and continue</option>
+			{{/select}}
+		</select>
+		{{#if network.network}}
+		{{else}}
+		<span class="nointernet">[No internet connection detected]</span>
+		{{/if}}
+		<br>
+		Use image cache to minimize network traffic
+		<select name="enable-cache">
+			{{#select settings.enable-cache}}
+			<option value="1">yes</option>
+			<option value="0">no, never cache images</option>
 			{{/select}}
 		</select>
 	</div>
@@ -177,7 +206,10 @@
 	<input type="button" id="new-service" value="Add photo provider">
 	<select id="new-service-type">
 		{{#each service-available}}
+			{{#if this.deprecated}}
+			{{else}}
 			<option value="{{this.id}}">{{this.name}}</option>
+			{{/if}}
 		{{/each}}
 		</select>
 	</div>
@@ -187,4 +219,20 @@
 		<img src="/img/busy.gif">
 	</div>
 </div>
+<div class="help" style="display: none" id="help_imagesizing">
+	<div>
+		<h3>Do nothing</h3>
+		Like the option indicates, will simply show the image, leaving the unused screen area blank
+		<h3>Blur</h3>
+		Will fill unused screen area with a zoomed and blurred version of the image shown. It's also darker to avoid distracting from the image shown.
+		<h3>Fill</h3>
+		Zoom the image so that it will fill the entire screen. This will cause the image to be cropped.
+		<h3>Auto</h3>
+		Will choose between blur and fill. The selection is based on how much screen area would be blank. If the area is very small, blur looks odd (you get a VERY small stripe of the blurred image), instead
+		it will use fill, since very little of the image will be cropped.
+		<hr>
+		<button name="help_close">Dismiss</button>
+	</div>
+</div>
+
 <script type="text/javascript" src="/js/main.js"></script>

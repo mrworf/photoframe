@@ -40,3 +40,4 @@ overscan_bottom=20
 
 # For more options, see http://elinux.org/RPi_config.txt
 display_rotate=1
+disable_overscan=1

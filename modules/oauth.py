@@ -20,6 +20,8 @@ from oauthlib.oauth2 import TokenExpiredError
 from requests_oauthlib import OAuth2Session
 
 from modules.helper import helper
+from modules.network import RequestResult
+from modules.network import RequestNoNetwork
 
 class OAuth:
 	def __init__(self, setToken, getToken, scope, extras=''):
@@ -50,22 +52,32 @@ class OAuth:
 		return auth
 
 	def request(self, uri, destination=None, params=None, data=None, usePost=False):
+		ret = RequestResult()
 		result = None
 		stream = destination != None
 		tries = 0
 
-		while tries < 1:
+		while tries < 5:
 			try:
 				try:
 					auth = self.getSession()
+					if auth is None:
+						logging.error('Unable to get OAuth session, probably expired')
+						ret.setResult(RequestResult.OAUTH_INVALID)
+						return ret
 					if usePost:
 						result = auth.post(uri, stream=stream, params=params, json=data)
 					else:
 						result = auth.get(uri, stream=stream, params=params)
 					if result is not None:
 						break
-				except TokenExpiredError as e:
+				except TokenExpiredError:
 					auth = self.getSession(True)
+					if auth is None:
+						logging.error('Unable to get OAuth session, probably expired')
+						ret.setResult(RequestResult.OAUTH_INVALID)
+						return ret
+
 					if usePost:
 						result = auth.post(uri, stream=stream, params=params, json=data)
 					else:
@@ -74,29 +86,30 @@ class OAuth:
 						break
 			except:
 				logging.exception('Issues downloading')
-			time.sleep(tries * 10) # Back off 10, 20, ... depending on tries
+			time.sleep(tries / 10) # Back off 10, 20, ... depending on tries
 			tries += 1
+			logging.warning('Retrying again, attempt #%d', tries)
 
 		if tries == 5:
 			logging.error('Failed to download due to network issues')
-			return False
+			raise RequestNoNetwork
 
-		if result is not None and destination is not None:
-			ret = {'status' : result.status_code, 'content' : None, 'mimetype' : result.headers['Content-Type'], 'headers' : result.headers}
+		if destination is not None:
 			try:
 				with open(destination, 'wb') as handle:
 					for chunk in result.iter_content(chunk_size=512):
 						if chunk:  # filter out keep-alive new chunks
 							handle.write(chunk)
+				ret.setResult(RequestResult.SUCCESS).setHTTPCode(result.status_code)
+				ret.setHeaders(result.headers)
 			except:
 				logging.exception('Failed to download %s' % uri)
-				ret['status'] = 600
-			return ret
+				ret.setResult(RequestResult.FAILED_SAVING)
 		else:
-			if result is None:
-				return {'status':500, 'content':'Unable to download URL using OAuth', 'mimetype': None, 'headers': None}
-			else:
-				return {'status':result.status_code, 'content':result.content, 'mimetype' : result.headers['Content-Type'], 'headers' : result.headers}
+			ret.setResult(RequestResult.SUCCESS).setHTTPCode(result.status_code)
+			ret.setHeaders(result.headers)
+			ret.setContent(result.content)
+		return ret
 
 	def getRedirectId(self):
 		r = requests.get('%s/?register' % self.ridURI)
@@ -117,15 +130,19 @@ class OAuth:
 		return authorization_url
 
 	def complete(self, url):
-		auth = OAuth2Session(self.oauth['client_id'],
-		                     scope=self.scope, # ['https://www.googleapis.com/auth/photos'],
-		                     redirect_uri=self.ridURI,
-		                     state='%s-%s-%s' % (self.rid, self.ip, self.extras))
+		try:
+			auth = OAuth2Session(self.oauth['client_id'],
+			                     scope=self.scope, # ['https://www.googleapis.com/auth/photos'],
+			                     redirect_uri=self.ridURI,
+			                     state='%s-%s-%s' % (self.rid, self.ip, self.extras))
 
-		token = auth.fetch_token(self.oauth['token_uri'],
-		                         client_secret=self.oauth['client_secret'],
-		                         authorization_response=url)
+			token = auth.fetch_token(self.oauth['token_uri'],
+			                         client_secret=self.oauth['client_secret'],
+			                         authorization_response=url)
 
-		self.cbSetToken(token)
-		return
+			self.cbSetToken(token)
+			return True
+		except:
+			logging.exception('Failed to complete OAuth')
+		return False
 

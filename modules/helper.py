@@ -20,6 +20,7 @@ import os
 import shutil
 import re
 import random
+import time
 
 # A regular expression to determine whether a url is valid or not (e.g. "www.example.de/someImg.jpg" is missing "http://")
 VALID_URL_REGEX = re.compile(
@@ -31,6 +32,8 @@ VALID_URL_REGEX = re.compile(
 	r'(?:/?|[/?]\S+)$', re.IGNORECASE)
 
 class helper:
+	TOOL_ROTATE = '/usr/bin/jpegtran'
+
 	@staticmethod
 	def isValidUrl(url):
 		# Catches most invalid URLs
@@ -86,17 +89,18 @@ class helper:
 		return None
 
 	@staticmethod
-	def getMimeType(filename):
+	def getMimetype(filename):
 		if not os.path.isfile(filename):
 			return None
 
+		mimetype = ''
 		cmd = ["/usr/bin/file", "--mime", filename]
 		with open(os.devnull, 'wb') as void:
 			try:
 				output = subprocess.check_output(cmd, stderr=void).strip("\n")
-				mimetype = output.lstrip(filename+":").strip()
-				if "; charset=" in mimetype:
-					mimetype = mimetype.split("; charset=")[0]
+				m = re.match('[^\:]+\: *([^;]+)', output)
+				if m:
+					mimetype = m.group(1)
 			except subprocess.CalledProcessError:
 				logging.debug("unable to determine mimetype of file: %s" % filename)
 				return None
@@ -159,6 +163,9 @@ class helper:
 		width = imageSize["width"]
 		height = imageSize["height"]
 
+		p, f = os.path.split(filename)
+		filenameProcessed = os.path.join(p, "framed_" + f)
+
 		width_border = 15
 		width_spacing = 3
 		border = None
@@ -216,12 +223,6 @@ class helper:
 		try:
 			# Time to process
 			if zoomOnly:
-				p, f = os.path.split(filename)
-				filenameProcessed = os.path.join(p, "zoomed", f)
-				if helper.getImageSize(filenameProcessed):
-					logging.debug("using cached processed image: %s" % filenameProcessed)
-					return filenameProcessed
-
 				cmd = [
 					'convert',
 					filename + '[0]',
@@ -235,12 +236,6 @@ class helper:
 					filenameProcessed
 				]
 			else:
-				p, f = os.path.split(filename)
-				filenameProcessed = os.path.join(p, "blurred", f)
-				if helper.getImageSize(filenameProcessed):
-					logging.debug("using cached processed image: %s"%filenameProcessed)
-					return filenameProcessed
-
 				cmd = [
 					'convert',
 					filename + '[0]',
@@ -283,14 +278,15 @@ class helper:
 			logging.debug('filenameProcessed: ' + repr(filenameProcessed))
 			logging.debug('border: ' + repr(border))
 			logging.debug('spacing: ' + repr(spacing))
-			return None
+			return filename
 
 		try:
 			subprocess.check_output(cmd, stderr=subprocess.STDOUT)
 		except subprocess.CalledProcessError as e:
 			logging.exception('Unable to reframe the image')
 			logging.error('Output: %s' % repr(e.output))
-			return None
+			return filename
+		os.unlink(filename)
 		return filenameProcessed
 
 	@staticmethod
@@ -314,3 +310,49 @@ class helper:
 			logging.exception('Unable to change timezone')
 			pass
 		return result == 0
+
+	@staticmethod
+	def hasNetwork():
+		return helper.getIP() is not None
+
+	@staticmethod
+	def waitForNetwork(funcNoNetwork, funcExit):
+		shownError = False
+		ip = None
+		while True and not funcExit():
+			ip = helper.getIP()
+
+			if ip is None:
+				funcNoNetwork()
+				if not shownError:
+					logging.error('You must have functional internet connection to use this app')
+					shownError = True
+				time.sleep(10)
+			else:
+				logging.info('Network connection reestablished')
+				break
+		return ip
+
+	@staticmethod
+	def autoRotate(ifile):
+		p, f = os.path.split(ifile)
+		ofile = os.path.join(p, "rotated_" + f)
+
+		# First, use jpegexiftran to determine orientation
+		parameters = ['', '-flip horizontal', '-rotate 180', '-flip vertical', '-transpose', '-rotate 90', '-transverse', '-rotate 270']
+		with open(os.devnull, 'wb') as void:
+			result = subprocess.check_output(['/usr/bin/jpegexiforient', ifile]) #, stderr=void)
+		if result:
+			orient = int(result)-1
+			if orient < 0 or orient >= len(parameters):
+				logging.info('Orientation was %d, not transforming it', orient)
+				return ifile
+			cmd = [helper.TOOL_ROTATE]
+			cmd.extend(parameters[orient].split())
+			cmd.extend(['-outfile', ofile, ifile])
+			with open(os.devnull, 'wb') as void:
+				result = subprocess.check_call(cmd, stderr=void)
+			if result == 0:
+				os.unlink(ifile)
+				return ofile
+		return ifile

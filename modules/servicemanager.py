@@ -24,11 +24,14 @@ import re
 import importlib
 
 from modules.helper import helper
+from modules.path import path
 
 class ServiceManager:
-  def __init__(self, settings):
+  def __init__(self, settings, cacheMgr):
     self._SETTINGS = settings
-    svc_folder = os.path.join(settings.CONFIGFOLDER, 'services')
+    self._CACHEMGR = cacheMgr
+
+    svc_folder = os.path.join(path.CONFIGFOLDER, 'services')
     if not os.path.exists(svc_folder):
       os.mkdir(svc_folder)
 
@@ -71,9 +74,9 @@ class ServiceManager:
             if line.startswith('class ') and line.endswith('(BaseService):'):
               m = re.search('class +([^\(]+)\(', line)
               if m is not None:
-                print('Importing %s' % item)
                 klass = self._instantiate(item[0:-3], m.group(1))
-                self._SVC_INDEX[m.group(1)] = {'id' : klass.SERVICE_ID, 'name' : klass.SERVICE_NAME, 'module' : item[0:-3], 'class' : m.group(1)}
+                logging.info('Loading service %s from %s', klass.__name__, item)
+                self._SVC_INDEX[m.group(1)] = {'id' : klass.SERVICE_ID, 'name' : klass.SERVICE_NAME, 'module' : item[0:-3], 'class' : m.group(1), 'deprecated' : klass.SERVICE_DEPRECATED}
               break
 
   def _deletefolder(self, folder):
@@ -122,8 +125,10 @@ class ServiceManager:
         logging.error('Cannot resolve service type %d, skipping', entry['type'])
         continue
       klass = self._instantiate(self._SVC_INDEX[svcname]['module'], self._SVC_INDEX[svcname]['class'])
-      svc = eval("klass(self._BASEDIR, entry['id'], entry['name'])")
-      self._SERVICES[svc.getId()] = {'service' : svc, 'id' : svc.getId(), 'name' : svc.getName()}
+      if klass:
+        svc = eval("klass(self._BASEDIR, entry['id'], entry['name'])")
+        svc.setCacheManager(self._CACHEMGR)
+        self._SERVICES[svc.getId()] = {'service' : svc, 'id' : svc.getId(), 'name' : svc.getName()}
 
   def _hash(self, text):
     return hashlib.sha1(text).hexdigest()
@@ -135,10 +140,12 @@ class ServiceManager:
 
     genid = self._hash("%s-%f-%d" % (name, time.time(), len(self._SERVICES)))
     klass = self._instantiate(self._SVC_INDEX[svcname]['module'], self._SVC_INDEX[svcname]['class'])
-    svc = eval("klass(self._BASEDIR, genid, name)")
-    self._SERVICES[genid] = {'service' : svc, 'id' : svc.getId(), 'name' : svc.getName()}
-    self._save()
-    return genid
+    if klass:
+      svc = eval("klass(self._BASEDIR, genid, name)")
+      self._SERVICES[genid] = {'service' : svc, 'id' : svc.getId(), 'name' : svc.getName()}
+      self._save()
+      return genid
+    return None
 
   def renameService(self, id, newName):
     if id not in self._SERVICES:
@@ -283,20 +290,22 @@ class ServiceManager:
     return serviceStates
 
   def _migrate(self):
-    if os.path.exists(self._SETTINGS.CONFIGFOLDER + '/oauth.json'):
+    if os.path.exists(path.CONFIGFOLDER + '/oauth.json'):
       logging.info('Migrating old setup to new service layout')
+      from services.svc_picasaweb import PicasaWeb
+
       id = self.addService(PicasaWeb.SERVICE_ID, 'PicasaWeb')
       svc = self._SERVICES[id]['service']
 
       # Migrate the oauth configuration
-      with open(self._SETTINGS.CONFIGFOLDER + '/oauth.json') as f:
+      with open(path.CONFIGFOLDER + '/oauth.json') as f:
         data = json.load(f)
       if 'web' in data: # if someone added it via command-line
         data = data['web']
       svc.setOAuthConfig(data)
       svc.migrateOAuthToken(self._SETTINGS.get('oauth_token'))
 
-      os.unlink(self._SETTINGS.CONFIGFOLDER + '/oauth.json')
+      os.unlink(path.CONFIGFOLDER + '/oauth.json')
       self._SETTINGS.set('oauth_token', '')
 
       # Migrate keywords
@@ -398,7 +407,7 @@ class ServiceManager:
     if svc is None:
       return None
     result = svc.prepareNextItem(destinationDir, supportedMimeTypes, displaySize, randomize)
-    if result['error'] is not None:
+    if result.error is not None:
       # If we end up here, two things can have happened
       # 1. All images have been shown for this service
       # 2. No image or data was able to download from this service
@@ -416,7 +425,8 @@ class ServiceManager:
         return None
       result = svc.prepareNextItem(destinationDir, supportedMimeTypes, displaySize, randomize)
 
-      if result['error'] is not None:
+      if result.error is not None:
+        logging.error('Service returned: ' + result.error)
         state = svc.updateState()
         if state == svc.STATE_READY and randomize and svc not in self._OUT_OF_IMAGES:
           self._OUT_OF_IMAGES.append(svc)

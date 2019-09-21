@@ -22,6 +22,7 @@ import logging
 class PicasaWeb(BaseService):
   SERVICE_NAME = 'PicasaWeb'
   SERVICE_ID = 1
+  SERVICE_DEPRECATED = True
 
   def __init__(self, configDir, id, name):
     BaseService.__init__(self, configDir, id, name, needConfig=False, needOAuth=True)
@@ -39,8 +40,8 @@ class PicasaWeb(BaseService):
     msgs = BaseService.getMessages(self)
     msgs.append(
       {
-        'level': 'WARNING',
-        'message' : 'This provider will cease to function January 1st, 2019. Please use GooglePhotos. For more details, see photoframe wiki',
+        'level': 'ERROR',
+        'message' : 'This provider is no longer supported by Google. Please use GooglePhotos. For more details, see photoframe wiki',
         'link': 'https://github.com/mrworf/photoframe/wiki/PicasaWeb-API-ceases-to-work-January-1st,-2019'
       }
     )
@@ -88,7 +89,7 @@ class PicasaWeb(BaseService):
       if images is None:
         continue
 
-      mimeType, imageUrl = self.getUrlFromImages(supportedMimeTypes, displaySize['width'], images)
+      mimeType, imageUrl = self.getUrlFromImages(supportedMimeTypes, displaySize['width'], images, displaySize)
       if imageUrl is None:
         continue
       result = self.requestUrl(imageUrl, destination=destinationFile)
@@ -96,7 +97,7 @@ class PicasaWeb(BaseService):
         return {'mimetype' : mimeType, 'error' : None, 'source':None}
     return {'mimetype' : None, 'error' : 'Could not download images from Google Photos', 'source':None}
 
-  def getUrlFromImages(self, types, width, images):
+  def getUrlFromImages(self, types, width, images, displaySize):
     # Next, pick an image
     count = len(images['feed']['entry'])
     offset = random.SystemRandom().randint(0,count-1)
@@ -123,6 +124,8 @@ class PicasaWeb(BaseService):
     return None, None
 
   def getImagesFor(self, keyword):
+    return None
+
     images = None
     filename = os.path.join(self.getStoragePath(), self.hashString(keyword) + '.json')
     if not os.path.exists(filename):
@@ -141,14 +144,15 @@ class PicasaWeb(BaseService):
       }
       url = 'https://picasaweb.google.com/data/feed/api/user/default'
       data = self.requestUrl(url, params=params)
-      if data['status'] != 200:
-        logging.warning('Requesting photo failed with status code %d', data['status'])
+      if not data.isSuccess():
+        logging.warning('Requesting photo failed with status code %d', data.httpcode)
       else:
         with open(filename, 'w') as f:
-          f.write(data['content'])
+          f.write(data.content)
 
     # Now try loading
     if os.path.exists(filename):
       with open(filename, 'r') as f:
         images = json.load(f)
+    print(repr(images))
     return images

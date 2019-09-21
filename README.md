@@ -160,8 +160,26 @@ service frame stop
 ```
 This will cause photoframe to run in the foreground and provide tons of debug information
 
-# todo
+## How do I run USB provider when emulated?
 
-Tracks ideas and improvements planned. No specific timeframe is mentioned, but the order of things should be fairly true
+Add the following to your `/etc/sudoers`
 
-Moved to [github.com](https://github.com/mrworf/photoframe/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aopen+label%3Aenhancement) for more dynamic tracking :-)
+```
+<your username>      ALL=(root) NOPASSWD: /bin/mount
+```
+
+But please note that this will enable your user to use mount via sudo *WITHOUT PASSWORD PROMPTING*
+
+## How do I test and develop on a desktop?
+
+Start `frame.py` with `--emulate` to run without a RPi
+
+## I can't seem to use some USB sticks?
+
+You might be missing exFAT support. If you used this on RPi, it comes preinstalled, but if you're running this manually, please install the following (assumes ubuntu distro)
+
+```
+sudo apt install exfat-fuse exfat-utils
+```
+
+After this, you should be able to use exFAT

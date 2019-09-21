@@ -23,8 +23,6 @@ import debug
 
 from sysconfig import sysconfig
 
-from threading import Thread
-
 class display:
   def __init__(self, use_emulator=False, emulate_width=1280, emulate_height=720):
     self.void = open(os.devnull, 'wb')
@@ -39,6 +37,7 @@ class display:
     self.url = None
     if self.emulate:
       logging.info('Using framebuffer emulation')
+    self.lastMessage = None
 
   def setConfigPage(self, url):
     self.url = url
@@ -162,7 +161,7 @@ class display:
 
     if self.depth in [24, 32]:
       with open(device, 'wb') as f:
-        ret = debug.subprocess_call(arguments, stdout=f, stderr=self.void)
+        debug.subprocess_call(arguments, stdout=f, stderr=self.void)
     elif self.depth == 16: # Typically RGB565
       # For some odd reason, cannot pipe the output directly to the framebuffer, use temp file
       with open(device, 'wb') as fb:
@@ -172,6 +171,8 @@ class display:
         pip.communicate()
     else:
       logging.error('Do not know how to render this, depth is %d', self.depth)
+      
+    self.lastMessage = None
 
   def message(self, message):
     if not self.enabled:
@@ -214,7 +215,9 @@ class display:
       '%s:-' % self.format
     ]
 
-    self._to_display(args)
+    if self.lastMessage != message:
+      self._to_display(args)
+      self.lastMessage = message
 
   def image(self, filename):
     if not self.enabled:

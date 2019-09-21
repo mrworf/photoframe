@@ -1,0 +1,23 @@
+language: bash
+dist: xenial
+before_install:
+ - sudo apt-get update
+install:
+- sudo apt-get install quilt parted realpath qemu-user-static debootstrap zerofree
+  pxz zip dosfstools bsdtar libcap2-bin grep rsync xz-utils
+script: "./build-img.sh"
+after_success:
+- cd pi-gen/deploy
+- sudo mv "$(ls *.zip)" photoframe.zip
+- cd ../..
+deploy:
+  provider: releases
+  api_key:
+    secure: Sko4gEcMR5ftlInVh1klBPsecyOJxJnpMGvm0FBRxlSsNfKRXqYYYfg+aQPVUEHCf+ev54t6gxT0CVkGMvaVWDv+9sHBOG0RAXk6NezteLgY6EtcKi65sS425HLkfFQIHhYhvHKl2RnSn+AerG7lYHMMY8pDXqD5UGwuocHVAXuvAYA8c+ErK0F2f+GRVL1N3Pe3QHQQlYyfjKyvq8HxVWqIrWc3whhG+Kme/Aet1j5R6GnK92FG74d7fs3k4pHYloVEZAyP0Ctv8w7z7TdrzC1uDNk0aiV9kBqF1XYRMi31vDUAkUs+mHfSAlp03e3QG68g0thQHKNRKUvC3NwnFCS/sHBwmuFt0c12ab4YRhxMyKEjXpa7nYRDDvT1+43fHVlA2guot/A0RyeYC5tkR2inlXRIGVdc/ImzyGlDnAh4a1SQ7lncWARPrCMCouBYQrvoiM7D7jEhNFJDDRFITei2WYvSjwXW70IFpjGQqkpOxlKHlKlw3LmOrq7fBlX8Quri5RF+SBQiT9V0wJaPx/iKzYIAHCgGteUtWjZsiQzisIyIEEGu80j2AMKGPTu/DjAD2Dg0mWrWopqgtphXPPSrG1F3vLk0bs1My1RPAPoVJHcv0LqUDvxthOPFWU2IUVk6lFMhV5a8gw8aZxhy7e2CBNKxKBNw8Lk+e66ZChY=
+  file: pi-gen/deploy/photoframe.zip
+  skip_cleanup: true
+  draft: true
+  on:
+    repo: mrworf/photoframe
+    all_branches: true
+    condition: $OFFICIAL = yes
