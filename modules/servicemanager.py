@@ -142,6 +142,7 @@ class ServiceManager:
     klass = self._instantiate(self._SVC_INDEX[svcname]['module'], self._SVC_INDEX[svcname]['class'])
     if klass:
       svc = eval("klass(self._BASEDIR, genid, name)")
+      svc.setCacheManager(self._CACHEMGR)
       self._SERVICES[genid] = {'service' : svc, 'id' : svc.getId(), 'name' : svc.getName()}
       self._save()
       return genid
