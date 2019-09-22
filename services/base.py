@@ -492,10 +492,13 @@ class BaseService:
 
       if image.cacheAllow:
         # Look it up in the cache mgr
-        cacheFile = self._CACHEMGR.getCachedImage(image.getCacheId(), filename)
-        if cacheFile:
-          image.setFilename(cacheFile)
-          image.cacheUsed = True
+        if self._CACHEMGR is None:
+          logging.error('CacheManager is not available')
+        else:
+          cacheFile = self._CACHEMGR.getCachedImage(image.getCacheId(), filename)
+          if cacheFile:
+            image.setFilename(cacheFile)
+            image.cacheUsed = True
 
       if not image.cacheUsed:
         try:
