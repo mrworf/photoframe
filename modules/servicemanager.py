@@ -418,7 +418,7 @@ class ServiceManager:
       state = svc.updateState()
       if state == svc.STATE_READY and randomize and svc not in self._OUT_OF_IMAGES:
         self._OUT_OF_IMAGES.append(svc)
-        logging.info("%s is probably out of images!" % svc.getName())
+        logging.info("%s has probably shown all available images" % svc.getName())
 
       self.nextService = True
       svc = self.chooseService(randomize, lastService=svc)
@@ -431,7 +431,7 @@ class ServiceManager:
         state = svc.updateState()
         if state == svc.STATE_READY and randomize and svc not in self._OUT_OF_IMAGES:
           self._OUT_OF_IMAGES.append(svc)
-          logging.info("%s is probably out of images!" % svc.getName())
+          logging.info("%s has probably shown all available images" % svc.getName())
 
     self.lastUsedService = svc
     return result
