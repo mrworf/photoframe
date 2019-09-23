@@ -627,7 +627,13 @@ class BaseService:
     return self._DIR_PRIVATE
 
   def hashString(self, text):
-    return hashlib.sha1(text).hexdigest()
+    if type(text) is not unicode:
+      # make sure it's unicode
+      a = text.decode('ascii', errors='replace')
+    else:
+      a = text
+    a = a.encode('utf-8', errors='replace')
+    return hashlib.sha1(a).hexdigest()
 
   def createImageHolder(self):
     return ImageHolder()
