@@ -127,7 +127,7 @@ class slideshow:
         self.services.memoryForget(forgetHistory=True)
         self.doMemoryForget = False
       if self.doClearCache:
-        CacheManager.empty(path.CACHEFOLDER)
+        self.cacheMgr.empty()
         self.doClearCache = False
       if self.imageCurrent:
         self.imageCurrent = None

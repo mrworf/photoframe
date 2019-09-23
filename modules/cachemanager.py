@@ -102,7 +102,7 @@ class CacheManager:
         os.mkdir(subDir)
 
   # delete all files but keep directory structure intact
-  def empty(directory = syspath.CACHEFOLDER):
+  def empty(self, directory = syspath.CACHEFOLDER):
     freedUpSpace = 0
     if not os.path.isdir(directory):
       logging.exception('Failed to delete "%s". Directory does not exist!' % directory)
