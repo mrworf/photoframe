@@ -15,6 +15,7 @@
 #
 import os
 import json
+import re
 
 from path import path
 import logging
@@ -119,6 +120,15 @@ class sysconfig:
     sysconfig._app_opt_save(lines)
 
   @staticmethod
+  def getOption(key):
+    lines = sysconfig._app_opt_load()
+    if lines is None:
+      lines = {}
+    if key in lines:
+      return lines[key]
+    return None
+
+  @staticmethod
   def removeOption(key):
     lines = sysconfig._app_opt_load()
     if lines is None:
@@ -145,3 +155,40 @@ class sysconfig:
           logging.exception('Unable to load JSON from "%s"' % userfile)
           user = None
     return user
+
+  @staticmethod
+  def setHostname(name):
+    # First, make sure it's legal
+    m = re.match('[a-zA-Z0-9\-]+', name)
+    if m is None:
+      return False
+
+    # Next, let's edit the relevant files....
+    with open('/etc/hostname', 'w') as f:
+      f.write('%s\n' % name)
+
+    lines = []
+    with open('/etc/hosts', 'r') as f:
+      for line in f:
+        line = line.strip()
+        if line.startswith('127.0.1.1'):
+          line = '127.0.1.1\t%s' % name
+        lines.append(line)
+    with open('/etc/hosts.new', 'w') as f:
+      for line in lines:
+        f.write('%s\n' % line)
+
+    try:
+      os.rename('/etc/hosts', '/etc/hosts.old')
+      os.rename('/etc/hosts.new', '/etc/hosts')
+      # Keep the first version of the config.txt just-in-case
+      os.unlink('/etc/hosts.old')
+      return True
+    except:
+      logging.exception('Failed to activate new config.txt, you may need to restore the config.txt')
+    return False
+
+  @staticmethod
+  def getHostname():
+    with open('/etc/hostname', 'r') as f:
+      return f.read().strip()

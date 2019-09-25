@@ -23,10 +23,16 @@ class RouteOptions(BaseRoute):
 
   def setup(self):
     self.addUrl('/options/<cmd>')
+    self.addUrl('/options/<cmd>/<arg>')
 
-  def handle(self, app, cmd):
+  def handle(self, app, cmd, arg=None):
+    cmd = cmd.upper()
     if cmd == 'DEBUG':
-      sysconfig.setOption('POSTCMD', '"--debug"')
-    elif cmd == 'NODEBUG':
-      sysconfig.setOption('POSTCMD', '')
-    return 'Options changed', 200
+      if arg is not None:
+        sysconfig.setOption('POSTCMD', '"--debug"' if arg == 'true' else '')
+      return self.jsonify({'debug' : '--debug' in sysconfig.getOption('POSTCMD')})
+    elif cmd == 'HOSTNAME':
+      if arg is not None:
+        sysconfig.setHostname(arg.strip())
+      return self.jsonify({'hostname' : sysconfig.getHostname()})
+    self.setAbort(404)
