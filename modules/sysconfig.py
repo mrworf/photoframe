@@ -159,7 +159,7 @@ class sysconfig:
   @staticmethod
   def setHostname(name):
     # First, make sure it's legal
-    m = re.match('[a-zA-Z0-9\-]+', name)
+    m = re.match('^[a-zA-Z0-9\-]+$', name)
     if m is None:
       return False
 
