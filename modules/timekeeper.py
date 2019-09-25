@@ -104,11 +104,9 @@ class timekeeper(Thread):
 			self.cbSlideshow()
 
 	def run(self):
+		self.scheduleOff = False
 		while True:
 			time.sleep(60) # every minute
-
-			self.scheduleOff = False
-
 			if self.hourOn is not None and self.hourOff is not None:
 				if self.hourOn > self.hourOff:
 					stateBegin = self.hourOff
