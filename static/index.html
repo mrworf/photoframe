@@ -1,6 +1,6 @@
 <html>
 	<head>
-		<title>PhotoFrame</title>
+		<title>Loading...</title>
 		<script type="text/javascript" src="js/jquery-3.3.1.min.js"></script>
 		<script type="text/javascript" src="js/handlebars-v4.0.11.js"></script>
 		<script type="text/javascript" src="js/jquery.ui.widget.js"></script>
@@ -26,6 +26,7 @@
 				loadSettings(function(data)
 				{
 					$('body').append(templates.get('main.html')(configData));
+					window.document.title = configData.hostname.hostname;
 				});
 			});
 		});

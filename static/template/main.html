@@ -67,6 +67,15 @@
 		Turn on display at hour <input value="{{settings.display-on}}" type="text" class="small aright" name="display-on" data-validate="time">
 		and off at hour <input value="{{settings.display-off}}" type="text" class="small aright" name="display-off" data-validate="time"> (24h time)
 		<br>
+		Time zone
+		<select name="timezone">
+			{{#select settings.timezone}}
+			{{#each timezones}}
+				<option value="{{this}}">{{this}}</option>
+			{{/each}}
+			{{/select}}
+		</select>
+		<br>
 		{{#if sensor.sensor}}
 		Auto off if ambient lux is below
 		<input value="{{settings.autooff-lux}}" type="text" class="medium" name="autooff-lux" data-validate="lux"> lux for
@@ -86,15 +95,6 @@
 		</select>
 		<hr>
 		Change every <input value="{{settings.interval}}" type="text" class="small" name="interval" data-validate="interval"> seconds
-		<br>
-		Time zone
-		<select name="timezone">
-			{{#select settings.timezone}}
-			{{#each timezones}}
-				<option value="{{this}}">{{this}}</option>
-			{{/each}}
-			{{/select}}
-		</select>
 		<br>
 		How to handle images which don't fill the screen
 		<select name="imagesizing">
@@ -134,6 +134,9 @@
 			<option value="0">no, never cache images</option>
 			{{/select}}
 		</select>
+		<br>
+		Name this frame
+		<input type="text" name="hostname" value="{{hostname.hostname}}">
 	</div>
 </div>
 <br>

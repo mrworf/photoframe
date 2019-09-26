@@ -105,6 +105,27 @@ confirmation = new Confirmation();
 $("input[type='text']").change(function() {
   if ($(this).attr('name') == undefined)
   return;
+
+  if ($(this).attr('name') == 'hostname') {
+    thiz = this;
+    if (confirm('Are you sure you whish to change the name of the frame?')) {
+      $.ajax({
+        url: '/options/hostname/' + encodeURIComponent($(this).val())
+      }).done(function(data) {
+        if (data['hostname'] !== $(thiz).val())
+          alert('Note!\n\nSome characters in the name were not allowed\n\nOnly A through Z and 0 through 9 (and dashes) are allowed.\nMax 63 characters');
+        configData['hostname']= data;
+        $(thiz).val(configData['hostname'].hostname);
+        window.document.title = configData.hostname.hostname
+      }).fail(function(data) {
+        alert('Unable to change hostname');
+        $(thiz).val(configData['hostname'].hostname);
+      });
+    } else {
+      $(this).val(configData['hostname'].hostname);
+    }
+    return;
+  }
   
   confirmit = $(this).data('confirm');
   if (confirmit && !eval('confirmation.' + confirmit + '()')) {
