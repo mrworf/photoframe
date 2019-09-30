@@ -16,6 +16,7 @@
 import os
 import json
 import re
+import subprocess
 
 from path import path
 import logging
@@ -184,9 +185,13 @@ class sysconfig:
       os.rename('/etc/hosts.new', '/etc/hosts')
       # Keep the first version of the config.txt just-in-case
       os.unlink('/etc/hosts.old')
+
+      # Last step, run hostname with the new name
+      with open(os.devnull, 'wb') as void:
+        result = subprocess.check_call(['/bin/hostname', name], stderr=void)
       return True
     except:
-      logging.exception('Failed to activate new config.txt, you may need to restore the config.txt')
+      logging.exception('Failed to activate new hostname, you should probably reboot to restore')
     return False
 
   @staticmethod
