@@ -173,7 +173,7 @@ class USB_Photos(BaseService):
 
   def getMessages(self):
     # display a message indicating which storage device is being used or an error messing if no suitable storage device could be found
-    if os.path.exists(self.baseDir):
+    if self.device and os.path.exists(self.baseDir):
       msgs = [
           {
               'level': 'SUCCESS',
@@ -276,6 +276,9 @@ class USB_Photos(BaseService):
     return filter(lambda x: os.path.isdir(os.path.join(self.baseDir, x)), os.listdir(self.baseDir))
 
   def selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize):
+    if self.device is None:
+      return BaseService.createImageHolder(self).setError('No external storage device detected! Please connect a USB-stick!\n\n Place albums inside /photoframe/{album_name} directory and add each {album_name} as keyword.\n\nAlternatively, put images directly inside the "/photoframe/"-directory on your storage device.')
+
     result = BaseService.selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize)
     if result is not None:
       return result
@@ -304,15 +307,27 @@ class USB_Photos(BaseService):
     images = []
     for filename in files:
       fullFilename = os.path.join(path, filename)
-      item = BaseService.createImageHolder(self)
-      item.setId(self.hashString(fullFilename))
-      item.setUrl(fullFilename).setSource(fullFilename)
-      item.setMimetype(helper.getMimetype(fullFilename))
       dim = helper.getImageSize(fullFilename)
-      item.setDimensions(dim['width'], dim['height'])
-      item.setFilename(filename)
+      readable = True
+      if dim is None:
+        try:
+          with open(fullFilename, 'rb') as f:
+            f.read(1)
+          logging.warning('File %s has unknown format, skipping', fullFilename)
+          continue
+        except:
+          readable = False
 
-      images.append(item)
+      if os.path.exists(fullFilename) and readable:
+        item = BaseService.createImageHolder(self)
+        item.setId(self.hashString(fullFilename))
+        item.setUrl(fullFilename).setSource(fullFilename)
+        item.setMimetype(helper.getMimetype(fullFilename))
+        item.setDimensions(dim['width'], dim['height'])
+        item.setFilename(filename)
+        images.append(item)
+      else:
+        logging.warning('File %s could not be read. Could be USB issue, try rebooting', fullFilename)
     return images
 
   def addUrlParams(self, url, recommendedSize, displaySize):
