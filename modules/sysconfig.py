@@ -165,25 +165,25 @@ class sysconfig:
       return False
 
     # Next, let's edit the relevant files....
-    with open('/tmp/hostname', 'w') as f:
+    with open('/etc/hostname', 'w') as f:
       f.write('%s\n' % name)
 
     lines = []
-    with open('/tmp/hosts', 'r') as f:
+    with open('/etc/hosts', 'r') as f:
       for line in f:
         line = line.strip()
         if line.startswith('127.0.1.1'):
           line = '127.0.1.1\t%s' % name
         lines.append(line)
-    with open('/tmp/hosts.new', 'w') as f:
+    with open('/etc/hosts.new', 'w') as f:
       for line in lines:
         f.write('%s\n' % line)
 
     try:
-      os.rename('/tmp/hosts', '/tmp/hosts.old')
-      os.rename('/tmp/hosts.new', '/tmp/hosts')
+      os.rename('/etc/hosts', '/etc/hosts.old')
+      os.rename('/etc/hosts.new', '/etc/hosts')
       # Keep the first version of the config.txt just-in-case
-      os.unlink('/tmp/hosts.old')
+      os.unlink('/etc/hosts.old')
       return True
     except:
       logging.exception('Failed to activate new config.txt, you may need to restore the config.txt')
@@ -191,5 +191,5 @@ class sysconfig:
 
   @staticmethod
   def getHostname():
-    with open('/tmp/hostname', 'r') as f:
+    with open('/etc/hostname', 'r') as f:
       return f.read().strip()
