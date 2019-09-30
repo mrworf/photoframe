@@ -335,6 +335,10 @@ class helper:
 
 	@staticmethod
 	def autoRotate(ifile):
+		if not os.path.exists('/usr/bin/jpegexiforient'):
+			logging.warning('jpegexiforient is missing, no auto rotate available. Did you forget to run "apt install libjpeg-turbo-progs" ?')
+			return ifile
+
 		p, f = os.path.split(ifile)
 		ofile = os.path.join(p, "rotated_" + f)
 
