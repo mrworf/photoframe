@@ -294,8 +294,8 @@ class slideshow:
         logging.info("Display is off, exit quietly")
         break
       
-      #if (i % 100) == 0:
-      #  CacheManager.garbageCollect(cacheFolder)
+      if (i % 10) == 0:
+        self.cacheMgr.garbageCollect()
   
       displaySize = {'width': self.settings.getUser('width'), 'height': self.settings.getUser('height'), 'force_orientation': self.settings.getUser('force_orientation')}
       randomize = (not self.ignoreRandomize) and bool(self.settings.getUser('randomize_images'))
