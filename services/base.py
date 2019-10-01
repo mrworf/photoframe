@@ -201,10 +201,15 @@ class BaseService:
           }
       )
     if 0 in self._STATE["_NUM_IMAGES"].values():
+      # Find first keyword with zero (unicode issue)
+      removeme = []
+      for keyword in self._STATE["_KEYWORDS"]:
+        if self._STATE["_NUM_IMAGES"][keyword] == 0:
+          removeme.append(keyword)
       msgs.append(
           {
               'level': 'WARNING',
-              'message': 'At least one keyword does not appear to provide any images! Please remove keyword(s) %s' % str([str(keyword) for keyword in self._STATE["_KEYWORDS"] if self._STATE["_NUM_IMAGES"][keyword] == 0]),
+              'message': 'At least one keyword does not appear to provide any images! Please remove keyword(s): %s' % ', '.join(removeme),
               'link': None
           }
       )
