@@ -159,12 +159,17 @@ function loadConfigData(url, field, doneFunc)
 		if (configOutstanding == 0)
 			doneFunc();
 	}).fail(function(data) {
+		document.location = '/failsafe.html?loading=' + url;
+		configOutstanding = -1;
+		return;
+		/*
 		alert('Problems loading ' + url + ' from backend, please reload');
 		configOutstanding--;
 		if (configOutstanding == 0) {
 			configOutstanding == -1; // Avoid double running (not 100% safe)
 			doneFunc();
 		}
+		*/
 	});
 }
 

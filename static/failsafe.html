@@ -1,0 +1,47 @@
+<html>
+<head>
+<title>Failsafe Mode</title>
+<style type="text/css">
+
+li
+{
+    padding-top: 15px;
+    font-weight: bold;
+}
+
+span
+{
+    font-weight: bold;
+    font-style: italic;
+}
+
+</style>   
+<script type="text/javascript">
+    function ssh() {
+        if (confirm('Are you sure you want to enable SSH? This is useless to you unless you know how to use bash, git, python, etc.'))
+            document.location = '/maintenance/ssh';
+    }
+</script>
+</head>
+<body>
+<h1>Photoframe is in fail-safe mode</h1>
+This means that something has happened which was unexpected. It doesn't mean your frame is broken (it might even still be showing images). But it means that the web interface isn't fully functional at the very least.
+
+To help resolve this, you have a couple of different options.
+
+<ol>
+<li><a href="/maintenance/reboot">Reboot the frame</a></li>
+Yes, you knew this would probably be the first choice. How many times have we not heard to turn it off and on again. Clicking this option will try to reboot the frame. Be patient, depending on hardware, this can take a few minutes.
+<li><a href="/maintenance/update">Update the frame</a></li>
+Maybe you just were unfortunate enough to end up between two bugfixes and thus your frame isn't working for the moment. While photoframe automatically updates every 24 hours, you can speed this up by requesting an update now. Expect this to take up to a few minutes depending on internet and performance of your device.
+<li><a href="/debug">Create a bug report</a></li>
+So neither option above helped. This will take you to a page holding a bunch of logs and other details plus a link to github to create a new bug report. Please take the time to provide details on HOW you ended up here and attach the output from this page.
+<li><a href="javascript:ssh()">Enable SSH</a></li>
+This is for the <span class="highlight">advanced</span> user. It will enable the system secure shell and allow remote login. It uses the standard Rasbian username and password (no, I deliberatly am not sharing this info here since this is not for the faint hearted and anyone knowing how to use it will also know how to obtain this login information). Btw, once you reboot the frame, SSH is disabled.
+</ol>
+Note!<br>
+Many of these links will return a very cryptic response, but as long as it doesn't say any three digit number starting with 4 or 5 (like 404 not found or 500 server error), it typically means it was successful. Reason for this behavior is the simplistic page you're looking at (less moving parts, less likely to fail).
+<h3>This isn't good enough!</h3>
+Sorry, this is an open source and free project, and while I do try my best to help troubleshooting, I still need you to do your part :) Besides, if you went through the trouble of building and assembling the hardware, I'm sure you have a bit of patience for this as well ;-)
+</body>
+</html>
