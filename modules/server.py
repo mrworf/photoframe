@@ -83,7 +83,7 @@ class WebServer(Thread):
     else:
       self.run()
 
-  def stop():
+  def stop(self):
     func = request.environ.get('werkzeug.server.shutdown')
     if func:
       func()
