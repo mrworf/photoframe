@@ -64,6 +64,23 @@ class helper:
 
 	@staticmethod
 	def getIP():
+		try:
+			import netifaces
+			if 'default' in netifaces.gateways() and netifaces.AF_INET in netifaces.gateways()['default']:
+				dev = netifaces.gateways()['default'][netifaces.AF_INET][1]
+				if netifaces.ifaddresses(dev) and netifaces.AF_INET in netifaces.ifaddresses(dev):
+					net = netifaces.ifaddresses(dev)[netifaces.AF_INET]
+					if len(net) > 0 and 'addr' in net[0]:
+						return net[0]['addr']
+		except ImportError:
+			logging.error('User has not installed python-netifaces, reverting to old getIP()')
+			return helper._old_getIP()
+		except:
+			logging.exception('netifaces call failed, reverting to old getIP()')
+			return helper._old_getIP()
+
+	@staticmethod
+	def _old_getIP():
 		ip = None
 		try:
 			s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -133,7 +150,6 @@ class helper:
 			logging.error('Output: %s' % repr(e.output))
 			return False
 		return True
-		
 
 	@staticmethod
 	def getImageSize(filename):
