@@ -186,9 +186,16 @@ class sysconfig:
       # Keep the first version of the config.txt just-in-case
       os.unlink('/etc/hosts.old')
 
-      # Last step, run hostname with the new name
+      # also, run hostname with the new name
       with open(os.devnull, 'wb') as void:
         result = subprocess.check_call(['/bin/hostname', name], stderr=void)
+
+      # Final step, restart avahi (so it knows the correct hostname)
+      try:
+        with open(os.devnull, 'wb') as void:
+          subprocess.check_call(['/usr/sbin/service', 'avahi-daemon', 'restart'], stderr=void)
+      except subprocess.CalledProcessError:
+        logging.exception('Couldnt restart avahi, not a deal breaker')
       return True
     except:
       logging.exception('Failed to activate new hostname, you should probably reboot to restore')
