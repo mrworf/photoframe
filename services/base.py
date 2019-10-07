@@ -562,9 +562,9 @@ class BaseService:
       while tries < 5:
         try:
           if usePost:
-            r = requests.post(url, params=params, json=data)
+            r = requests.post(url, params=params, json=data, timeout=180)
           else:
-            r = requests.get(url, params=params)
+            r = requests.get(url, params=params, timeout=180)
           break
         except:
           logging.exception('Issues downloading')

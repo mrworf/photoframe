@@ -66,9 +66,9 @@ class OAuth:
 						ret.setResult(RequestResult.OAUTH_INVALID)
 						return ret
 					if usePost:
-						result = auth.post(uri, stream=stream, params=params, json=data)
+						result = auth.post(uri, stream=stream, params=params, json=data, timeout=180)
 					else:
-						result = auth.get(uri, stream=stream, params=params)
+						result = auth.get(uri, stream=stream, params=params, timeout=180)
 					if result is not None:
 						break
 				except TokenExpiredError:
@@ -79,9 +79,9 @@ class OAuth:
 						return ret
 
 					if usePost:
-						result = auth.post(uri, stream=stream, params=params, json=data)
+						result = auth.post(uri, stream=stream, params=params, json=data, timeout=180)
 					else:
-						result = auth.get(uri, stream=stream, params=params)
+						result = auth.get(uri, stream=stream, params=params, timeout=180)
 					if result is not None:
 						break
 			except:
