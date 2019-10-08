@@ -122,19 +122,25 @@ class CacheManager:
   # delete all files that were modified earlier than {minAge}
   # return total freedUpSpace in bytes
   def deleteOldFiles(self, topPath, minAge):
+    if topPath is None or topPath == '':
+      logging.error('deleteOldFiles() called with invalid path')
+      return 0
     freedUpSpace = 0
     now = time.time()
-    for path, _dirs, files in os.walk(topPath):
-      for filename in [os.path.join(path, f) for f in files]:
-        stat = os.stat(filename)
-        if stat.st_mtime < now - minAge:
-          try:
-            os.remove(filename)
-            logging.debug("old file '%s' deleted" % filename)
-            freedUpSpace += stat.st_size
-          except OSError as e:
-            logging.warning("unable to delete file '%s'!" % filename)
-            logging.exception("Output: "+e.strerror)
+    try:
+      for path, _dirs, files in os.walk(topPath):
+        for filename in [os.path.join(path, f) for f in files]:
+          stat = os.stat(filename)
+          if stat.st_mtime < now - minAge:
+            try:
+              os.remove(filename)
+              logging.debug("old file '%s' deleted" % filename)
+              freedUpSpace += stat.st_size
+            except OSError as e:
+              logging.warning("unable to delete file '%s'!" % filename)
+              logging.exception("Output: "+e.strerror)
+    except:
+      logging.exception('Failed to clean "%s"', topPath)
     return freedUpSpace
 
   def getDirSize(self, path):
