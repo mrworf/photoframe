@@ -25,7 +25,7 @@ from modules.network import RequestNoNetwork
 
 class OAuth:
 	def __init__(self, setToken, getToken, scope, extras=''):
-		self.ip = helper.getIP()
+		self.ip = helper.getDeviceIp()
 		self.scope = scope
 		self.oauth = None
 		self.cbGetToken = getToken
