@@ -22,6 +22,7 @@ import time
 import logging
 import argparse
 import importlib
+import signal
 
 from modules.shutdown import shutdown
 from modules.timekeeper import timekeeper
@@ -102,6 +103,11 @@ class Photoframe:
     # Force display to desired user setting
     self.displayMgr.enable(True, True)
 
+  def updating(self, x, y):
+    self.slideshow.stop()
+    self.displayMgr.message('Updating software', False)
+    self.webServer.stop()
+
   def _loadRoute(self, module, klass, *vargs):
     module = importlib.import_module('routes.' + module)
     klass = getattr(module, klass)
@@ -158,6 +164,7 @@ class Photoframe:
     path().reassignConfigTxt('extras/config.txt')
 
   def start(self):
+    signal.signal(signal.SIGHUP, lambda x, y: self.updating(x,y))
     self.slideshow.start()
     self.webServer.start()
 

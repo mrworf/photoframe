@@ -55,6 +55,8 @@ class slideshow:
         # HEIF to be added once I get ImageMagick running with support
     ]
 
+    self.running = True
+
   def setCountdown(self, seconds):
     if seconds < 1:
       self.countdown = 0
@@ -86,7 +88,12 @@ class slideshow:
     if self.thread is None:
       self.thread = threading.Thread(target=self.presentation)
       self.thread.daemon = True
+      self.running = True
       self.thread.start()
+
+  def stop(self):
+    self.running = False
+    self.delayer.set()
 
   def trigger(self):
     logging.debug('Causing immediate showing of image')
@@ -281,7 +288,7 @@ class slideshow:
 
     logging.info('Starting presentation')
     i = 0
-    while True:
+    while self.running:
       i += 1
       time_process = time.time()
 

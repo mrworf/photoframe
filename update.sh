@@ -74,6 +74,10 @@ git log -n1 --oneline origin/${BRANCH} >/tmp/server.txt
 git log -n1 --oneline >/tmp/client.txt
 
 if ! diff /tmp/server.txt /tmp/client.txt >/dev/null ; then
+        # Show updating message
+        PID=$(systemctl show --property=ExecMainPID --value frame.service)
+	kill -SIGHUP $PID 2>/dev/null
+
 	echo "New version is available (for branch ${BRANCH})"
 	git pull --rebase >>/tmp/update.log 2>&1 || error "Unable to update"
 
