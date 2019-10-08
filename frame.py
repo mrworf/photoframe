@@ -36,6 +36,9 @@ from modules.cachemanager import CacheManager
 from modules.path import path
 from modules.server import WebServer
 
+# Make sure we run from our own directory
+os.chdir(os.path.dirname(sys.argv[0]))
+
 parser = argparse.ArgumentParser(description="PhotoFrame - A RaspberryPi based digital photoframe", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--logfile', default=None, help="Log to file instead of stdout")
 parser.add_argument('--port', default=7777, type=int, help="Port to listen on")
@@ -158,14 +161,6 @@ class Photoframe:
     self.slideshow.start()
     self.webServer.start()
 
-# Spin until we have internet, check every 10s
-#if not helper.hasNetwork():
-#  helper.waitForNetwork(lambda: display.message('No internet\n\nCheck wifi-config.txt or cable'))
-
-# Let the display know the URL to use
-#display.setConfigPage('http://%s:%d/' % (settings.get('local-ip'), 7777))
-
 frame = Photoframe(cmdline)
 frame.start()
-#test.start();
 sys.exit(0)

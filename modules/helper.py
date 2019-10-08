@@ -63,7 +63,7 @@ class helper:
 		return res
 
 	@staticmethod
-	def getIP():
+	def getDeviceIp():
 		try:
 			import netifaces
 			if 'default' in netifaces.gateways() and netifaces.AF_INET in netifaces.gateways()['default']:
@@ -73,19 +73,20 @@ class helper:
 					if len(net) > 0 and 'addr' in net[0]:
 						return net[0]['addr']
 		except ImportError:
-			logging.error('User has not installed python-netifaces, reverting to old getIP()')
-			return helper._old_getIP()
+			logging.error('User has not installed python-netifaces, using checkNetwork() instead (depends on internet)')
+			return helper.checkNetwork()
 		except:
-			logging.exception('netifaces call failed, reverting to old getIP()')
-			return helper._old_getIP()
+			logging.exception('netifaces call failed, using checkNetwork() instead (depends on internet)')
+			return helper.checkNetwork()
 
 	@staticmethod
-	def _old_getIP():
+	def _checkNetwork():
 		ip = None
 		try:
 			s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 			s.connect(("photoframe.sensenet.nu", 80))
 			ip = s.getsockname()[0]
+
 			s.close()
 		except:
 			logging.exception('Failed to get IP via old method')
@@ -329,16 +330,13 @@ class helper:
 
 	@staticmethod
 	def hasNetwork():
-		return helper.getIP() is not None
+		return helper._checkNetwork() is not None
 
 	@staticmethod
 	def waitForNetwork(funcNoNetwork, funcExit):
 		shownError = False
-		ip = None
 		while True and not funcExit():
-			ip = helper.getIP()
-
-			if ip is None:
+			if not hasNetwork():
 				funcNoNetwork()
 				if not shownError:
 					logging.error('You must have functional internet connection to use this app')
@@ -347,7 +345,6 @@ class helper:
 			else:
 				logging.info('Network connection reestablished')
 				break
-		return ip
 
 	@staticmethod
 	def autoRotate(ifile):

@@ -21,13 +21,12 @@ from path import path
 
 class settings:
   DEPRECATED_USER = ['resolution']
-  DEPRECATED_SYSTEM = ['colortemp-script']
+  DEPRECATED_SYSTEM = ['colortemp-script', 'local-ip']
 
   def __init__(self):
     self.settings = {
       'oauth_token' : None,
       'oauth_state' : None,
-      'local-ip' : None,
       'tempfolder' : '/tmp/',
       'colortemp' : None,
       'cfg' : None

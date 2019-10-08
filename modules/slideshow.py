@@ -167,21 +167,19 @@ class slideshow:
 
   def waitForNetwork(self):
     self.imageOnScreen = False
-    newIp = helper.waitForNetwork(
+    helper.waitForNetwork(
       lambda: self.display.message('No internet connection\n\nCheck router, wifi-config.txt or cable'),
       lambda: self.settings.getUser('offline-behavior') != 'wait'
     )
-    if newIp is not None:
-      self.settings.set('local-ip', newIp)
-      self.display.setConfigPage('http://%s:%d/' % (newIp, 7777))
+    self.display.setConfigPage('http://%s:%d/' % (helper.getDeviceIp(), 7777))
 
   def handleErrors(self, result):
     if result is None:
       serviceStates = self.services.getAllServiceStates()
       if len(serviceStates) == 0:
-        msg = 'Photoframe isn\'t ready yet\n\nPlease direct your webbrowser to\n\nhttp://%s:7777/\n\nand add one or more photo providers' % self.settings.get('local-ip')
+        msg = 'Photoframe isn\'t ready yet\n\nPlease direct your webbrowser to\n\nhttp://%s:7777/\n\nand add one or more photo providers' % helper.getDeviceIp()
       else:
-        msg = 'Please direct your webbrowser to\n\nhttp://%s:7777/\n\nto complete the setup process' % self.settings.get('local-ip')
+        msg = 'Please direct your webbrowser to\n\nhttp://%s:7777/\n\nto complete the setup process' % helper.getDeviceIp()
         for svcName, state, additionalInfo in serviceStates:
           msg += "\n\n"+svcName+": "
           if state == 'OAUTH':
