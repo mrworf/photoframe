@@ -84,16 +84,26 @@ class WebServer(Thread):
       self.run()
 
   def stop(self):
-    func = request.environ.get('werkzeug.server.shutdown')
-    if func:
-      func()
-      return True
-    else:
-      logging.error('Unable to stop webserver, cannot find shutdown() function')
-      return False
+    try:
+      func = request.environ.get('werkzeug.server.shutdown')
+      if func:
+        func()
+        return True
+      else:
+        logging.error('Unable to stop webserver, cannot find shutdown() function')
+        return False
+    except:
+      # We're not running with request, so...
+      raise RuntimeError('Server shutdown')
 
   def run(self):
-    self.app.run(debug=False, port=self.port, host=self.listen )
+    try:
+      self.app.run(debug=False, port=self.port, host=self.listen )
+    except RuntimeError, msg:
+      if str(msg) == "Server shutdown":
+        pass # or whatever you want to do when the server goes down
+      else:
+        raise RuntimeError(msg)
 
   def _nocache(self, r):
       r.headers["Pragma"] = "no-cache"
