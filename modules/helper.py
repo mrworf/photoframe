@@ -63,15 +63,33 @@ class helper:
 		return res
 
 	@staticmethod
-	def getIP():
+	def getDeviceIp():
+		try:
+			import netifaces
+			if 'default' in netifaces.gateways() and netifaces.AF_INET in netifaces.gateways()['default']:
+				dev = netifaces.gateways()['default'][netifaces.AF_INET][1]
+				if netifaces.ifaddresses(dev) and netifaces.AF_INET in netifaces.ifaddresses(dev):
+					net = netifaces.ifaddresses(dev)[netifaces.AF_INET]
+					if len(net) > 0 and 'addr' in net[0]:
+						return net[0]['addr']
+		except ImportError:
+			logging.error('User has not installed python-netifaces, using checkNetwork() instead (depends on internet)')
+			return helper._checkNetwork()
+		except:
+			logging.exception('netifaces call failed, using checkNetwork() instead (depends on internet)')
+			return helper._checkNetwork()
+
+	@staticmethod
+	def _checkNetwork():
 		ip = None
 		try:
 			s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 			s.connect(("photoframe.sensenet.nu", 80))
 			ip = s.getsockname()[0]
+
 			s.close()
 		except:
-			pass
+			logging.exception('Failed to get IP via old method')
 		return ip
 
 	@staticmethod
@@ -133,7 +151,6 @@ class helper:
 			logging.error('Output: %s' % repr(e.output))
 			return False
 		return True
-		
 
 	@staticmethod
 	def getImageSize(filename):
@@ -313,16 +330,13 @@ class helper:
 
 	@staticmethod
 	def hasNetwork():
-		return helper.getIP() is not None
+		return helper._checkNetwork() is not None
 
 	@staticmethod
 	def waitForNetwork(funcNoNetwork, funcExit):
 		shownError = False
-		ip = None
 		while True and not funcExit():
-			ip = helper.getIP()
-
-			if ip is None:
+			if not hasNetwork():
 				funcNoNetwork()
 				if not shownError:
 					logging.error('You must have functional internet connection to use this app')
@@ -331,7 +345,6 @@ class helper:
 			else:
 				logging.info('Network connection reestablished')
 				break
-		return ip
 
 	@staticmethod
 	def autoRotate(ifile):

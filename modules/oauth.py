@@ -25,7 +25,7 @@ from modules.network import RequestNoNetwork
 
 class OAuth:
 	def __init__(self, setToken, getToken, scope, extras=''):
-		self.ip = helper.getIP()
+		self.ip = helper.getDeviceIp()
 		self.scope = scope
 		self.oauth = None
 		self.cbGetToken = getToken
@@ -66,9 +66,9 @@ class OAuth:
 						ret.setResult(RequestResult.OAUTH_INVALID)
 						return ret
 					if usePost:
-						result = auth.post(uri, stream=stream, params=params, json=data)
+						result = auth.post(uri, stream=stream, params=params, json=data, timeout=180)
 					else:
-						result = auth.get(uri, stream=stream, params=params)
+						result = auth.get(uri, stream=stream, params=params, timeout=180)
 					if result is not None:
 						break
 				except TokenExpiredError:
@@ -79,9 +79,9 @@ class OAuth:
 						return ret
 
 					if usePost:
-						result = auth.post(uri, stream=stream, params=params, json=data)
+						result = auth.post(uri, stream=stream, params=params, json=data, timeout=180)
 					else:
-						result = auth.get(uri, stream=stream, params=params)
+						result = auth.get(uri, stream=stream, params=params, timeout=180)
 					if result is not None:
 						break
 			except:

@@ -22,6 +22,7 @@ import json
 import debug
 
 from sysconfig import sysconfig
+from helper import helper
 
 class display:
   def __init__(self, use_emulator=False, emulate_width=1280, emulate_height=720):
@@ -171,7 +172,7 @@ class display:
         pip.communicate()
     else:
       logging.error('Do not know how to render this, depth is %d', self.depth)
-      
+
     self.lastMessage = None
 
   def message(self, message):
@@ -179,11 +180,9 @@ class display:
       logging.debug('Don\'t bother, display is off')
       return
 
-    url = ''
-    if self.url is not None:
-      url = 'caption:Configuration available at %s' % self.url
-    else:
-      url = 'caption:'
+    url = 'caption:'
+    if helper.getDeviceIp() is not None:
+      url = 'caption:Configuration available at http://%s:7777' % helper.getDeviceIp()
 
     args = [
       'convert',

@@ -47,7 +47,7 @@ if [ "$1" = "post" ]; then
 
 	# We also have added more dependencies, so add more software
 	apt update
-	apt install -y libjpeg-turbo-progs
+	apt install -y libjpeg-turbo-progs python-netifaces
 
 	# Copy new service and reload systemd
 	cp frame.service /etc/systemd/system/
