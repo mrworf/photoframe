@@ -88,7 +88,7 @@ class helper:
 			ip = s.getsockname()[0]
 			s.close()
 		except:
-			pass
+			logging.exception('Failed to get IP via old method')
 		return ip
 
 	@staticmethod
