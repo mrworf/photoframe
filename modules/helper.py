@@ -74,10 +74,10 @@ class helper:
 						return net[0]['addr']
 		except ImportError:
 			logging.error('User has not installed python-netifaces, using checkNetwork() instead (depends on internet)')
-			return helper.checkNetwork()
+			return helper._checkNetwork()
 		except:
 			logging.exception('netifaces call failed, using checkNetwork() instead (depends on internet)')
-			return helper.checkNetwork()
+			return helper._checkNetwork()
 
 	@staticmethod
 	def _checkNetwork():
