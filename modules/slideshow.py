@@ -19,8 +19,6 @@ import os
 import time
 
 from modules.helper import helper
-from modules.cachemanager import CacheManager
-from modules.path import path
 from modules.network import RequestNoNetwork
 
 class slideshow:
@@ -98,7 +96,7 @@ class slideshow:
   def createEvent(self, cmd):
     if cmd not in slideshow.EVENTS:
       logging.warning("Unknown event '%s' detected!"%cmd)
-      return 
+      return
 
     if cmd == "settingsChange":
       self.skipPreloadedImage = True
@@ -170,7 +168,7 @@ class slideshow:
   def waitForNetwork(self):
     self.imageOnScreen = False
     newIp = helper.waitForNetwork(
-      lambda: self.display.message('No internet connection\n\nCheck router, wifi-config.txt or cable'), 
+      lambda: self.display.message('No internet connection\n\nCheck router, wifi-config.txt or cable'),
       lambda: self.settings.getUser('offline-behavior') != 'wait'
     )
     if newIp is not None:
@@ -194,10 +192,10 @@ class slideshow:
             msg += "Add one or more keywords (album names)"
           elif state == 'NO_IMAGES':
             msg += "No images could be found"
-          
+
           if additionalInfo is not None:
             msg += "\n\n"+additionalInfo
-          
+
       self.display.message(msg)
       self.imageOnScreen = False
       return True
@@ -270,7 +268,7 @@ class slideshow:
       self.imageOnScreen = True
       self.services.memoryRemember(imageId)
       os.unlink(filename)
-    
+
     self.skipPreloadedImage = False
 
   def presentation(self):
@@ -293,10 +291,10 @@ class slideshow:
       if self.queryPowerFunc is not None and self.queryPowerFunc() is False:
         logging.info("Display is off, exit quietly")
         break
-      
+
       if (i % 10) == 0:
         self.cacheMgr.garbageCollect()
-  
+
       displaySize = {'width': self.settings.getUser('width'), 'height': self.settings.getUser('height'), 'force_orientation': self.settings.getUser('force_orientation')}
       randomize = (not self.ignoreRandomize) and bool(self.settings.getUser('randomize_images'))
       self.ignoreRandomize = False
@@ -306,7 +304,7 @@ class slideshow:
         if self.handleErrors(result):
           continue
       except RequestNoNetwork:
-        offline = self.settings.getUser('offline-behavior') 
+        offline = self.settings.getUser('offline-behavior')
         if offline == 'wait':
           self.waitForNetwork()
           continue
