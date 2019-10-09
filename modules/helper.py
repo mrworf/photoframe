@@ -336,7 +336,7 @@ class helper:
 	def waitForNetwork(funcNoNetwork, funcExit):
 		shownError = False
 		while True and not funcExit():
-			if not hasNetwork():
+			if not helper.hasNetwork():
 				funcNoNetwork()
 				if not shownError:
 					logging.error('You must have functional internet connection to use this app')
