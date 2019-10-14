@@ -656,8 +656,12 @@ class BaseService:
       with open(os.path.join(self._DIR_MEMORY, '%s.json' % self._MEMORY_KEY), 'w') as f:
         json.dump(self._MEMORY, f)
     if os.path.exists(os.path.join(self._DIR_MEMORY, '%s.json' % h)):
-      with open(os.path.join(self._DIR_MEMORY, '%s.json' % h), 'r') as f:
-        self._MEMORY = json.load(f)
+      try:
+        with open(os.path.join(self._DIR_MEMORY, '%s.json' % h), 'r') as f:
+          self._MEMORY = json.load(f)
+      except:
+        logging.exception('File %s is corrupt' % os.path.join(self._DIR_MEMORY, '%s.json' % h))
+        self._MEMORY = []
     else:
       self._MEMORY = []
     self._MEMORY_KEY = h
