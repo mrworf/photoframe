@@ -25,7 +25,39 @@ function error
 	exit 255
 }
 
-cd /root/photoframe
+function hasupdate
+{
+	# See if we have changes locally or commits locally (because then we cannot update)
+	if git status | egrep '(not staged|Untracked|ahead|to be committed)' >/dev/null; then
+		echo error "Unable to update due to local changes"
+	fi
+
+	BRANCH="$(git status | head -n1)" ; BRANCH=${BRANCH:10}
+	git fetch 2>&1 >/tmp/update.log || error "Unable to load info about latest"
+	git log -n1 --oneline origin/${BRANCH} >/tmp/server.txt
+	git log -n1 --oneline >/tmp/client.txt
+
+	local RET=1
+	if ! diff /tmp/server.txt /tmp/client.txt >/dev/null ; then
+		RET=0
+	fi
+
+	rm /tmp/server.txt 2>/dev/null 1>/dev/null
+	rm /tmp/client.txt 2>/dev/null 1>/dev/null
+	return ${RET}
+}
+
+BASEDIR="$(dirname "$0")"
+
+cd ${BASEDIR}
+
+if [ "$1" = "checkversion" ]; then
+	if hasupdate; then
+		# Return non-zero on new version
+		exit 1
+	fi
+	exit 0
+fi
 
 if [ "$1" = "post" ]; then
 	####-vvv- ANYTHING HERE MUST HANDLE BEING RUN AGAIN AND AGAIN -vvv-####
@@ -60,29 +92,19 @@ if [ "$1" = "post" ]; then
 elif [ ! -f /root/.donepost ]; then
 	# Since we didn't have this behavior, we need to make sure it happens regardless
 	# of availability of new update.
-	/root/photoframe/update.sh post
+	${BASEDIR}/update.sh post
 fi
 
-# See if we have changes locally or commits locally (because then we cannot update)
-if git status | egrep '(not staged|Untracked|ahead|to be committed)' >/dev/null; then
-	error "Unable to update due to local changes"
-fi
-
-BRANCH="$(git status | head -n1)" ; BRANCH=${BRANCH:10}
-git fetch 2>&1 >/tmp/update.log || error "Unable to load info about latest"
-git log -n1 --oneline origin/${BRANCH} >/tmp/server.txt
-git log -n1 --oneline >/tmp/client.txt
-
-if ! diff /tmp/server.txt /tmp/client.txt >/dev/null ; then
-        # Show updating message
-        PID=$(systemctl show --property=ExecMainPID --value frame.service)
+if hasupdate ; then
+  # Show updating message
+  PID=$(systemctl show --property=ExecMainPID --value frame.service)
 	kill -SIGHUP $PID 2>/dev/null
 
 	echo "New version is available (for branch ${BRANCH})"
 	git pull --rebase >>/tmp/update.log 2>&1 || error "Unable to update"
 
 	# Run again with the post option so any necessary changes can be carried out
-	/root/photoframe/update.sh post
+	${BASEDIR}/update.sh post
 
 	# Skip service restart if we were running an update only
 	if [ "$1" != "updateonly" ]; then
@@ -95,7 +117,5 @@ fi
 touch /root/.firstupdate
 
 # Clean up
-rm /tmp/server.txt 2>/dev/null 1>/dev/null
-rm /tmp/client.txt 2>/dev/null 1>/dev/null
 rm /tmp/update.log 2>/dev/null 1>/dev/null
 exit 0

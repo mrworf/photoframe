@@ -75,7 +75,7 @@ function updateAmbient() {
   }).done(function(data) {
     if (data['temperature'] == null)
     return;
-    
+
     $('#colortemp').text(data['temperature'].toFixed(0));
     $('#lux').text(data['lux'].toFixed(2));
     setTimeout(updateAmbient, 5000);
@@ -126,7 +126,7 @@ $("input[type='text']").change(function() {
     }
     return;
   }
-  
+
   confirmit = $(this).data('confirm');
   if (confirmit && !eval('confirmation.' + confirmit + '()')) {
     // Yeah, not pretty, but easier
@@ -258,21 +258,30 @@ $("select[name=display-driver]").change(function() {
 
 $("#update").click(function() {
   $.ajax({
-    url:"/details/version"
+    url:"/maintenance/checkversion"
   }).done(function(data) {
-    console.log(data);
-    var msg = "Are you sure?\n\nThis will force the photoframe to look for a new version and reboot.\n\nNote! Even if no new version is found, photoframe will still reboot.";
-    /* NOT VERY USEFUL YET
-    msg += "\n\nCurrent version information:\n";
-    msg += 'Commit ' + data.commit + '(' + data.branch + ')\n';
-    msg += 'Dated ' + data.date;
-    */
-    if (confirm(msg)) {
-      $.ajax({
-        url:"/maintenance/update"
-      }).done(function(){
-        location.reload();
-      });
+    if (data.checkversion) {
+      var msg = "Are you sure?\n\nThis will force the photoframe to look for a new version and reboot.\n\nNote! Even if no new version is found, photoframe will still reboot.";
+      if (confirm(msg)) {
+        $.ajax({
+          url:"/maintenance/update"
+        }).done(function(){
+          location.reload();
+        });
+      }
+    } else {
+      if (confirm('No new version is available, would you like to see current version information?')) {
+        $.ajax({
+          url:"/details/version"
+        }).done(function(data){
+          msg = 'Last change to codebase was ' + data.date + "\n\n";
+          msg += 'Running variant "' + data.branch + '"';
+          if (data.branch != 'master')
+            msg += ' (unsupported)';
+          msg += '\n\nChange id: ' + data.commit;
+          alert(msg);
+        });
+      }
     }
   });
 });
@@ -442,4 +451,3 @@ $('#explain_imagesizing').click(function() {
 $("button[name=help_close]").click(function() {
   $(this).parent().parent().hide();
 });
- 

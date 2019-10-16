@@ -21,7 +21,6 @@ import shutil
 from baseroute import BaseRoute
 from modules.path import path
 
-
 class RouteMaintenance(BaseRoute):
   def setupex(self, emulator, drivermgr, slideshow):
     self.drivermgr = drivermgr
@@ -56,11 +55,24 @@ class RouteMaintenance(BaseRoute):
       else:
         self.server.stop()
       return self.jsonify({'shutdown': True})
+    elif cmd == 'checkversion':
+      if os.path.exists('update.sh'):
+        with open(os.devnull, 'wb') as void:
+          result = subprocess.check_call(['/bin/bash', 'update.sh', 'checkversion'], stderr=void)
+          if result == 0:
+            return self.jsonify({'checkversion' : False})
+          elif result == 1:
+            return self.jsonify({'checkversion' : True})
+          else:
+            return self.jsonify({'checkversion' : False, 'error' : True})
+      else:
+        return 'Cannot find update tool', 404
+
     elif cmd == 'update':
       if self.emulator:
         return 'Cannot run update from emulation mode', 200
-      if os.path.exists('/root/photoframe/update.sh'):
-        subprocess.Popen('/bin/bash /root/photoframe/update.sh 2>&1 | logger -t forced_update', shell=True)
+      if os.path.exists('update.sh'):
+        subprocess.Popen('/bin/bash update.sh 2>&1 | logger -t forced_update', shell=True)
         return 'Update in process', 200
       else:
         return 'Cannot find update tool', 404
