@@ -60,7 +60,7 @@ class RouteMaintenance(BaseRoute):
         with open(os.devnull, 'wb') as void:
           try:
             result = subprocess.check_call(['/bin/bash', 'update.sh', 'checkversion'], stderr=void)
-          except subprocess.CalledProcessError e:
+          except subprocess.CalledProcessError as e:
             result = e.returncode
           if returncode == 0:
             return self.jsonify({'checkversion' : False})
