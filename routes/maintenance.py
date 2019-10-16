@@ -20,6 +20,7 @@ import shutil
 from baseroute import BaseRoute
 from modules.path import path
 
+
 class RouteMaintenance(BaseRoute):
   def setupex(self, emulator, drivermgr, slideshow):
     self.drivermgr = drivermgr
