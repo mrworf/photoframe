@@ -29,7 +29,7 @@ function hasupdate
 {
 	# See if we have changes locally or commits locally (because then we cannot update)
 	if git status | egrep '(not staged|Untracked|ahead|to be committed)' >/dev/null; then
-		echo error "Unable to update due to local changes"
+		error "Unable to update due to local changes"
 	fi
 
 	BRANCH="$(git status | head -n1)" ; BRANCH=${BRANCH:10}
@@ -78,8 +78,8 @@ if [ "$1" = "post" ]; then
 	done
 
 	# We also have added more dependencies, so add more software
-	apt update
-	apt install -y libjpeg-turbo-progs python-netifaces
+	apt-get update
+	apt-get install -y libjpeg-turbo-progs python-netifaces
 
 	# Copy new service and reload systemd
 	cp frame.service /etc/systemd/system/

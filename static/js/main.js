@@ -261,7 +261,7 @@ $("#update").click(function() {
     url:"/maintenance/checkversion"
   }).done(function(data) {
     if (data.checkversion) {
-      var msg = "Are you sure?\n\nThis will force the photoframe to look for a new version and reboot.\n\nNote! Even if no new version is found, photoframe will still reboot.";
+      var msg = "New version was found\n\nThis will force an update of the photoframe and cause a reboot.\n\nDo you want to continue?";
       if (confirm(msg)) {
         $.ajax({
           url:"/maintenance/update"
