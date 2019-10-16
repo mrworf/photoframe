@@ -57,11 +57,8 @@ class RouteMaintenance(BaseRoute):
     elif cmd == 'checkversion':
       if os.path.exists('update.sh'):
         with open(os.devnull, 'wb') as void:
-          try:
-            result = subprocess.check_call(['/bin/bash', 'update.sh', 'checkversion'], stderr=void)
-          except subprocess.CalledProcessError as e:
-            result = e.returncode
-          if returncode == 0:
+          result = subprocess.call(['/bin/bash', 'update.sh', 'checkversion'], stderr=void)
+          if result == 0:
             return self.jsonify({'checkversion' : False})
           elif result == 1:
             return self.jsonify({'checkversion' : True})
