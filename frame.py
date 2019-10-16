@@ -105,10 +105,13 @@ class Photoframe:
 
   def updating(self, x, y):
     self.slideshow.stop()
+    try:
+      self.webServer.stop()
+    except:
+      pass
     self.displayMgr.message('Updating software', False)
-    self.webServer.stop()
     while True: # This is to allow our subprocess to run!
-      time.sleep(10)
+      time.sleep(30)
 
   def _loadRoute(self, module, klass, *vargs):
     module = importlib.import_module('routes.' + module)
