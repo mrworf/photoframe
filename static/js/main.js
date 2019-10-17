@@ -33,8 +33,8 @@ $("#driver-button").click(function() {
 });
 
 function rebootWatch() {
-  $(document.body).html('<h1>Rebooting<span id="reboot"></span></h1>Please be patient, this can take anywhere from 30s to several minutes depending on device and network.<br><br>Page will automatically refresh once photoframe is available again')
-  rebootWatchCheck();
+  $(document.body).html('<h1>Restarting<span id="reboot"></span></h1>Please be patient, this can take anywhere from 30s to several minutes depending on device and network.<br><br>Page will automatically refresh once photoframe is available again')
+  setTimeout(rebootWatchCheck, 10000); // Wait 10s, since nothing will be up that fast anyway (also solves issues during update)
 }
 
 function rebootWatchCheck() {
@@ -261,12 +261,12 @@ $("#update").click(function() {
     url:"/maintenance/checkversion"
   }).done(function(data) {
     if (data.checkversion) {
-      var msg = "New version was found\n\nThis will force an update of the photoframe and cause a reboot.\n\nDo you want to continue?";
+      var msg = "New version was found\n\nThis will force an update of the photoframe and cause a restart.\n\nDo you want to continue?";
       if (confirm(msg)) {
         $.ajax({
           url:"/maintenance/update"
         }).done(function(){
-          location.reload();
+          rebootWatch();
         });
       }
     } else {

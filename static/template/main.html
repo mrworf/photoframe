@@ -1,13 +1,11 @@
 <h1><a href="https://github.com/mrworf/photoframe">PhotoFrame Configuration</a> <span id="tiny"><a href="https://mrworf.github.io/">news / blog</a></span></h1>
 
+	{{#if hardware.throttling}}
+	<p class="WARNING top">Your device is being throttled. Make sure it has enough power and gets enough air</p>
+	{{else}}
 	{{#if hardware.undervoltage}}
 	<p class="WARNING top">Your device is not getting enough power. Check your power supply and device requirements</p>
 	{{/if}}
-	{{#if hardware.throttling}}
-	<p class="WARNING top">Your device is being throttled. Make sure it has enough power and gets enough air</p>
-	{{/if}}
-	{{#if hardware.temperature}}
-	<p class="WARNING top">Your device is getting too warm. Make sure it has enough cooling</p>
 	{{/if}}
 
 <img class="thumbnail" alt="On screen now" title="Realtime view, updates every 30s" src="/details/current" id="screen">
