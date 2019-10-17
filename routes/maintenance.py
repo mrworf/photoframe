@@ -16,6 +16,7 @@
 import os
 import subprocess
 import shutil
+import logging
 
 from baseroute import BaseRoute
 from modules.path import path
@@ -66,7 +67,6 @@ class RouteMaintenance(BaseRoute):
             return self.jsonify({'checkversion' : False, 'error' : True})
       else:
         return 'Cannot find update tool', 404
-
     elif cmd == 'update':
       if self.emulator:
         return 'Cannot run update from emulation mode', 200
@@ -84,3 +84,28 @@ class RouteMaintenance(BaseRoute):
     elif cmd == 'ssh':
       subprocess.call(['systemctl', 'restart', 'ssh'], stderr=self.void)
       return self.jsonify({'ssh': True})
+    elif cmd == 'throttling':
+      try:
+        output = subprocess.check_output(['/opt/vc/bin/vcgencmd', 'get_throttled'], stderr=self.void)
+      except:
+        logging.error('Unable to execute /opt/vc/bin/vcgencmd')
+        return self.jsonify({'error' : 'unable to query'})
+      if not output.startswith('throttled='):
+        logging.error('Output from vcgencmd get_throttled has changed')
+        return self.jsonify({'error' : 'format has changed'})
+      try:
+        h = int(output[10:].strip())
+      except:
+        logging.error('Unable to convert output from vcgencmd get_throttled')
+        return self.jsonify({'error':'Unable to convert output'})
+      result = {
+        'undervoltage detected' : h & (1 << 0) > 0,
+        'frequency capped': h & (1 << 1) > 0,
+        'throttling' : h & (1 << 2) > 0,
+        'soft temperature limit active' : h & (1 << 3) > 0,
+        'undervoltage occurred' : h & (1 << 16) > 0,
+        'frequency capped occurred' : h & (1 << 17) > 0,
+        'throttling occurred' : h & (1 << 18) > 0,
+        'soft temperature limit occurred' : h & (1 << 19) > 0,
+      }
+      return self.jsonify(result)
