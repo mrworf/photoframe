@@ -36,6 +36,7 @@ class slideshow:
     self.cacheMgr = None
     self.void = open(os.devnull, 'wb')
     self.delayer = threading.Event()
+    self.cbStopped = None
 
     self.imageCurrent = None
     self.imageMime = None
@@ -91,7 +92,8 @@ class slideshow:
       self.running = True
       self.thread.start()
 
-  def stop(self):
+  def stop(self, cbStopped=None):
+    self.cbStopped = cbStopped
     self.running = False
     self.delayer.set()
 
@@ -326,3 +328,10 @@ class slideshow:
       self.showPreloadedImage(filenameProcessed, result.mimetype, result.id)
 
     self.thread = None
+
+    # Callback if anyone was listening
+    if self.cbStopped is not None:
+      logging.debug('Stop required notification, so call them')
+      tmp = self.cbStopped
+      self.cbStopped = None
+      tmp()
