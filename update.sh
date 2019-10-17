@@ -97,7 +97,8 @@ fi
 
 if hasupdate ; then
   # Show updating message
-  PID=$(systemctl show --property=ExecMainPID --value frame.service)
+  PID=$(pgrep -f frame.py)
+  # Do NOT kill the service itself, since it will actually tear down the python script
 	kill -SIGHUP $PID 2>/dev/null
 
 	echo "New version is available (for branch ${BRANCH})"
