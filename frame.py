@@ -112,6 +112,7 @@ class Photoframe:
     except:
       pass
     self.displayMgr.message('Updating software', False)
+
     logging.debug('Entering hover mode, waiting for update to finish')
     while True: # This is to allow our subprocess to run!
       time.sleep(30)
