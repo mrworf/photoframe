@@ -107,12 +107,8 @@ class Photoframe:
     self.slideshow.stop(self.updating_continue)
 
   def updating_continue(self):
-    try:
-      self.webServer.stop()
-    except:
-      pass
     self.displayMgr.message('Updating software', False)
-
+    self.webServer.stop()
     logging.debug('Entering hover mode, waiting for update to finish')
     while True: # This is to allow our subprocess to run!
       time.sleep(30)

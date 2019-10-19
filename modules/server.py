@@ -110,7 +110,7 @@ class WebServer(Thread):
       r.headers["Expires"] = "0"
       r.headers['Cache-Control'] = 'public, max-age=0'
       return r
- 
+
   def _showException(self, e):
     if isinstance(e, HTTPException):
       code = e.code
