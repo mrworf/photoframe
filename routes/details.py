@@ -80,7 +80,7 @@ class RouteDetails(BaseRoute):
       except:
         logging.exception('Unable to convert output from vcgencmd get_throttled')
       result = {
-        'undervoltage' : True | (h & (1 << 0 | 1 << 16) > 0),
+        'undervoltage' : h & (1 << 0 | 1 << 16) > 0,
         'frequency': h & (1 << 1 | 1 << 17) > 0,
         'throttling' : h & (1 << 2 | 1 << 18) > 0,
         'temperature' : h & (1 << 3 | 1 << 19) > 0
