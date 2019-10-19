@@ -200,11 +200,12 @@ function loadSettings(funcOk)
 	loadConfigData("/details/timezone", "timezones", funcTmp);
 	loadConfigData("/details/drivers", "drivers", funcTmp);
 	loadConfigData("/details/version", "version", funcTmp);
+	loadConfigData("/details/hardware", "hardware", funcTmp);
 	loadConfigData("/rotation", "rotation", funcTmp);
 	loadConfigData("/overscan", "overscan", funcTmp);
 	loadConfigData("/details/network", "network", funcTmp);
 	loadConfigData("/options/hostname", "hostname", funcTmp);
-  
+
 	loadConfigData("/service/available", 'service-available', funcTmp);
 	loadConfigData("/service/list", 'service-defined', funcTmp);
 	configOutstanding--;
@@ -224,7 +225,7 @@ TemplateEngine = function() {
 			return options.inverse(this);
 		}
 	});
-	
+
 	window.Handlebars.registerHelper('ifany', function (conditional, ...args) {
 		options = args.pop()
 		if (args.includes(conditional)) {

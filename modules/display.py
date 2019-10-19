@@ -175,13 +175,13 @@ class display:
 
     self.lastMessage = None
 
-  def message(self, message):
+  def message(self, message, showConfig=True):
     if not self.enabled:
       logging.debug('Don\'t bother, display is off')
       return
 
     url = 'caption:'
-    if helper.getDeviceIp() is not None:
+    if helper.getDeviceIp() is not None and showConfig:
       url = 'caption:Configuration available at http://%s:7777' % helper.getDeviceIp()
 
     args = [

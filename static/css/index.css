@@ -104,7 +104,7 @@ img.thumbnail {
 
 div.controls {
   margin-top: 5pt;
-  display: flex; 
+  display: flex;
   float: right;
   clear: right;
 }
@@ -173,4 +173,10 @@ p.message {
 .ERROR {
   color: #D8000C;
   background-color: #FFD2D2
+}
+
+.top {
+  font-weight: bold;
+  padding: 2pt;
+  text-align: center;
 }

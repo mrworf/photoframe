@@ -36,6 +36,7 @@ class slideshow:
     self.cacheMgr = None
     self.void = open(os.devnull, 'wb')
     self.delayer = threading.Event()
+    self.cbStopped = None
 
     self.imageCurrent = None
     self.imageMime = None
@@ -54,6 +55,8 @@ class slideshow:
         'image/bmp'
         # HEIF to be added once I get ImageMagick running with support
     ]
+
+    self.running = True
 
   def setCountdown(self, seconds):
     if seconds < 1:
@@ -86,7 +89,13 @@ class slideshow:
     if self.thread is None:
       self.thread = threading.Thread(target=self.presentation)
       self.thread.daemon = True
+      self.running = True
       self.thread.start()
+
+  def stop(self, cbStopped=None):
+    self.cbStopped = cbStopped
+    self.running = False
+    self.delayer.set()
 
   def trigger(self):
     logging.debug('Causing immediate showing of image')
@@ -281,7 +290,7 @@ class slideshow:
 
     logging.info('Starting presentation')
     i = 0
-    while True:
+    while self.running:
       i += 1
       time_process = time.time()
 
@@ -319,3 +328,10 @@ class slideshow:
       self.showPreloadedImage(filenameProcessed, result.mimetype, result.id)
 
     self.thread = None
+
+    # Callback if anyone was listening
+    if self.cbStopped is not None:
+      logging.debug('Stop required notification, so call them')
+      tmp = self.cbStopped
+      self.cbStopped = None
+      tmp()
