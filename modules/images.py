@@ -68,6 +68,6 @@ class ImageHolder:
     return self
 
   def getCacheId(self):
-    if self.url is None:
+    if self.id is None:
       return None
-    return hashlib.sha1(self.url).hexdigest()
+    return hashlib.sha1(self.id).hexdigest()

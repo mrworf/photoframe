@@ -330,23 +330,13 @@ class USB_Photos(BaseService):
         logging.warning('File %s could not be read. Could be USB issue, try rebooting', fullFilename)
     return images
 
-  def addUrlParams(self, url, recommendedSize, displaySize):
-    if recommendedSize is None:
-      return url
-    return url
-    #return "%s||%d||%d" % (url, recommendedSize["width"], recommendedSize["height"])
-
   def requestUrl(self, url, destination=None, params=None, data=None, usePost=False):
     # pretend to download the file (for compatability with 'selectImageFromAlbum' of baseService)
     # instead just cache a scaled version of the file and return {status: 200}
     result = RequestResult()
 
-    if url.count("||") == 2:
-      filename, width, height = url.split("||", 2)
-      recSize = {"width": width, "height": height}
-    else:
-      filename = url
-      recSize = None
+    filename = url
+    recSize = None
 
     if destination is None or not os.path.isfile(filename):
       result.setResult(RequestResult.SUCCESS).setHTTPCode(400)

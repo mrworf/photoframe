@@ -64,7 +64,7 @@ class CacheManager:
     return "%dB" % size
 
   def getCachedImage(self, cacheId, destination):
-    if not self.enable:
+    if not self.enable or cacheId is None:
       return None
 
     filename = os.path.join(syspath.CACHEFOLDER, cacheId)

@@ -443,8 +443,10 @@ class BaseService:
     # override this function and place them inside the url.
     # If the recommendedSize is None (due to unknown imageSize)
     # use the displaySize instead (better than nothing, but image quality might suffer a little bit)
-
     return url
+
+  def getContentUrl(self, image, hints):
+    return image.url
 
   ###[ Helpers ]######################################
 
@@ -493,8 +495,7 @@ class BaseService:
 
       # you should implement 'addUrlParams' if the provider allows 'width' / 'height' parameters!
       recommendedSize = self.calcRecommendedSize(image.dimensions, displaySize)
-      url = self.addUrlParams(image.url, recommendedSize, displaySize)
-
+      #url = self.addUrlParams(image.url, recommendedSize, displaySize)
       if image.cacheAllow:
         # Look it up in the cache mgr
         if self._CACHEMGR is None:
@@ -506,6 +507,10 @@ class BaseService:
             image.cacheUsed = True
 
       if not image.cacheUsed:
+        url = self.getContentUrl(image, {'size' : recommendedSize, 'display' : displaySize})
+        if url is None:
+          return ImageHolder().setError('Unable to download image, no URL')
+
         try:
           result = self.requestUrl(url, destination=filename)
         except requests.exceptions.RequestException:
