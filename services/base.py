@@ -446,13 +446,15 @@ class BaseService:
     # hints is a map holding various hints to be used by the content provider.
     # "size" holds "width" and "height" of the ideal image dimensions based on display size
     # "display" holds "width" and "height" of the physical display
+    #
+    # By default, if you don't override this, it will simply use the image.url as the return
     return image.url
 
   ###[ Helpers ]######################################
 
   def selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize):
-    # chooses an album and selects an image from that album --> return {'id':, 'mimetype':, 'error':, 'source':}
-    # if no (new) images can be found --> return None
+    # chooses an album and selects an image from that album. Returns an image object or None
+    # if no images are available.
 
     keywordList = list(self.getKeywords())
     keywordCount = len(keywordList)
