@@ -88,9 +88,10 @@ class SimpleUrl(BaseService):
     image = BaseService.createImageHolder(self).setId(self.hashString(url)).setUrl(url).setSource(url).allowCache(True)
     return [image]
 
-  def addUrlParams(self, url, _recommendedSize, displaySize):
-    url = url.replace('{width}', str(displaySize['width']))
-    url = url.replace('{height}', str(displaySize['height']))
+  def getContentUrl(self, image, hints):
+    url = image.url
+    url = url.replace('{width}', str(hints['size']['width']))
+    url = url.replace('{height}', str(hints['size']['height']))
     return url
 
   # Treat the entire service as one album

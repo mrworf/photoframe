@@ -17,6 +17,7 @@ from base import BaseService
 import os
 import json
 import logging
+from modules.network import RequestResult
 
 class GooglePhotos(BaseService):
   SERVICE_NAME = 'GooglePhotos'
@@ -307,13 +308,19 @@ class GooglePhotos(BaseService):
     parsedImages = []
     for entry in data:
       item = BaseService.createImageHolder(self)
-      item.setId(entry['id']).setUrl(entry['baseUrl'])
+      item.setId(entry['id'])
       item.setSource(entry['productUrl']).setMimetype(entry['mimeType'])
       item.setDimensions(entry['mediaMetadata']['width'], entry['mediaMetadata']['height'])
       item.allowCache(True)
-      #item.setFilename(entry['filename'])
       parsedImages.append(item)
     return parsedImages
 
-  def addUrlParams(self, url, recommendedSize, _displaySize):
-    return url + "=w" + str(recommendedSize["width"]) + "-h" + str(recommendedSize["height"])
+  def getContentUrl(self, image, hints):
+    # Tricky, we need to obtain the real URL before doing anything
+    data = self.requestUrl('https://photoslibrary.googleapis.com/v1/mediaItems/%s' % image.id)
+    if data.result != RequestResult.SUCCESS:
+      logging.error('%d,%d: Failed to get URL', data.httpcode, data.result)
+      return None
+
+    data = json.loads(data.content)
+    return data['baseUrl'] + "=w" + str(hints['size']["width"]) + "-h" + str(hints['size']["height"])

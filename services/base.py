@@ -437,20 +437,24 @@ class BaseService:
 
     return ImageHolder().setError('getImagesFor() not implemented')
 
-
-  def addUrlParams(self, url, recommendedSize, displaySize):
-    # If the service provider allows 'width' / 'height' parameters
-    # override this function and place them inside the url.
-    # If the recommendedSize is None (due to unknown imageSize)
-    # use the displaySize instead (better than nothing, but image quality might suffer a little bit)
-
-    return url
+  def getContentUrl(self, image, hints):
+    # Allows a content provider to do extra operations as needed to
+    # extract the correct URL.
+    #
+    # image is an image object
+    #
+    # hints is a map holding various hints to be used by the content provider.
+    # "size" holds "width" and "height" of the ideal image dimensions based on display size
+    # "display" holds "width" and "height" of the physical display
+    #
+    # By default, if you don't override this, it will simply use the image.url as the return
+    return image.url
 
   ###[ Helpers ]######################################
 
   def selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize):
-    # chooses an album and selects an image from that album --> return {'id':, 'mimetype':, 'error':, 'source':}
-    # if no (new) images can be found --> return None
+    # chooses an album and selects an image from that album. Returns an image object or None
+    # if no images are available.
 
     keywordList = list(self.getKeywords())
     keywordCount = len(keywordList)
@@ -491,10 +495,6 @@ class BaseService:
 
       filename = os.path.join(destinationDir, image.id)
 
-      # you should implement 'addUrlParams' if the provider allows 'width' / 'height' parameters!
-      recommendedSize = self.calcRecommendedSize(image.dimensions, displaySize)
-      url = self.addUrlParams(image.url, recommendedSize, displaySize)
-
       if image.cacheAllow:
         # Look it up in the cache mgr
         if self._CACHEMGR is None:
@@ -506,6 +506,13 @@ class BaseService:
             image.cacheUsed = True
 
       if not image.cacheUsed:
+        recommendedSize = self.calcRecommendedSize(image.dimensions, displaySize)
+        if recommendedSize is None:
+          recommendedSize = displaySize
+        url = self.getContentUrl(image, {'size' : recommendedSize, 'display' : displaySize})
+        if url is None:
+          return ImageHolder().setError('Unable to download image, no URL')
+
         try:
           result = self.requestUrl(url, destination=filename)
         except requests.exceptions.RequestException:
