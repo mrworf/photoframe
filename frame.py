@@ -129,7 +129,7 @@ class Photoframe:
     self._loadRoute('orientation', 'RouteOrientation', self.cacheMgr)
     self._loadRoute('overscan', 'RouteOverscan', self.cacheMgr)
     self._loadRoute('maintenance', 'RouteMaintenance', self.emulator, self.driverMgr, self.slideshow)
-    self._loadRoute('details', 'RouteDetails', self.displayMgr, self.driverMgr, self.colormatch, self.slideshow)
+    self._loadRoute('details', 'RouteDetails', self.displayMgr, self.driverMgr, self.colormatch, self.cacheMgr, self.slideshow)
     self._loadRoute('upload', 'RouteUpload', self.settingsMgr, self.driverMgr)
     self._loadRoute('oauthlink', 'RouteOAuthLink', self.serviceMgr, self.slideshow)
     self._loadRoute('service', 'RouteService', self.serviceMgr, self.slideshow)

@@ -45,6 +45,7 @@ class CacheManager:
 
   def __init__(self):
     self.enable = True
+    self.stats = {'count' : 0, 'hit': 0, 'size': 0}
 
   def enableCache(self, enable):
     self.enable = enable
@@ -53,6 +54,7 @@ class CacheManager:
   def validate(self):
     self.createDirs()
     self.garbageCollect()
+    self.calcUtilization()
 
   def formatBytes(self, size):
     if size > 0.1*GB:
@@ -72,6 +74,7 @@ class CacheManager:
       try:
         shutil.copy(filename, destination)
         logging.debug('Cache hit, using %s as %s', cacheId, destination)
+        self.stats['hit'] += 1
         return destination
       except:
         logging.exception('Failed to copy cached image')
@@ -86,8 +89,12 @@ class CacheManager:
     cacheFile = os.path.join(syspath.CACHEFOLDER, cacheId)
     try:
       if os.path.exists(cacheFile):
+        self.stats['count'] -= 1
+        self.stats['size'] -= stat(cacheFile).st_size
         os.unlink(cacheFile)
       shutil.copy(filename, cacheFile)
+      self.stats['count'] += 1
+      self.stats['size'] += stat(cacheFile).st_size
       logging.debug('Cached %s as %s', filename, cacheId)
       return filename
     except:
@@ -150,6 +157,18 @@ class CacheManager:
         size += os.stat(filename).st_size
     return size
 
+  def calcUtilization(self):
+    # Indexes the cache so we know number of items and total size
+    count = 0
+    size = 0
+    for path, _dirs, files in os.walk(syspath.CACHEFOLDER):
+      for filename in [os.path.join(path, f) for f in files]:
+        count += 1
+        size += os.stat(filename).st_size
+
+    self.stats['count'] = count
+    self.stats['size'] = size
+
   # classify disk space usage into five differnt states based on free/total ratio
   def getDiskSpaceState(self, path):
     # all values are in bytes!
@@ -158,6 +177,7 @@ class CacheManager:
     stat = os.statvfs(path)
     total = float(stat.f_blocks*stat.f_bsize)
     free = float(stat.f_bfree*stat.f_bsize)
+    self.stats['free'] = free
 
     #logging.debug("'%s' takes up %s" % (path, CacheManager.formatBytes(dirSize)))
     #logging.debug("free space on partition: %s" % CacheManager.formatBytes(free))
@@ -178,7 +198,6 @@ class CacheManager:
   # Frequently calling this function will make sure, less important files are deleted before having to delete more important ones.
   # Of course a manual cache reset is possible via the photoframe web interface
   def garbageCollect(self, lessImportantDirs=[]):
-    #logging.debug("Garbage Collector started!")
     state = self.getDiskSpaceState(syspath.CACHEFOLDER)
     freedUpSpace = 0
     if state == CacheManager.STATE_FULL:
@@ -192,9 +211,8 @@ class CacheManager:
       freedUpSpace = self.deleteOldFiles(syspath.CACHEFOLDER, MONTH)
     else:
       freedUpSpace = self.deleteOldFiles(syspath.CACHEFOLDER, 6*MONTH)
-    '''
-    if freedUpSpace:
-      logging.info("Garbage Collector was able to free up %s of disk space!" % CacheManager.formatBytes(freedUpSpace))
-    else:
-      logging.debug("Garbage Collector was able to free up %s of disk space!" % CacheManager.formatBytes(freedUpSpace))
-    '''
+    if freedUpSpace != 0:
+      self.calcUtilization()
+
+  def getStatistics(self):
+    return self.stats

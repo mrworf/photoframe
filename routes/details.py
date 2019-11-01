@@ -22,11 +22,12 @@ from modules.helper import helper
 from baseroute import BaseRoute
 
 class RouteDetails(BaseRoute):
-  def setupex(self, displaymgr, drivermgr, colormatch, slideshow):
+  def setupex(self, displaymgr, drivermgr, colormatch, cacheMgr, slideshow):
     self.displaymgr = displaymgr
     self.drivermgr = drivermgr
     self.colormatch = colormatch
     self.slideshow = slideshow
+    self.cacheMgr = cacheMgr
 
     self.void = open(os.devnull, 'wb')
 
@@ -86,5 +87,8 @@ class RouteDetails(BaseRoute):
         'temperature' : h & (1 << 3 | 1 << 19) > 0
       }
       return self.jsonify(result)
+    elif about == 'cache':
+      return self.jsonify(self.cacheMgr.getStatistics())
+    else:
+      self.setAbort(404)
 
-    self.setAbort(404)
