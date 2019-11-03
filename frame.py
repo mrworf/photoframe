@@ -71,17 +71,17 @@ class Photoframe:
 
     self.cacheMgr = CacheManager()
     self.settingsMgr = settings()
-    self.driverMgr = drivers()
     self.displayMgr = display(self.emulator)
+    # Validate all settings, prepopulate with defaults if needed
+    self.validateSettings()
+
+    self.driverMgr = drivers()
     self.serviceMgr = ServiceManager(self.settingsMgr, self.cacheMgr)
 
     self.colormatch = colormatch(self.settingsMgr.get('colortemp-script'), 2700) # 2700K = Soft white, lowest we'll go
     self.slideshow = slideshow(self.displayMgr, self.settingsMgr, self.colormatch)
     self.timekeeperMgr = timekeeper(self.displayMgr.enable, self.slideshow.start)
     self.powerMgr = shutdown(self.settingsMgr.getUser('shutdown-pin'))
-
-    # Validate all settings, prepopulate with defaults if needed
-    self.validateSettings()
 
     self.cacheMgr.validate()
     self.cacheMgr.enableCache(self.settingsMgr.getUser('enable-cache') == 1)

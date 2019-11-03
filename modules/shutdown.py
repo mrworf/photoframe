@@ -33,6 +33,7 @@ class shutdown(Thread):
 		self.client.close()
 
 	def run(self):
+		logging.info('GPIO shutdown can be triggered by GPIO %d', self.gpio)
 		# Shutdown can be initated from GPIO26
 		poller = select.poll()
 		try:
@@ -49,6 +50,8 @@ class shutdown(Thread):
 			return
 		with open('/sys/class/gpio/gpio%d/edge' % self.gpio, 'wb') as f:
 			f.write('both')
+		with open('/sys/class/gpio/gpio%d/active_low' % self.gpio, 'wb') as f:
+			f.write('1')
 		with open('/sys/class/gpio/gpio%d/value' % self.gpio, 'rb') as f:
 			f.read()
 			poller.register(f, select.POLLPRI)
