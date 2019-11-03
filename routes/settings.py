@@ -22,7 +22,7 @@ class RouteSettings(BaseRoute):
   def setupex(self, powermanagement, settingsMgr, drivermgr, timekeeper, display, cachemgr, slideshow):
     self.powermanagement = powermanagement
     self.settingsMgr = settingsMgr
-    self.drivermgr = drivermgr
+    self.driverMgr = drivermgr
     self.timekeeper = timekeeper
     self.display = display
     self.cachemgr = cachemgr
@@ -51,7 +51,7 @@ class RouteSettings(BaseRoute):
         drv = self.settingsMgr.getUser('display-driver')
         if drv == 'none':
           drv = None
-        special = self.drivermngt.activate(drv)
+        special = self.driverMgr.activate(drv)
         if special is None:
           self.settingsMgr.setUser('display-driver', 'none')
           self.settingsMgr.setUser('display-special', None)
