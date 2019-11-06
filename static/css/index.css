@@ -95,18 +95,28 @@ div.settings div:nth-child(2) {
 }
 
 img.thumbnail {
+  border: 5px inset;
+}
+
+div.thumbnail {
+  margin-left: 5pt;
   max-width:25%;
   height:auto;
   float:right;
-  border: 5px inset;
-  margin-left: 5pt;
+  border: 0px;
+  flex-wrap: wrap;
+}
+
+button.slideshowControl  {
 }
 
 div.controls {
-  margin-top: 5pt;
-  display: flex;
-  float: right;
-  clear: right;
+  width: 100%;
+  text-align: center;
+}
+
+div.statistics {
+  with: 100%;
 }
 
 div.busy {

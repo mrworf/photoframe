@@ -8,12 +8,22 @@
 	{{/if}}
 	{{/if}}
 
-<img class="thumbnail" alt="On screen now" title="Realtime view, updates every 30s" src="/details/current" id="screen">
-<div class="controls">
-	<button class="slideshowControl" id="prevAlbum">Prev Album</button>
-	<button class="slideshowControl" id="prevImage">Prev Image</button>
-	<button class="slideshowControl" id="nextImage">Next Image</button>
-	<button class="slideshowControl" id="nextAlbum">Next Album</button>
+<div class="thumbnail">
+	<img class="thumbnail" alt="On screen now" title="Realtime view, updates every 30s" src="/details/current" id="screen">
+	<br style="clear: both">
+	<div class="controls">
+		<button class="slideshowControl" id="prevAlbum">Prev Album</button>
+		<button class="slideshowControl" id="prevImage">Prev Image</button>
+		<button class="slideshowControl" id="nextImage">Next Image</button>
+		<button class="slideshowControl" id="nextAlbum">Next Album</button>
+	</div>
+	<div class="statistics">
+		Cache
+		<hr>
+		Usage: {{cache.size}} of {{cache.free}}
+		<br>
+		Hits: {{cache.hits}} of {{cache.requests}}
+	</div>
 </div>
 <div class="settings">
 	<div>

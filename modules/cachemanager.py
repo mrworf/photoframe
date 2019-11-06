@@ -45,7 +45,7 @@ class CacheManager:
 
   def __init__(self):
     self.enable = True
-    self.stats = {'count' : 0, 'hit': 0, 'size': 0}
+    self.stats = {'files' : 0, 'hits': 0, 'size': 0, 'requests' : 0}
 
   def enableCache(self, enable):
     self.enable = enable
@@ -70,11 +70,12 @@ class CacheManager:
       return None
 
     filename = os.path.join(syspath.CACHEFOLDER, cacheId)
+    self.stats['requests'] += 1
     if os.path.isfile(filename):
       try:
         shutil.copy(filename, destination)
         logging.debug('Cache hit, using %s as %s', cacheId, destination)
-        self.stats['hit'] += 1
+        self.stats['hits'] += 1
         return destination
       except:
         logging.exception('Failed to copy cached image')
@@ -89,11 +90,11 @@ class CacheManager:
     cacheFile = os.path.join(syspath.CACHEFOLDER, cacheId)
     try:
       if os.path.exists(cacheFile):
-        self.stats['count'] -= 1
+        self.stats['files'] -= 1
         self.stats['size'] -= stat(cacheFile).st_size
         os.unlink(cacheFile)
       shutil.copy(filename, cacheFile)
-      self.stats['count'] += 1
+      self.stats['files'] += 1
       self.stats['size'] += stat(cacheFile).st_size
       logging.debug('Cached %s as %s', filename, cacheId)
       return filename
@@ -166,7 +167,7 @@ class CacheManager:
         count += 1
         size += os.stat(filename).st_size
 
-    self.stats['count'] = count
+    self.stats['files'] = count
     self.stats['size'] = size
 
   # classify disk space usage into five differnt states based on free/total ratio

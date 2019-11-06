@@ -208,6 +208,7 @@ function loadSettings(funcOk)
 
 	loadConfigData("/service/available", 'service-available', funcTmp);
 	loadConfigData("/service/list", 'service-defined', funcTmp);
+	loadConfigData("/details/cache", 'cache', funcTmp);
 	configOutstanding--;
 }
 

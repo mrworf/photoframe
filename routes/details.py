@@ -88,6 +88,12 @@ class RouteDetails(BaseRoute):
       }
       return self.jsonify(result)
     elif about == 'cache':
+      stats = self.cacheMgr.getStatistics()
+      logging.debug('Stats = ' + repr(stats))
+      stats['textSize'] = self.cacheMgr.formatBytes(stats['size'])
+      stats['textFree'] = self.cacheMgr.formatBytes(stats['free'])
+      stats['textUse'] = '%.1f' % float(stats['size'])*100.0 / float(stats['size'] + stats['free'])
+      stats['textRatio'] = '%.1f' % float(stats['hits'])*100.0 / float(stats['requests'])
       return self.jsonify(self.cacheMgr.getStatistics())
     else:
       self.setAbort(404)
