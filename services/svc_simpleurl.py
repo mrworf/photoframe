@@ -75,7 +75,7 @@ class SimpleUrl(BaseService):
       return result
 
     # track broken urls / unsupported mimetypes and display warning message on web interface
-    self.brokenUrls.append(result["source"])
+    self.brokenUrls.append(result.source)
     # retry (with another image)
     if retry > 0:
       return self.selectImageFromAlbum(destinationDir, supportedMimeTypes, displaySize, randomize, retry=retry-1)
