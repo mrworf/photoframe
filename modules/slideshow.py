@@ -27,7 +27,6 @@ class slideshow:
 
   def __init__(self, display, settings, colormatch):
     self.countdown = 0
-    self.queryPowerFunc = None
     self.thread = None
     self.services = None
     self.display = display
@@ -79,8 +78,14 @@ class slideshow:
   def setCacheManager(self, cacheMgr):
     self.cacheMgr = cacheMgr
 
-  def setQueryPower(self, func):
-    self.queryPowerFunc = func
+  def shouldShow(self, show):
+    logging.debug('shouldShow called with %d', show)
+    if show:
+      logging.debug('Calling start()')
+      self.start()
+    else:
+      logging.debug('Calling stop()')
+      self.stop()
 
   def start(self, blank=False):
     if blank:
@@ -294,11 +299,6 @@ class slideshow:
       i += 1
       time_process = time.time()
 
-      # Avoid showing images if the display is off
-      if self.queryPowerFunc is not None and self.queryPowerFunc() is False:
-        logging.info("Display is off, exit quietly")
-        break
-
       if (i % 10) == 0:
         self.cacheMgr.garbageCollect()
 
@@ -324,10 +324,13 @@ class slideshow:
 
       time_process = time.time() - time_process
       self.delayNextImage(time_process)
-      self.handleEvents()
-      self.showPreloadedImage(filenameProcessed, result.mimetype, result.id)
+      if self.running:
+        # Skip this section if we were killed while waiting around
+        self.handleEvents()
+        self.showPreloadedImage(filenameProcessed, result.mimetype, result.id)
 
     self.thread = None
+    logging.info('slideshow has ended')
 
     # Callback if anyone was listening
     if self.cbStopped is not None:

@@ -19,7 +19,7 @@ import time
 
 # Start timer for keeping display on/off
 class timekeeper(Thread):
-	def __init__(self, cbPower, cbSlideshow):
+	def __init__(self):
 		Thread.__init__(self)
 		self.daemon = True
 		self.scheduleOff = False
@@ -34,9 +34,12 @@ class timekeeper(Thread):
 		self.luxTimeout = None
 		self.luxLow = None
 		self.luxHigh = None
-		self.cbPower = cbPower
-		self.cbSlideshow = cbSlideshow
+		self.listeners = []
 		self.start()
+
+	def registerListener(self, cbPowerState):
+		logging.debug('Adding listener %s' % repr(cbPowerState))
+		self.listeners.append(cbPowerState)
 
 	def setConfiguration(self, hourOn, hourOff):
 		self.hourOn = hourOn
@@ -97,11 +100,17 @@ class timekeeper(Thread):
 		# NOTE! Schedule and sensor can be overriden
 		if not self.standby and ((not self.ignoreSchedule and self.scheduleOff) or (not self.ignoreSensor and self.ambientOff)):
 			self.standby = True
-			self.cbPower(False)
+			self.notifyListeners(False)
 		elif self.standby and (self.ignoreSchedule or not self.scheduleOff) and (self.ignoreSensor or not self.ambientOff):
 			self.standby = False
-			self.cbPower(True)
-			self.cbSlideshow()
+			self.notifyListeners(True)
+
+	def notifyListeners(self, hasPower):
+		if len(self.listeners) == 0:
+			logging.warning('No registered listeners')
+		for listener in self.listeners:
+			logging.debug('Notifying %s of power change to %d' % (repr(listener), hasPower))
+			listener(hasPower)
 
 	def run(self):
 		self.scheduleOff = False
@@ -125,5 +134,5 @@ class timekeeper(Thread):
 					self.scheduleOff = not stateMode
 
 				if self.scheduleOff != previouslyOff:
-					logging.debug('Schedule has triggered change in power %s' % repr(self.scheduleOff))
+					logging.debug('Schedule has triggered change in power, standby is now %s' % repr(self.scheduleOff))
 					self.evaluatePower()
