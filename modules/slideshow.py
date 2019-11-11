@@ -95,11 +95,13 @@ class slideshow:
       self.thread = threading.Thread(target=self.presentation)
       self.thread.daemon = True
       self.running = True
+      self.imageOnScreen = False
       self.thread.start()
 
   def stop(self, cbStopped=None):
     self.cbStopped = cbStopped
     self.running = False
+    self.imageOnScreen = False
     self.delayer.set()
 
   def trigger(self):
