@@ -17,6 +17,43 @@ import logging
 from threading import Thread
 import time
 
+class Interval():
+	def __init__(self, onHour, offHour, onDay = -1, offDay = -1):
+		# Day can be 0-6 (mon-sun) or both can be -1 for all days
+		if onDay == -1 and offDay == -1:
+			self.start = onHour
+			self.end = offHour
+			self.includeDays = False
+		else:
+			self.start = onDay * 24 + onHour
+			self.end = offDay * 24 + offHour
+			self.includeDays = True
+
+	def __testRange(self, start, end, value):
+		if start > end:
+			stateBegin = end
+			stateEnd = start
+			stateMode = False
+		else:
+			stateBegin = start
+			stateEnd = end
+			stateMode = True
+
+		print('Testing if %d >= %d and %d < %d (mode = %d)' % (value, stateBegin, value, stateEnd, stateMode))
+		if value >= stateBegin and value < stateEnd:
+			print('  True, returning %d' % stateMode)
+			return stateMode
+		else:
+			print('  False, returning %d' % (not stateMode))
+			return not stateMode
+
+	def testSchedule(self):
+		# Returns True if within the on hours
+		current = int(time.strftime('%H'))
+		if self.includeDays:
+			current += ((int(time.strftime('%w')) - 1) % 7)*24
+		return self.__testRange(self.start, self.end, current):
+
 # Start timer for keeping display on/off
 class timekeeper(Thread):
 	def __init__(self):
@@ -40,6 +77,9 @@ class timekeeper(Thread):
 	def registerListener(self, cbPowerState):
 		logging.debug('Adding listener %s' % repr(cbPowerState))
 		self.listeners.append(cbPowerState)
+
+	def addInterval(self, onDay, onHour, offDay, offHour):
+		self.intervals.append(Interval(onDay, onHour, offDay, offHour))
 
 	def setConfiguration(self, hourOn, hourOff):
 		self.hourOn = hourOn
@@ -117,21 +157,10 @@ class timekeeper(Thread):
 		while True:
 			time.sleep(60) # every minute
 			if self.hourOn is not None and self.hourOff is not None:
-				if self.hourOn > self.hourOff:
-					stateBegin = self.hourOff
-					stateEnd = self.hourOn
-					stateMode = True
-				else:
-					stateBegin = self.hourOn
-					stateEnd = self.hourOff
-					stateMode = False
+				i = Interval(self.hourOn, self.hourOff)
 
 				previouslyOff = self.scheduleOff
-				hour = int(time.strftime('%H'))
-				if hour >= stateBegin and hour < stateEnd:
-					self.scheduleOff = stateMode
-				else:
-					self.scheduleOff = not stateMode
+				self.scheduleOff = not i.testSchedule()
 
 				if self.scheduleOff != previouslyOff:
 					logging.debug('Schedule has triggered change in power, standby is now %s' % repr(self.scheduleOff))
