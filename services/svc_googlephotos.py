@@ -323,4 +323,8 @@ class GooglePhotos(BaseService):
       return None
 
     data = json.loads(data.content)
+    if 'baseUrl' not in data:
+      logging.error('Data from Google didn\'t contain baseUrl, see original content:')
+      logging.error(repr(data))
+      return None
     return data['baseUrl'] + "=w" + str(hints['size']["width"]) + "-h" + str(hints['size']["height"])
