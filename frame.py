@@ -80,7 +80,8 @@ class Photoframe:
 
     self.colormatch = colormatch(self.settingsMgr.get('colortemp-script'), 2700) # 2700K = Soft white, lowest we'll go
     self.slideshow = slideshow(self.displayMgr, self.settingsMgr, self.colormatch)
-    self.timekeeperMgr = timekeeper(self.displayMgr.enable, self.slideshow.start)
+    self.timekeeperMgr = timekeeper()
+    self.timekeeperMgr.registerListener(self.displayMgr.enable)
     self.powerMgr = shutdown(self.settingsMgr.getUser('shutdown-pin'))
 
     self.cacheMgr.validate()
@@ -92,7 +93,7 @@ class Photoframe:
     self.timekeeperMgr.setPowermode(self.settingsMgr.getUser('powersave'))
     self.colormatch.setUpdateListener(self.timekeeperMgr.sensorListener)
 
-    self.slideshow.setQueryPower(self.timekeeperMgr.getDisplayOn)
+    self.timekeeperMgr.registerListener(self.slideshow.shouldShow)
     self.slideshow.setServiceManager(self.serviceMgr)
     self.slideshow.setCacheManager(self.cacheMgr)
     self.slideshow.setCountdown(cmdline.countdown)
