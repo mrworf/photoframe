@@ -39,6 +39,7 @@ from modules.images import ImageHolder
 # Use the exposed functions as needed to get the data you want.
 #
 class BaseService:
+  REFRESH_DELAY = 60*60 # Number of seconds before we refresh the index in case no photos
   SERVICE_DEPRECATED = False
 
   STATE_ERROR = -1
@@ -64,12 +65,15 @@ class BaseService:
     # NUM_IMAGES keeps track of how many images are being provided by each keyword
     # As for now, unsupported images (mimetype, orientation) and already displayed images are NOT excluded due to simplicity,
     # but it should still serve as a rough estimate to ensure that every image has a similar chance of being shown in "random_image_mode"!
+    # NEXT_SCAN is used to determine when a keyword should be re-indexed. This used in the case number of photos are zero to avoid hammering
+    # services.
     self._STATE = {
         '_OAUTH_CONFIG' : None,
         '_OAUTH_CONTEXT' : None,
         '_CONFIG' : None,
         '_KEYWORDS' : [],
         '_NUM_IMAGES' : {},
+        '_NEXT_SCAN' : {},
         '_EXTRAS' : None
     }
     self._NEED_CONFIG = needConfig
@@ -181,8 +185,9 @@ class BaseService:
     # return the total number of images provided by this service
     if self.needKeywords():
       for keyword in self.getKeywords():
-        if keyword not in self._STATE["_NUM_IMAGES"]:
+        if keyword not in self._STATE["_NUM_IMAGES"] or keyword not in self._STATE['_NEXT_SCAN'] or self._STATE['_NEXT_SCAN'][keyword] < time.time():
           images = self.getImagesFor(keyword)
+          self._STATE['_NEXT_SCAN'][keyword] = time.time() + self.REFRESH_DELAY
           if images is not None:
             self._STATE["_NUM_IMAGES"][keyword] = len(images)
     return sum([self._STATE["_NUM_IMAGES"][k] for k in self._STATE["_NUM_IMAGES"]])
@@ -192,7 +197,7 @@ class BaseService:
     # the provider's instance. Return None to hide
     # Format: [{'level' : 'INFO', 'message' : None, 'link' : None}]
     msgs = []
-    if self._CURRENT_STATE in [self.STATE_NEED_KEYWORDS, self.STATE_NO_IMAGES]:
+    if self._CURRENT_STATE in [self.STATE_NEED_KEYWORDS]: # , self.STATE_NO_IMAGES]:
       msgs.append(
           {
               'level': 'INFO',
@@ -209,7 +214,7 @@ class BaseService:
       msgs.append(
           {
               'level': 'WARNING',
-              'message': 'At least one keyword does not appear to provide any images! Please remove keyword(s): %s' % ', '.join(removeme),
+              'message': 'The following keyword(s) do not yield any photos: %s' % ', '.join(map(u'"{0}"'.format, removeme)),
               'link': None
           }
       )
@@ -483,6 +488,7 @@ class BaseService:
       if len(images) > 0 and images[0].error is not None:
         return images[0]
       self._STATE["_NUM_IMAGES"][keyword] = len(images)
+      self._STATE['_NEXT_SCAN'][keyword] = time.time() + self.REFRESH_DELAY
       if len(images) == 0:
         self.imageIndex = 0
         continue
