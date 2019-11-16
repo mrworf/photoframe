@@ -155,12 +155,14 @@ class helper:
 	@staticmethod
 	def getImageSize(filename):
 		if not os.path.isfile(filename):
+			logging.warning('File %s does not exist, so cannot get dimensions', filename)
 			return None
 
 		with open(os.devnull, 'wb') as void:
 			try:
 				output = subprocess.check_output(['/usr/bin/identify', filename], stderr=void)
 			except:
+				logging.exception('Failed to run identify to get image dimensions on %s', filename)
 				return None
 
 		m = re.search('([1-9][0-9]*)x([1-9][0-9]*)', output)
@@ -177,6 +179,10 @@ class helper:
 	@staticmethod
 	def makeFullframe(filename, displayWidth, displayHeight, zoomOnly=False, autoChoose=False):
 		imageSize = helper.getImageSize(filename)
+		if imageSize is None:
+			logging.warning('Cannot frame %s since we cannot determine image dimensions', filename)
+			return filename
+
 		width = imageSize["width"]
 		height = imageSize["height"]
 
