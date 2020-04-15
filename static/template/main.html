@@ -196,6 +196,9 @@
 				{{#if ../hasSourceUrl}}
 					<input class="keyword-search" data-service="{{../id}}" data-index="{{@index}}" type="button" value="Open">
 				{{/if}}
+				{{#if ../hasDetails}}
+					<input class="keyword-details" data-service="{{../id}}" data-index="{{@index}}" type="button" value="Details">
+				{{/if}}
 				{{#if this}}
 					{{this}}
 				{{/if}}
@@ -246,5 +249,91 @@
 		<button name="help_close">Dismiss</button>
 	</div>
 </div>
-
+<div class="details" style="display: none" id="help_details">
+	<div>
+		<h3>Summary</h3>
+		<span id="details_short">Stuff and things</span>
+		<h3>Details</h3>
+		<div class="details_scroll" id="details_long">
+			Some<br>
+			Lines<br>
+			Of<br>
+			Text<br>
+			Some<br>
+			Lines<br>
+			Of<br>
+			Text<br>
+			Some<br>
+			Lines<br>
+			Of<br>
+			Text<br>
+			Some<br>
+			Lines<br>
+			Of<br>
+			Text<br>
+			Some<br>
+			Lines<br>
+			Of<br>
+			Text<br>
+			Some<br>
+			Lines<br>
+			Of<br>
+			Text<br>
+			Some<br>
+			Lines<br>
+			Of<br>
+			Text<br>
+			Some<br>
+			Lines<br>
+			Of<br>
+			Text<br>
+			Some<br>
+			Lines<br>
+			Of<br>
+			Text<br>
+			Some<br>
+			Lines<br>
+			Of<br>
+			Text<br>
+			Some<br>
+			Lines<br>
+			Of<br>
+			Text<br>
+			Some<br>
+			Lines<br>
+			Of<br>
+			Text<br>
+			Some<br>
+			Lines<br>
+			Of<br>
+			Text<br>
+			Some<br>
+			Lines<br>
+			Of<br>
+			Text<br>
+			Some<br>
+			Lines<br>
+			Of<br>
+			Text<br>
+			Some<br>
+			Lines<br>
+			Of<br>
+			Text<br>
+			Some<br>
+			Lines<br>
+			Of<br>
+			Text<br>
+			Some<br>
+			Lines<br>
+			Of<br>
+			Text<br>
+			Some<br>
+			Lines<br>
+			Of<br>
+			Text<br>
+		</div>
+		<hr>
+		<button name="details_close">Dismiss</button>
+	</div>
+</div>
 <script type="text/javascript" src="/js/main.js"></script>

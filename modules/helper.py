@@ -34,6 +34,15 @@ VALID_URL_REGEX = re.compile(
 class helper:
 	TOOL_ROTATE = '/usr/bin/jpegtran'
 
+	MIMETYPES = {
+		'image/jpeg' : 'jpg',
+		'image/png' : 'png',
+		'image/gif' : 'gif',
+		'image/bmp' : 'bmp'
+		# HEIF to be added once I get ImageMagick running with support
+	}
+
+
 	@staticmethod
 	def isValidUrl(url):
 		# Catches most invalid URLs
@@ -94,17 +103,17 @@ class helper:
 
 	@staticmethod
 	def getExtension(mime):
-		mapping = {
-			'image/jpeg' : 'jpg',
-			'image/png' : 'png',
-			'image/gif' : 'gif',
-			'image/x-adobe-dng' : 'dng',
-			'image/bmp' : 'bmp'
-		}
 		mime = mime.lower()
-		if mime in mapping:
-			return mapping[mime]
+		if mime in helper.MIMETYPES:
+			return helper.MIMETYPES[mime]
 		return None
+
+	@staticmethod
+	def getSupportedTypes():
+		ret = []
+		for i in helper.MIMETYPES:
+			ret.append(i)
+		return ret
 
 	@staticmethod
 	def getMimetype(filename):

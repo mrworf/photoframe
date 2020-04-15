@@ -28,6 +28,11 @@ class RequestResult:
         self.mimetype = 'none/none'
         self.headers = []
         self.httpcode = 0
+        self.errormsg = None
+
+    def setErrorMessage(self, msg):
+        self.errormsg = msg
+        return self
 
     def setResult(self, result):
         self.result = result
@@ -62,4 +67,10 @@ class RequestResult:
         return self.result == RequestResult.NO_NETWORK
 
 class RequestNoNetwork(Exception):
+    pass
+
+class RequestInvalidToken(Exception):
+    pass
+
+class RequestExpiredToken(Exception):
     pass

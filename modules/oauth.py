@@ -16,12 +16,14 @@
 import requests
 import logging
 import time
-from oauthlib.oauth2 import TokenExpiredError
+from oauthlib.oauth2 import TokenExpiredError, InvalidGrantError
 from requests_oauthlib import OAuth2Session
 
 from modules.helper import helper
 from modules.network import RequestResult
 from modules.network import RequestNoNetwork
+from modules.network import RequestInvalidToken
+from modules.network import RequestExpiredToken
 
 class OAuth:
 	def __init__(self, setToken, getToken, scope, extras=''):
@@ -63,8 +65,7 @@ class OAuth:
 					auth = self.getSession()
 					if auth is None:
 						logging.error('Unable to get OAuth session, probably expired')
-						ret.setResult(RequestResult.OAUTH_INVALID)
-						return ret
+						raise RequestExpiredToken
 					if usePost:
 						result = auth.post(uri, stream=stream, params=params, json=data, timeout=180)
 					else:
@@ -75,8 +76,7 @@ class OAuth:
 					auth = self.getSession(True)
 					if auth is None:
 						logging.error('Unable to get OAuth session, probably expired')
-						ret.setResult(RequestResult.OAUTH_INVALID)
-						return ret
+						raise RequestExpiredToken
 
 					if usePost:
 						result = auth.post(uri, stream=stream, params=params, json=data, timeout=180)
@@ -84,6 +84,9 @@ class OAuth:
 						result = auth.get(uri, stream=stream, params=params, timeout=180)
 					if result is not None:
 						break
+			except InvalidGrantError:
+				logging.error('Token is no longer valid, need to re-authenticate')
+				raise RequestInvalidToken
 			except:
 				logging.exception('Issues downloading')
 			time.sleep(tries / 10) # Back off 10, 20, ... depending on tries

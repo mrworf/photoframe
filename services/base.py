@@ -25,6 +25,8 @@ from modules.oauth import OAuth
 from modules.helper import helper
 from modules.network import RequestResult
 from modules.network import RequestNoNetwork
+from modules.network import RequestInvalidToken
+from modules.network import RequestExpiredToken
 from modules.images import ImageHolder
 
 # This is the base implementation of a service. It provides all the
@@ -256,6 +258,12 @@ class BaseService:
     # returns False if we need to set it up
     return self._STATE['_OAUTH_CONTEXT'] is not None
 
+  def invalidateOAuth(self):
+    # Removes previously negotiated OAuth
+    self._STATE['_OAUTH_CONFIG'] = None
+    self._STATE['_OAUTH_CONTEXT'] = None
+    self.saveState()
+
   def startOAuth(self):
     # Returns a HTTP redirect to begin OAuth or None if
     # oauth isn't configured. Normally not overriden
@@ -351,6 +359,16 @@ class BaseService:
   def getKeywordSourceUrl(self, index):
     # Override to provide a source link
     return None
+
+  def getKeywordDetails(self, index):
+    # Override so we can tell more
+    # Format of data is:
+    # ('short': short, 'long' : ["line1", "line2", ...]) where short is a string and long is a string array
+    return None
+
+  def hasKeywordDetails(self):
+    # Override so we can tell more
+    return False
 
   def hasKeywordSourceUrl(self):
     # Override to provide source url support
@@ -521,6 +539,10 @@ class BaseService:
 
         try:
           result = self.requestUrl(url, destination=filename)
+        except (RequestResult.RequestExpiredToken, RequestInvalidToken):
+          logging.exception('Cannot fetch due to token issues')
+          result = RequestResult().setResult(RequestResult.OAUTH_INVALID)
+          self._OAUTH = None
         except requests.exceptions.RequestException:
           logging.exception('request to download image failed')
           result = RequestResult().setResult(RequestResult.NO_NETWORK)
@@ -569,7 +591,15 @@ class BaseService:
 
     if self._OAUTH is not None:
       # Use OAuth path
-      result = self._OAUTH.request(url, destination, params, data=data, usePost=usePost)
+      try:
+        result = self._OAUTH.request(url, destination, params, data=data, usePost=usePost)
+      except (RequestExpiredToken, RequestInvalidToken):
+        logging.exception('Cannot fetch due to token issues')
+        result = RequestResult().setResult(RequestResult.OAUTH_INVALID)
+        self.invalidateOAuth()
+      except requests.exceptions.RequestException:
+        logging.exception('request to download image failed')
+        result = RequestResult().setResult(RequestResult.NO_NETWORK)
     else:
       tries = 0
       while tries < 5:

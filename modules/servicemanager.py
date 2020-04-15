@@ -46,7 +46,7 @@ class ServiceManager:
     self.lastUsedService = None
 
     # Logs services that appear to have no images or only images that have already been displayed
-    # memoryForget will be called when all images of every services have been displayed 
+    # memoryForget will be called when all images of every services have been displayed
     self._OUT_OF_IMAGES = []
 
     # Logs the sequence in which services are being used
@@ -253,6 +253,15 @@ class ServiceManager:
       return None
     return svc.getKeywordSourceUrl(index)
 
+  def detailsServiceKeywords(self, service, index):
+    if service not in self._SERVICES:
+      return None
+    svc = self._SERVICES[service]['service']
+    if not svc.hasKeywordDetails():
+      logging.error('Service does not support keyword details')
+      return None
+    return svc.getKeywordDetails(index)
+
   def helpServiceKeywords(self, service):
     if service not in self._SERVICES:
       return False
@@ -337,6 +346,7 @@ class ServiceManager:
         'state' : self.getServiceState(k),
         'useKeywords' : svc['service'].needKeywords(),
         'hasSourceUrl' : svc['service'].hasKeywordSourceUrl(),
+        'hasDetails' : svc['service'].hasKeywordDetails(),
         'messages' : svc['service'].getMessages(),
       })
     return result
@@ -397,7 +407,7 @@ class ServiceManager:
           svc.resetToLastAlbum()
         else:
           svc = lastService
-      
+
     self.forceService = None
     self.nextService = False
     self.prevService = False
@@ -455,8 +465,8 @@ class ServiceManager:
 
   def memoryRemember(self, imageId):
     svc = self.lastUsedService
-    # only remember service in _HISTORY if image has changed. 
-    # alwaysRemember is True if the current service is different to the service of the previous image 
+    # only remember service in _HISTORY if image has changed.
+    # alwaysRemember is True if the current service is different to the service of the previous image
     alwaysRemember = (len(self._HISTORY) == 0) or (svc != self._HISTORY[-1])
     if svc.memoryRemember(imageId, alwaysRemember=alwaysRemember):
       self._HISTORY.append(svc)

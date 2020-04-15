@@ -20,6 +20,8 @@ import time
 
 from modules.helper import helper
 from modules.network import RequestNoNetwork
+from modules.network import RequestInvalidToken
+from modules.network import RequestExpiredToken
 
 class slideshow:
   SHOWN_IP = False
@@ -47,13 +49,7 @@ class slideshow:
     self.ignoreRandomize = False
     self.skipPreloadedImage = False
 
-    self.supportedFormats = [
-        'image/jpeg',
-        'image/png',
-        'image/gif',
-        'image/bmp'
-        # HEIF to be added once I get ImageMagick running with support
-    ]
+    self.supportedFormats = helper.getSupportedTypes()
 
     self.running = True
 
