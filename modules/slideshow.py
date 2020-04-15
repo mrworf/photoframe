@@ -231,7 +231,7 @@ class slideshow:
 
   def process(self, image):
 
-    logging.info('Processing %s', image.url)
+    logging.debug('Processing %s', image.id)
 
     imageSizing = self.settings.getUser('imagesizing')
 

@@ -48,7 +48,7 @@ class CacheManager:
 
   def enableCache(self, enable):
     self.enable = enable
-    logging.info('Cache is set to %s' + repr(enable))
+    logging.info('Cache is set to ' + repr(enable))
 
   def validate(self):
     self.createDirs()

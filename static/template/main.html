@@ -105,6 +105,8 @@
 		<hr>
 		Change every <input value="{{settings.interval}}" type="text" class="small" name="interval" data-validate="interval"> seconds
 		<br>
+		Refresh keywords after <input value="{{settings.refresh}}" type="text" class="small" name="refresh" data-validate="refresh"> hours <button onclick="alert('Will refresh list from server after this many hours. If all photos are shown, refresh will always happen. Set to zero if you only want to refresh once all images have been shown');">Explain</button>
+		<br>
 		How to handle images which don't fill the screen
 		<select name="imagesizing">
 			{{#select settings.imagesizing}}

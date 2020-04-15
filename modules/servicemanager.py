@@ -413,7 +413,21 @@ class ServiceManager:
     self.prevService = False
     return svc
 
+  def expireStaleKeywords(self):
+    maxage = self._SETTINGS.getUser('refresh')
+    for key in self._SERVICES:
+      svc = self._SERVICES[key]["service"]
+      for k in svc.getKeywords():
+        if svc.freshnessImagesFor(k) < maxage:
+          continue
+        logging.info('Expire is set to %dh, expiring %s which was %d hours old', maxage, k, svc.freshnessImagesFor(k))
+        svc.clearImagesFor(k)
+
   def servicePrepareNextItem(self, destinationDir, supportedMimeTypes, displaySize, randomize):
+    # We should expire any old index if setting is active
+    if self._SETTINGS.getUser('refresh') > 0:
+      self.expireStaleKeywords()
+
     svc = self.chooseService(randomize)
     if svc is None:
       return None
@@ -476,8 +490,11 @@ class ServiceManager:
     for key in self._SERVICES:
       svc = self._SERVICES[key]["service"]
       svc.memoryForget(forgetHistory=forgetHistory)
-      for file in os.listdir(svc.getStoragePath()):
-        os.unlink(os.path.join(svc.getStoragePath(), file))
+      for k in svc.getKeywords():
+        logging.info('%s was %d hours old when we refreshed' % (k, svc.freshnessImagesFor(k)))
+        svc.clearImagesFor(k)
+      #for file in os.listdir(svc.getStoragePath()):
+      #  os.unlink(os.path.join(svc.getStoragePath(), file))
     self._OUT_OF_IMAGES = []
     if forgetHistory:
       self._HISTORY = []

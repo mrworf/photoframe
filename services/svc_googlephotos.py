@@ -17,6 +17,8 @@ from base import BaseService
 import os
 import json
 import logging
+import time
+
 from modules.network import RequestResult
 from modules.helper import helper
 
@@ -256,7 +258,7 @@ class GooglePhotos(BaseService):
           source = data['albums'][i]['productUrl']
           break
       if albumid is None and 'nextPageToken' in data:
-        logging.info('Another page of albums available')
+        logging.debug('Another page of albums available')
         params['pageToken'] = data['nextPageToken']
         continue
       break
@@ -281,7 +283,7 @@ class GooglePhotos(BaseService):
             source = data['sharedAlbums'][i]['productUrl']
             break
         if albumid is None and 'nextPageToken' in data:
-          logging.info('Another page of shared albums available')
+          logging.debug('Another page of shared albums available')
           params['pageToken'] = data['nextPageToken']
           continue
         break
@@ -299,6 +301,21 @@ class GooglePhotos(BaseService):
       return BaseService.createImageHolder(self).setError('"Photos Library API" is not enabled on\nhttps://console.developers.google.com\n\nCheck the Photoframe Wiki for details')
     else:
       return BaseService.createImageHolder(self).setError('No (new) images could be found.\nCheck spelling or make sure you have added albums')
+
+  def freshnessImagesFor(self, keyword):
+    filename = os.path.join(self.getStoragePath(), self.hashString(keyword) + '.json')
+    if not os.path.exists(filename):
+      return 0 # Superfresh
+    # Hours should be returned
+    return (time.time() - os.stat(filename).st_mtime) / 3600
+
+  def clearImagesFor(self, keyword):
+    BaseService.clearImagesFor(self, keyword)
+
+    filename = os.path.join(self.getStoragePath(), self.hashString(keyword) + '.json')
+    if os.path.exists(filename):
+      logging.info('Cleared image information for %s' % keyword)
+      os.unlink(filename)
 
   def getImagesFor(self, keyword, rawReturn=False):
     filename = os.path.join(self.getStoragePath(), self.hashString(keyword) + '.json')

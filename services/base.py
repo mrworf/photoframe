@@ -460,6 +460,18 @@ class BaseService:
 
     return ImageHolder().setError('getImagesFor() not implemented')
 
+  def clearImagesFor(self, keyword):
+    # You can hook this function to do any additional needed cleanup
+    # keyword is the item for which you need to clear the images for
+    self.memoryForget(keyword)
+    self._STATE["_NUM_IMAGES"].pop(keyword, None)
+    self._STATE['_NEXT_SCAN'].pop(keyword, None)
+
+  def freshnessImagesFor(self, keyword):
+    # You need to implement this function if you intend to support refresh of content
+    # keyword is the item for which you need to clear the images for. Should return age of content in hours
+    return ImageHolder().setError('freshnessImagesFor() not implemented')
+
   def getContentUrl(self, image, hints):
     # Allows a content provider to do extra operations as needed to
     # extract the correct URL.
