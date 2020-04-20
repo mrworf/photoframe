@@ -35,6 +35,21 @@ class ImageHolder:
     self.cacheAllow = False
     self.cacheUsed = False
 
+    self.contentProvider = None
+    self.contentSource = None
+
+  def setContentProvider(self, provider):
+    if provider is None:
+      raise Exception('setContentProvider cannot be None')
+    self.contentProvider = repr(provider)
+    return self
+
+  def setContentSource(self, source):
+    if source is None:
+      raise Exception('setContentSource cannot be None')
+    self.contentSource = repr(source)
+    return self
+
   def setId(self, id):
     self.id = id
     return self

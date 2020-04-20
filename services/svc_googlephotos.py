@@ -104,6 +104,7 @@ class GooglePhotos(BaseService):
     # This is not going to be fast...
     data = self.getImagesFor(keyword, rawReturn=True)
     mimes = helper.getSupportedTypes()
+    memory = self.memoryList(keyword)
 
     countv = 0
     counti = 0
@@ -139,7 +140,7 @@ class GooglePhotos(BaseService):
     if countu > 0:
       extra = ' where %d is not yet unsupported' % countu
     return {
-      'short': '%d items fetched from album, %d images%s, %d videos, %d is unknown' % (len(data), counti + countu, extra, countv, len(data) - counti - countv),
+      'short': '%d items fetched from album, %d images%s, %d videos, %d is unknown. %d has been shown' % (len(data), counti + countu, extra, countv, len(data) - counti - countv, len(memory)),
       'long' : longer
     }
 
@@ -310,8 +311,6 @@ class GooglePhotos(BaseService):
     return (time.time() - os.stat(filename).st_mtime) / 3600
 
   def clearImagesFor(self, keyword):
-    BaseService.clearImagesFor(self, keyword)
-
     filename = os.path.join(self.getStoragePath(), self.hashString(keyword) + '.json')
     if os.path.exists(filename):
       logging.info('Cleared image information for %s' % keyword)
@@ -372,9 +371,9 @@ class GooglePhotos(BaseService):
         albumdata = None
     if rawReturn:
       return albumdata
-    return self.parseAlbumInfo(albumdata)
+    return self.parseAlbumInfo(albumdata, keyword)
 
-  def parseAlbumInfo(self, data):
+  def parseAlbumInfo(self, data, keyword):
     # parse GooglePhoto specific keys into a format that the base service can understand
     if data is None:
       return None
@@ -385,6 +384,8 @@ class GooglePhotos(BaseService):
       item.setSource(entry['productUrl']).setMimetype(entry['mimeType'])
       item.setDimensions(entry['mediaMetadata']['width'], entry['mediaMetadata']['height'])
       item.allowCache(True)
+      item.setContentProvider(self)
+      item.setContentSource(keyword)
       parsedImages.append(item)
     return parsedImages
 

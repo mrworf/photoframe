@@ -36,6 +36,7 @@ from modules.servicemanager import ServiceManager
 from modules.cachemanager import CacheManager
 from modules.path import path
 from modules.server import WebServer
+from modules.events import Events
 
 # Make sure we run from our own directory
 os.chdir(os.path.dirname(sys.argv[0]))
@@ -68,6 +69,9 @@ class Photoframe:
       self.changeRoot(cmdline.basedir)
     if not path().validate():
       sys.exit(255)
+
+    self.eventMgr = Events()
+    self.eventMgr.add('Hello world')
 
     self.cacheMgr = CacheManager()
     self.settingsMgr = settings()
@@ -130,11 +134,12 @@ class Photoframe:
     self._loadRoute('orientation', 'RouteOrientation', self.cacheMgr)
     self._loadRoute('overscan', 'RouteOverscan', self.cacheMgr)
     self._loadRoute('maintenance', 'RouteMaintenance', self.emulator, self.driverMgr, self.slideshow)
-    self._loadRoute('details', 'RouteDetails', self.displayMgr, self.driverMgr, self.colormatch, self.slideshow)
+    self._loadRoute('details', 'RouteDetails', self.displayMgr, self.driverMgr, self.colormatch, self.slideshow, self.serviceMgr, self.settingsMgr)
     self._loadRoute('upload', 'RouteUpload', self.settingsMgr, self.driverMgr)
     self._loadRoute('oauthlink', 'RouteOAuthLink', self.serviceMgr, self.slideshow)
     self._loadRoute('service', 'RouteService', self.serviceMgr, self.slideshow)
     self._loadRoute('control', 'RouteControl', self.slideshow)
+    self._loadRoute('events', 'RouteEvents', self.eventMgr)
 
   def validateSettings(self):
     if not self.settingsMgr.load():

@@ -460,12 +460,16 @@ class BaseService:
 
     return ImageHolder().setError('getImagesFor() not implemented')
 
+  def _clearImagesFor(self, keyword):
+    self._STATE["_NUM_IMAGES"].pop(keyword, None)
+    self._STATE['_NEXT_SCAN'].pop(keyword, None)
+    self.memoryForget(keyword)
+    self.clearImagesFor(keyword)
+
   def clearImagesFor(self, keyword):
     # You can hook this function to do any additional needed cleanup
     # keyword is the item for which you need to clear the images for
-    self.memoryForget(keyword)
-    self._STATE["_NUM_IMAGES"].pop(keyword, None)
-    self._STATE['_NEXT_SCAN'].pop(keyword, None)
+    pass
 
   def freshnessImagesFor(self, keyword):
     # You need to implement this function if you intend to support refresh of content
@@ -515,7 +519,7 @@ class BaseService:
         logging.warning('Function returned None, this is used sometimes when a temporary error happens. Still logged')
         self.imageIndex = 0
         continue
-      if len(images) > 0 and images[0].error is not None:
+      if len(images) > 0 and images[0].error is not None: #Something went wrong
         return images[0]
       self._STATE["_NUM_IMAGES"][keyword] = len(images)
       self._STATE['_NEXT_SCAN'][keyword] = time.time() + self.REFRESH_DELAY
@@ -524,7 +528,7 @@ class BaseService:
         continue
       self.saveState()
 
-      image = self.selectImage(images, supportedMimeTypes, displaySize, randomize)
+      image = self.selectImage(keyword, images, supportedMimeTypes, displaySize, randomize)
       if image is None:
         self.imageIndex = 0
         continue
@@ -563,13 +567,17 @@ class BaseService:
           return ImageHolder().setError('%d: Unable to download image!' % result.httpcode)
         else:
           image.setFilename(filename)
+
+        # Last step, remember that we delivered this image
+        self.memoryRemember(image.id, keyword)
+
       image.setMimetype(helper.getMimetype(image.filename))
       return image
 
     self.resetIndices()
     return None
 
-  def selectImage(self, images, supportedMimeTypes, displaySize, randomize):
+  def selectImage(self, keywords, images, supportedMimeTypes, displaySize, randomize):
     imageCount = len(images)
     if randomize:
       index = random.SystemRandom().randint(0, imageCount-1)
@@ -584,15 +592,17 @@ class BaseService:
       image = images[self.imageIndex]
 
       orgFilename = image.filename if image.filename is not None else image.id
-      if randomize and self.memorySeen(image.id):
+      if randomize and self.memorySeen(image.id, keywords):
         logging.debug("Skipping already displayed image '%s'!" % orgFilename)
         continue
       if not self.isCorrectOrientation(image.dimensions, displaySize):
         logging.debug("Skipping image '%s' due to wrong orientation!" % orgFilename)
+        self.memoryRemember(image.id, keywords) # Makes it easier to track if we've been here
         continue
       if image.mimetype is not None and image.mimetype not in supportedMimeTypes:
         # Make sure we don't get a video, unsupported for now (gif is usually bad too)
-        logging.debug('Unsupported media: %s' % (image.mimetype))
+        logging.debug('Skipping unsupported media: %s' % (image.mimetype))
+        self.memoryRemember(image.id, keywords) # Makes it easier to track if we've been here
         continue
 
       return image
@@ -702,9 +712,12 @@ class BaseService:
 
   def _fetchMemory(self, key):
     if key is None:
+      raise Exception('No key provided to _fetchMemory')
+      logging.debug('No key provided to _fetchMemory')
       key = ''
     h = self.hashString(key)
     if self._MEMORY_KEY == h:
+      logging.debug('We already are looking at key %s, it has %d entries', h, len(self._MEMORY))
       return
     # Save work and swap
     if self._MEMORY is not None and len(self._MEMORY) > 0:
@@ -718,6 +731,7 @@ class BaseService:
         logging.exception('File %s is corrupt' % os.path.join(self._DIR_MEMORY, '%s.json' % h))
         self._MEMORY = []
     else:
+      logging.debug('_fetchMemory returned no memory')
       self._MEMORY = []
     self._MEMORY_KEY = h
 
@@ -729,7 +743,7 @@ class BaseService:
       return False
     return True
 
-  def memoryRemember(self, itemId, keywords=None, alwaysRemember=True):
+  def memoryRemember(self, itemId, keywords, alwaysRemember=True):
     # some debug info about the service of the currently displayed image
     logging.debug("Displaying new image")
     logging.debug(self._NAME)
@@ -757,12 +771,16 @@ class BaseService:
 
     return rememberInHistory
 
-  def memorySeen(self, itemId, keywords=None):
+  def memoryList(self, keywords):
+    self._fetchMemory(keywords)
+    return self._MEMORY
+
+  def memorySeen(self, itemId, keywords):
     self._fetchMemory(keywords)
     h = self.hashString(itemId)
     return h in self._MEMORY
 
-  def memoryForgetLast(self, keywords=None):
+  def memoryForgetLast(self, keywords):
     # remove the currently displayed image from memory as well as history
     # implications:
     # - the image will be treated as never seen before (random image order)
@@ -775,11 +793,13 @@ class BaseService:
     else:
       logging.warning("Trying to forget a single memory, but 'self._HISTORY' is empty. This should have never happened!")
 
-  def memoryForget(self, keywords=None, forgetHistory=False):
+  def memoryForget(self, keywords, forgetHistory=False):
     self._fetchMemory(keywords)
     n = os.path.join(self._DIR_MEMORY, '%s.json' % self._MEMORY_KEY)
     if os.path.exists(n):
+      logging.debug('Removed memory file %s' % n)
       os.unlink(n)
+    logging.debug('Has %d memories before wipe' % len(self._MEMORY))
     self._MEMORY = []
     if forgetHistory:
       self._HISTORY = []

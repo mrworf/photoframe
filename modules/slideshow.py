@@ -276,7 +276,6 @@ class slideshow:
       self.imageCurrent = filename
       self.imageMime = mimetype
       self.imageOnScreen = True
-      self.services.memoryRemember(imageId)
       os.unlink(filename)
 
     self.skipPreloadedImage = False

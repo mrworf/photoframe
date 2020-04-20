@@ -421,7 +421,11 @@ class ServiceManager:
         if svc.freshnessImagesFor(k) < maxage:
           continue
         logging.info('Expire is set to %dh, expiring %s which was %d hours old', maxage, k, svc.freshnessImagesFor(k))
-        svc.clearImagesFor(k)
+        svc._clearImagesFor(k)
+
+  def getTotalImageCount(self):
+    services = self.getServices(readyOnly=True)
+    return sum([self._SERVICES[s['id']]['service'].getNumImages() for s in services])
 
   def servicePrepareNextItem(self, destinationDir, supportedMimeTypes, displaySize, randomize):
     # We should expire any old index if setting is active
@@ -477,24 +481,22 @@ class ServiceManager:
       return True
     return False
 
-  def memoryRemember(self, imageId):
-    svc = self.lastUsedService
-    # only remember service in _HISTORY if image has changed.
-    # alwaysRemember is True if the current service is different to the service of the previous image
-    alwaysRemember = (len(self._HISTORY) == 0) or (svc != self._HISTORY[-1])
-    if svc.memoryRemember(imageId, alwaysRemember=alwaysRemember):
-      self._HISTORY.append(svc)
+#  def dead_memoryRemember(self, imageId):
+#    svc = self.lastUsedService
+#    # only remember service in _HISTORY if image has changed.
+#    # alwaysRemember is True if the current service is different to the service of the previous image
+#    alwaysRemember = (len(self._HISTORY) == 0) or (svc != self._HISTORY[-1])
+#    if svc.memoryRemember(imageId, alwaysRemember=alwaysRemember):
+#      self._HISTORY.append(svc)
 
   def memoryForget(self, forgetHistory=False):
     logging.info("Photoframe's memory was reset. Already displayed images will be shown again!")
     for key in self._SERVICES:
       svc = self._SERVICES[key]["service"]
-      svc.memoryForget(forgetHistory=forgetHistory)
       for k in svc.getKeywords():
         logging.info('%s was %d hours old when we refreshed' % (k, svc.freshnessImagesFor(k)))
+        svc.memoryForget(k, forgetHistory=forgetHistory)
         svc.clearImagesFor(k)
-      #for file in os.listdir(svc.getStoragePath()):
-      #  os.unlink(os.path.join(svc.getStoragePath(), file))
     self._OUT_OF_IMAGES = []
     if forgetHistory:
       self._HISTORY = []
