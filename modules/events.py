@@ -14,8 +14,6 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import logging
-
 class Events:
   TYPE_PERSIST = 1
   TYPE_NORMAL = 0
@@ -34,8 +32,8 @@ class Events:
     if unique is not None:
       unique = repr(unique) # Make it a string to be safe
       for i in range(0, len(self.msgs)):
-        if msg[i]['unique'] == unique:
-          msg[i] = record
+        if self.msgs[i]['unique'] == unique:
+          self.msgs[i] = record
           record = None
           break
 

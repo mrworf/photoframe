@@ -397,14 +397,14 @@ class ServiceManager:
       if lastService == None:
         key = availableServices[0]['id']
         svc = self._SERVICES[key]['service']
-        svc.resetIndices()
+        svc.memory.resetIndices()
       else:
         if self.nextService:
           svc = self._getOffsetService(availableServices, lastService, 1)
-          svc.resetIndices()
+          svc.memory.resetIndices()
         elif self.prevService:
           svc = self._getOffsetService(availableServices, lastService, -1)
-          svc.resetToLastAlbum()
+          svc.memory.resetToLastAlbum()
         else:
           svc = lastService
 
@@ -495,7 +495,7 @@ class ServiceManager:
       svc = self._SERVICES[key]["service"]
       for k in svc.getKeywords():
         logging.info('%s was %d hours old when we refreshed' % (k, svc.freshnessImagesFor(k)))
-        svc.memoryForget(k, forgetHistory=forgetHistory)
+        svc.memory.forget(k, forgetHistory=forgetHistory)
         svc.clearImagesFor(k)
     self._OUT_OF_IMAGES = []
     if forgetHistory:
@@ -511,12 +511,12 @@ class ServiceManager:
 
     # delete last two memories, because the currentImage and the previous need to be forgotten
     currentService = self._HISTORY.pop()
-    currentService.memoryForgetLast()
+    currentService.memory.forgetLast()
     if currentService in self._OUT_OF_IMAGES:
       self._OUT_OF_IMAGES.remove(currentService)
 
     previousService = self._HISTORY.pop()
-    previousService.memoryForgetLast()
+    previousService.memory.forgetLast()
     if previousService in self._OUT_OF_IMAGES:
       self._OUT_OF_IMAGES.remove(previousService)
 
@@ -526,7 +526,7 @@ class ServiceManager:
         previousService = None
         break
       previousService = self._HISTORY.pop()
-      previousService.memoryForgetLast()
+      previousService.memory.forgetLast()
       if previousService in self._OUT_OF_IMAGES:
         self._OUT_OF_IMAGES.remove(previousService)
 

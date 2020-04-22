@@ -20,8 +20,6 @@ import time
 
 from modules.helper import helper
 from modules.network import RequestNoNetwork
-from modules.network import RequestInvalidToken
-from modules.network import RequestExpiredToken
 
 class slideshow:
   SHOWN_IP = False

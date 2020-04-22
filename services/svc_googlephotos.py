@@ -104,7 +104,7 @@ class GooglePhotos(BaseService):
     # This is not going to be fast...
     data = self.getImagesFor(keyword, rawReturn=True)
     mimes = helper.getSupportedTypes()
-    memory = self.memoryList(keyword)
+    memory = self.memory.getList(keyword)
 
     countv = 0
     counti = 0
