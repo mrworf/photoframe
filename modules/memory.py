@@ -22,9 +22,8 @@ class MemoryManager:
   def __init__(self, memoryLocation):
     self._MEMORY = []
     self._MEMORY_KEY = None
-    self._HISTORY = []
     self._DIR_MEMORY = memoryLocation
-    self.resetIndices()
+    self._MEMORY_COUNT = {}
 
   def _hashString(self, text):
     if type(text) is not unicode:
@@ -55,15 +54,8 @@ class MemoryManager:
     else:
       logging.debug('_fetch returned no memory')
       self._MEMORY = []
+    self._MEMORY_COUNT[h] = len(self._MEMORY)
     self._MEMORY_KEY = h
-
-  def _differentThanLastHistory(self, keywordindex, imageIndex):
-    # just a little helper function to compare indices with the indices of the previously displayed image
-    if len(self._HISTORY) == 0:
-      return True
-    if keywordindex == self._HISTORY[-1][0] and imageIndex == self._HISTORY[-1][1]:
-      return False
-    return True
 
   def remember(self, itemId, keywords, alwaysRemember=True):
     # The MEMORY makes sure that this image won't be shown again until memoryForget is called
@@ -71,46 +63,36 @@ class MemoryManager:
     h = self._hashString(itemId)
     if h not in self._MEMORY:
       self._MEMORY.append(h)
+      k = self._hashString(keywords)
+      if k in self._MEMORY_COUNT:
+        self._MEMORY_COUNT[k] += 1
+      else:
+        self._MEMORY_COUNT[k] = 1
+
     # save memory
     if (len(self._MEMORY) % 20) == 0:
       logging.info('Interim saving of memory every 20 entries')
       with open(os.path.join(self._DIR_MEMORY, '%s.json' % self._MEMORY_KEY), 'w') as f:
         json.dump(self._MEMORY, f)
 
-    # annoying behaviour fix: only remember current image in history if the image has actually changed
-    rememberInHistory = alwaysRemember or self._differentThanLastHistory(self.keywordIndex, self.imageIndex)
-    if rememberInHistory:
-      # The HISTORY makes it possible to show previously displayed images
-      self._HISTORY.append((self.keywordIndex, self.imageIndex))
-
-    # (non-random image order only): on 'prepareNextItem' --> make sure to preload the following image
-    self.imageIndex += 1
-
-    return rememberInHistory
-
   def getList(self, keywords):
     self._fetch(keywords)
     return self._MEMORY
+
+  def count(self, keywords):
+    if self._MEMORY_KEY is None:
+      self._fetch(keywords)
+    h = self._hashString(keywords)
+    if h in self._MEMORY_COUNT:
+      return self._MEMORY_COUNT[h]
+    return 0
 
   def seen(self, itemId, keywords):
     self._fetch(keywords)
     h = self._hashString(itemId)
     return h in self._MEMORY
 
-  def forgetLast(self, keywords):
-    # remove the currently displayed image from memory as well as history
-    # implications:
-    # - the image will be treated as never seen before (random image order)
-    # - the same image will be preloaded again during 'prepareNextItem' (non-random image order)
-    self._fetch(keywords)
-    if len(self._MEMORY) != 0:
-      self._MEMORY.pop()
-    if len(self._HISTORY) != 0:
-      self.keywordIndex, self.imageIndex = self._HISTORY.pop()
-    else:
-      raise Exception("Trying to forget a single memory, but 'self._HISTORY' is empty. This should have never happened!")
-
-  def forget(self, keywords, forgetHistory=False):
+  def forget(self, keywords):
     self._fetch(keywords)
     n = os.path.join(self._DIR_MEMORY, '%s.json' % self._MEMORY_KEY)
     if os.path.exists(n):
@@ -118,13 +100,4 @@ class MemoryManager:
       os.unlink(n)
     logging.debug('Has %d memories before wipe' % len(self._MEMORY))
     self._MEMORY = []
-    if forgetHistory:
-      self._HISTORY = []
-
-  def resetIndices(self):
-    self.keywordIndex = 0
-    self.imageIndex = 0
-
-  def resetToLastAlbum(self):
-    self.keywordIndex = max(0, len(self.getKeywords())-1)
-    self.imageIndex = 0
+    self._MEMORY_COUNT.pop(self._hashString(keywords), None)

@@ -25,6 +25,7 @@ import importlib
 
 from modules.helper import helper
 from modules.path import path
+from services.base import BaseService
 
 class ServiceManager:
   def __init__(self, settings, cacheMgr):
@@ -40,21 +41,18 @@ class ServiceManager:
     self._SERVICES = {}
     self._CONFIGFILE = os.path.join(self._BASEDIR, 'services.json')
 
-    self.nextService = False
-    self.prevService = False
-    self.forceService = None
-    self.lastUsedService = None
-
     # Logs services that appear to have no images or only images that have already been displayed
-    # memoryForget will be called when all images of every services have been displayed
+    # memoryForgetAll will be called when all images of every services have been displayed
     self._OUT_OF_IMAGES = []
 
     # Logs the sequence in which services are being used
     # useful for displaying previous images
     self._HISTORY = []
 
-    self._detectServices()
+    # Tracks current service showing the image
+    self.currentService = None
 
+    self._detectServices()
     self._load()
 
     # Translate old config into new
@@ -273,19 +271,21 @@ class ServiceManager:
   def getServiceState(self, id):
     if id not in self._SERVICES:
       return None
-
     svc = self._SERVICES[id]['service']
     # Find out if service is ready
-    state = svc.updateState()
-    if state == svc.STATE_DO_OAUTH:
+    return svc.updateState()
+
+  def getServiceStateText(self, id):
+    state = self.getServiceState(id)
+    if state == BaseService.STATE_DO_OAUTH:
       return 'OAUTH'
-    elif state == svc.STATE_DO_CONFIG:
+    elif state == BaseService.STATE_DO_CONFIG:
       return 'CONFIG'
-    elif state == svc.STATE_NEED_KEYWORDS:
+    elif state == BaseService.STATE_NEED_KEYWORDS:
       return 'NEED_KEYWORDS'
-    elif state == svc.STATE_NO_IMAGES:
+    elif state == BaseService.STATE_NO_IMAGES:
       return 'NO_IMAGES'
-    elif state == svc.STATE_READY:
+    elif state == BaseService.STATE_READY:
       return 'READY'
     return 'ERROR'
 
@@ -294,7 +294,7 @@ class ServiceManager:
     for id in self._SERVICES:
       svc = self._SERVICES[id]['service']
       name = svc.getName()
-      state = self.getServiceState(id)
+      state = self.getServiceStateText(id)
       additionalInfo = svc.explainState()
       serviceStates.append((name, state, additionalInfo))
     return serviceStates
@@ -329,21 +329,21 @@ class ServiceManager:
       self._SETTINGS.save()
 
   def getLastUsedServiceName(self):
-    if self.lastUsedService is None:
+    if self.currentService is None:
       return ""
-    return self.lastUsedService.getName()
+    return self._SERVICES[self.currentService]['service'].getName()
 
   def getServices(self, readyOnly=False):
     result = []
     for k in self._SERVICES:
-      if readyOnly and self.getServiceState(k) != 'READY':
+      if readyOnly and self.getServiceState(k) != BaseService.STATE_READY:
         continue
       svc = self._SERVICES[k]
       result.append({
         'name' : svc['service'].getName(),
         'service' : svc['service'].SERVICE_ID,
         'id' : k,
-        'state' : self.getServiceState(k),
+        'state' : self.getServiceStateText(k),
         'useKeywords' : svc['service'].needKeywords(),
         'hasSourceUrl' : svc['service'].hasKeywordSourceUrl(),
         'hasDetails' : svc['service'].hasKeywordDetails(),
@@ -361,57 +361,48 @@ class ServiceManager:
 
   def selectRandomService(self, services):
     # select service at random but weighted by the number of images each service provides
-    numImages = [self._SERVICES[s['id']]['service'].getNumImages() for s in services]
+    numImages = [self._SERVICES[s['id']]['service'].getImagesTotal() for s in services]
     totalImages = sum(numImages)
     if totalImages == 0:
       return 0
     i = helper.getWeightedRandomIndex(numImages)
     return services[i]['id']
 
-  def chooseService(self, randomize, lastService=None):
+  def chooseService(self, randomize, retry=False):
+    result = None
     availableServices = self.getServices(readyOnly=True)
     if len(availableServices) == 0:
       return None
 
-    if lastService is None:
-      if len(self._HISTORY) != 0:
-        lastService = self._HISTORY[-1]
-      elif self.lastUsedService != None:
-        lastService = self.lastUsedService
-    # if lastService is not ready anymore!
-    if lastService not in [self._SERVICES[s['id']]['service'] for s in availableServices]:
-      lastService = None
-
-    if self.forceService is not None:
-      svc = self.forceService
-    elif randomize:
-      availableServices = [s for s in availableServices if self._SERVICES[s['id']]['service'] not in self._OUT_OF_IMAGES]
-      logging.debug("# of available services %d"%len(availableServices))
-      if len(availableServices) == 0:
-        self.memoryForget()
-        availableServices = self.getServices(readyOnly=True)
-
-      key = self.selectRandomService(availableServices)
-      svc = self._SERVICES[key]['service']
+    if randomize:
+      availableServices = [s for s in availableServices if self._SERVICES[s['id']]['service'].getImagesRemaining() > 0]
+      if len(availableServices) > 0:
+        logging.debug('Found %d services with images' % len(availableServices))
+        key = self.selectRandomService(availableServices)
+        result = self._SERVICES[key]['service']
     else:
-      if lastService == None:
-        key = availableServices[0]['id']
-        svc = self._SERVICES[key]['service']
-        svc.memory.resetIndices()
-      else:
-        if self.nextService:
-          svc = self._getOffsetService(availableServices, lastService, 1)
-          svc.memory.resetIndices()
-        elif self.prevService:
-          svc = self._getOffsetService(availableServices, lastService, -1)
-          svc.memory.resetToLastAlbum()
-        else:
-          svc = lastService
+        offset = 0
+        # Find where to start
+        for s in range(0, len(availableServices)):
+          if availableServices[s]['id'] == self.currentService:
+            offset = s
+            break
+        # Next, pick the service which has photos
+        for s in range(0, len(availableServices)):
+          index = (offset + s) % len(availableServices)
+          svc = self._SERVICES[availableServices[index]['id']]['service']
+          if svc.getImagesRemaining() > 0:
+            result = svc
+            break
 
-    self.forceService = None
-    self.nextService = False
-    self.prevService = False
-    return svc
+    # Oh snap, out of images, reset memory and try again
+    if result is None and not retry:
+      logging.info('All images have been shown, resetting counters')
+      self.memoryForgetAll()
+      return self.chooseService(randomize, retry=True) # Avoid calling us forever
+    else:
+      logging.debug('Picked %s which has %d images left to show', result.getName(), result.getImagesRemaining())
+    return result
 
   def expireStaleKeywords(self):
     maxage = self._SETTINGS.getUser('refresh')
@@ -425,7 +416,7 @@ class ServiceManager:
 
   def getTotalImageCount(self):
     services = self.getServices(readyOnly=True)
-    return sum([self._SERVICES[s['id']]['service'].getNumImages() for s in services])
+    return sum([self._SERVICES[s['id']]['service'].getImagesTotal() for s in services])
 
   def servicePrepareNextItem(self, destinationDir, supportedMimeTypes, displaySize, randomize):
     # We should expire any old index if setting is active
@@ -436,38 +427,16 @@ class ServiceManager:
     if svc is None:
       return None
     result = svc.prepareNextItem(destinationDir, supportedMimeTypes, displaySize, randomize)
-    if result.error is not None:
-      # If we end up here, two things can have happened
-      # 1. All images have been shown for this service
-      # 2. No image or data was able to download from this service
-      # Retry, but use next service instead
-      # If all services are out of images
-      # Try forgetting all data and do another run (see 'chooseService')
-      state = svc.updateState()
-      if state == svc.STATE_READY and randomize and svc not in self._OUT_OF_IMAGES:
-        self._OUT_OF_IMAGES.append(svc)
-        logging.info("%s has probably shown all available images" % svc.getName())
-
-      self.nextService = True
-      svc = self.chooseService(randomize, lastService=svc)
-      if svc is None:
-        return None
-      result = svc.prepareNextItem(destinationDir, supportedMimeTypes, displaySize, randomize)
-
-      if result.error is not None:
-        logging.error('Service returned: ' + result.error)
-        state = svc.updateState()
-        if state == svc.STATE_READY and randomize and svc not in self._OUT_OF_IMAGES:
-          self._OUT_OF_IMAGES.append(svc)
-          logging.info("%s has probably shown all available images" % svc.getName())
-
-    self.lastUsedService = svc
+    if result is None:
+      logging.warning('prepareNextItem for %s came back with None', svc.getName())
+    elif result.error is not None:
+      logging.warning('prepareNextItem for %s came back with an error: %s', svc.getName(), result.error)
     return result
 
   def hasKeywords(self):
     # Check any and all services to see if any is ready and if they have keywords
     for k in self._SERVICES:
-      if self.getServiceState(k) != 'READY':
+      if self.getServiceStateText(k) != 'READY':
         continue
       words = self.getServiceKeywords(k)
       if words is not None and len(words) > 0:
@@ -476,76 +445,29 @@ class ServiceManager:
 
   def hasReadyServices(self):
     for k in self._SERVICES:
-      if self.getServiceState(k) != 'READY':
+      if self.getServiceStateText(k) != 'READY':
         continue
       return True
     return False
 
-#  def dead_memoryRemember(self, imageId):
-#    svc = self.lastUsedService
-#    # only remember service in _HISTORY if image has changed.
-#    # alwaysRemember is True if the current service is different to the service of the previous image
-#    alwaysRemember = (len(self._HISTORY) == 0) or (svc != self._HISTORY[-1])
-#    if svc.memoryRemember(imageId, alwaysRemember=alwaysRemember):
-#      self._HISTORY.append(svc)
-
-  def memoryForget(self, forgetHistory=False):
+  def memoryForgetAll(self):
     logging.info("Photoframe's memory was reset. Already displayed images will be shown again!")
     for key in self._SERVICES:
       svc = self._SERVICES[key]["service"]
       for k in svc.getKeywords():
         logging.info('%s was %d hours old when we refreshed' % (k, svc.freshnessImagesFor(k)))
-        svc.memory.forget(k, forgetHistory=forgetHistory)
-        svc.clearImagesFor(k)
-    self._OUT_OF_IMAGES = []
-    if forgetHistory:
-      self._HISTORY = []
+        svc._clearImagesFor(k)
 
   def nextImage(self):
     #No need to change anything; all done in slideshow.py
     pass
 
   def prevImage(self):
-    if len(self._HISTORY) <= 1:
-      return False
-
-    # delete last two memories, because the currentImage and the previous need to be forgotten
-    currentService = self._HISTORY.pop()
-    currentService.memory.forgetLast()
-    if currentService in self._OUT_OF_IMAGES:
-      self._OUT_OF_IMAGES.remove(currentService)
-
-    previousService = self._HISTORY.pop()
-    previousService.memory.forgetLast()
-    if previousService in self._OUT_OF_IMAGES:
-      self._OUT_OF_IMAGES.remove(previousService)
-
-    # skip all previous images of services that are not ready
-    while previousService.updateState() != previousService.STATE_READY:
-      if len(self._HISTORY) == 0:
-        previousService = None
-        break
-      previousService = self._HISTORY.pop()
-      previousService.memory.forgetLast()
-      if previousService in self._OUT_OF_IMAGES:
-        self._OUT_OF_IMAGES.remove(previousService)
-
-    self.forceService = previousService
-    return True
+    return False
 
   def nextAlbum(self):
-    if len(self._HISTORY) == 0:
-      return False
-    lastService = self._HISTORY[-1]
-    if not lastService.nextAlbum():
-      self.nextService = True
-    return True
+    return False
 
   def prevAlbum(self):
-    if len(self._HISTORY) == 0:
-      return False
-    lastService = self._HISTORY[-1]
-    if not lastService.prevAlbum():
-      self.prevService = True
-    return True
+    return False
 

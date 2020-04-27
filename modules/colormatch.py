@@ -82,6 +82,9 @@ class colormatch(Thread):
 
 		try:
 			result = subprocess.call([self.script, '-t', "%d" % temperature, filename + '[0]', filenameTemp], stderr=self.void) == 0
+			if os.path.exists(filename + '.cache'):
+				os.unlink(filename + '.cache') #Leftovers
+
 			return result
 		except:
 			logging.exception('Unable to run %s:', self.script)
