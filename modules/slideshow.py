@@ -25,27 +25,25 @@ class slideshow:
   SHOWN_IP = False
   EVENTS = ["nextImage", "prevImage", "nextAlbum", "prevAlbum", "settingsChange", "memoryForget", "clearCache"]
 
-  def __init__(self, display, settings, colormatch):
+  def __init__(self, display, settings, colormatch, history):
     self.countdown = 0
     self.thread = None
     self.services = None
     self.display = display
     self.settings = settings
     self.colormatch = colormatch
+    self.history = history
     self.cacheMgr = None
     self.void = open(os.devnull, 'wb')
     self.delayer = threading.Event()
     self.cbStopped = None
 
+    self.eventList = []
+
     self.imageCurrent = None
     self.imageMime = None
     self.imageOnScreen = False
-    self.cleanConfig = False
-    self.doControl = None
-    self.doClearCache = False
-    self.doMemoryForget = False
-    self.ignoreRandomize = False
-    self.skipPreloadedImage = False
+    self.historyIndex = -1
 
     self.supportedFormats = helper.getSupportedTypes()
 
@@ -105,62 +103,51 @@ class slideshow:
 
   def createEvent(self, cmd):
     if cmd not in slideshow.EVENTS:
-      logging.warning("Unknown event '%s' detected!"%cmd)
+      logging.warning("Unknown event '%s' received, will not act upon it" % cmd)
       return
-
-    if cmd == "settingsChange":
-      self.skipPreloadedImage = True
-    elif cmd == "memoryForget":
-      self.cleanConfig = True
-      self.doMemoryForget = True
-    elif cmd == "clearCache":
-      self.cleanConfig = True
-      self.doClearCache = True
     else:
-      self.doControl = cmd
-      if self.settings.getUser("randomize_images"):
-        if cmd == "nextAlbum":
-          self.doControl = "nextImage"
-        elif cmd == "prevAlbum":
-          self.doControl = "prevImage"
+      logging.debug('Event %s added to the queue', cmd)
 
+    self.eventList.append(cmd)
     self.delayer.set()
 
   def handleEvents(self):
-    if self.cleanConfig:
-      logging.info('Change of configuration, flush data and restart')
-      # We need to expunge any pending image now
-      # so we get fresh data to show the user
-      if self.doMemoryForget:
-        self.services.memoryForget(forgetHistory=True)
-        self.doMemoryForget = False
-      if self.doClearCache:
-        self.cacheMgr.empty()
-        self.doClearCache = False
-      if self.imageCurrent:
-        self.imageCurrent = None
-        self.skipPreloadedImage = True
-        self.imageOnScreen = False
-        self.display.clear()
-      self.cleanConfig = False
+    showNext = True
+    isRandom = self.settings.getUser("randomize_images")
+    while len(self.eventList) > 0:
+      event = self.eventList.pop(0)
 
-    if self.doControl == "nextImage":
-      #just skip delay and show the next (preloaded) image
-      pass
-    elif self.doControl == "prevImage":
-      self.skipPreloadedImage = True
-      self.ignoreRandomize = True
-      if self.services.prevImage():
+      if event == 'memoryForget' or event == 'clearCache':
+        if event == 'memoryForget':
+          self.services.memoryForget()
+        if event == 'clearCache':
+          self.cacheMgr.empty()
+        if self.imageCurrent:
+          self.imageCurrent = None
+          self.imageOnScreen = False
+          self.display.clear()
+          showNext = False
+      elif event == "nextImage":
+        logging.info('nextImage called, historyIndex is %d', self.historyIndex)
+      elif event == "prevImage":
+        if self.historyIndex == -1:
+          # special case, first time, history holds what we're showing, so step twice
+          self.historyIndex = min(self.history.getAvailable()-1, self.historyIndex+2)
+        else:
+          self.historyIndex = min(self.history.getAvailable()-1, self.historyIndex+1)
+        logging.info('prevImage called, historyIndex is %d', self.historyIndex)
+        showNext = False
+      elif event == "nextAlbum":
+        # FIX
+        self.skipPreloadedImage = True
+        self.services.nextAlbum()
         self.delayer.set()
-    elif self.doControl == "nextAlbum":
-      self.skipPreloadedImage = True
-      self.services.nextAlbum()
-      self.delayer.set()
-    elif self.doControl == "prevAlbum":
-      self.skipPreloadedImage = True
-      self.services.prevAlbum()
-      self.delayer.set()
-    self.doControl = None
+      elif event == "prevAlbum":
+        # FIX
+        self.skipPreloadedImage = True
+        self.services.prevAlbum()
+        self.delayer.set()
+    return showNext
 
   def startupScreen(self):
     slideshow.SHOWN_IP = True
@@ -227,17 +214,16 @@ class slideshow:
       logging.warning('Unable to adjust image to colormatch, using original')
     return filenameProcessed
 
+  def remember(self, image):
+    logging.debug('Commit this to history')
+    self.history.add(image)
+
   def process(self, image):
-
     logging.debug('Processing %s', image.id)
-
     imageSizing = self.settings.getUser('imagesizing')
 
-    # Get the starting point
-    filename = os.path.join(self.settings.get('tempfolder'), image.id)
-
     # Make sure it's oriented correctly
-    filename = helper.autoRotate(filename)
+    filename = helper.autoRotate(image.filename)
 
     # At this point, we have a good image, store it if allowed
     if image.cacheAllow and not image.cacheUsed:
@@ -265,18 +251,14 @@ class slideshow:
     self.delayer.clear()
 
   def showPreloadedImage(self, filename, mimetype, imageId):
-    if not self.skipPreloadedImage:
-      if not os.path.isfile(filename):
-        logging.warning("Trying to show image '%s', but file does not exist!"%filename)
-        self.delayer.set()
-        return
-      self.display.image(filename)
-      self.imageCurrent = filename
-      self.imageMime = mimetype
-      self.imageOnScreen = True
-      os.unlink(filename)
-
-    self.skipPreloadedImage = False
+    if not os.path.isfile(filename):
+      logging.warning("Trying to show image '%s', but file does not exist!"%filename)
+      self.delayer.set()
+      return
+    self.display.image(filename)
+    self.imageCurrent = filename
+    self.imageMime = mimetype
+    self.imageOnScreen = True
 
   def presentation(self):
     self.services.getServices(readyOnly=True)
@@ -298,11 +280,16 @@ class slideshow:
         self.cacheMgr.garbageCollect()
 
       displaySize = {'width': self.settings.getUser('width'), 'height': self.settings.getUser('height'), 'force_orientation': self.settings.getUser('force_orientation')}
-      randomize = (not self.ignoreRandomize) and bool(self.settings.getUser('randomize_images'))
-      self.ignoreRandomize = False
+      randomize = self.settings.getUser('randomize_images')
 
       try:
-        result = self.services.servicePrepareNextItem(self.settings.get('tempfolder'), self.supportedFormats, displaySize, randomize)
+        if self.historyIndex == -1:
+          result = self.services.servicePrepareNextItem(self.settings.get('tempfolder'), self.supportedFormats, displaySize, randomize)
+          self.remember(result)
+        else:
+          logging.info('Fetching history image %d of %d', self.historyIndex, self.history.getAvailable())
+          result = self.history.getByIndex(self.historyIndex)
+          self.historyIndex = max(-1, self.historyIndex-1)
         if self.handleErrors(result):
           continue
       except RequestNoNetwork:
@@ -318,11 +305,17 @@ class slideshow:
         continue
 
       time_process = time.time() - time_process
+      logging.debug('Waiting %f seconds before showing', time_process)
       self.delayNextImage(time_process)
       if self.running:
         # Skip this section if we were killed while waiting around
-        self.handleEvents()
-        self.showPreloadedImage(filenameProcessed, result.mimetype, result.id)
+        if self.handleEvents():
+          self.showPreloadedImage(filenameProcessed, result.mimetype, result.id)
+        else:
+          self.imageOnScreen = False # Forces showing immediately
+          self.imageCurrent = None
+        logging.debug('Deleting temp file "%s"' % filenameProcessed)
+        os.unlink(filenameProcessed)
 
     self.thread = None
     logging.info('slideshow has ended')
@@ -333,3 +326,7 @@ class slideshow:
       tmp = self.cbStopped
       self.cbStopped = None
       tmp()
+
+#TODO:
+#- Remove imageOnScreen and imageCurrent, replace with ONE which uses ImageHolder
+#- Once in history, STOP PRELOADING THE IMAGE, IT BREAKS THINGS BADLY

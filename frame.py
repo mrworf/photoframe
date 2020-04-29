@@ -37,6 +37,7 @@ from modules.cachemanager import CacheManager
 from modules.path import path
 from modules.server import WebServer
 from modules.events import Events
+from modules.history import ImageHistory
 
 # Make sure we run from our own directory
 os.chdir(os.path.dirname(sys.argv[0]))
@@ -79,11 +80,12 @@ class Photoframe:
     # Validate all settings, prepopulate with defaults if needed
     self.validateSettings()
 
+    self.imageHistory = ImageHistory(self.settingsMgr)
     self.driverMgr = drivers()
     self.serviceMgr = ServiceManager(self.settingsMgr, self.cacheMgr)
 
     self.colormatch = colormatch(self.settingsMgr.get('colortemp-script'), 2700) # 2700K = Soft white, lowest we'll go
-    self.slideshow = slideshow(self.displayMgr, self.settingsMgr, self.colormatch)
+    self.slideshow = slideshow(self.displayMgr, self.settingsMgr, self.colormatch, self.imageHistory)
     self.timekeeperMgr = timekeeper()
     self.timekeeperMgr.registerListener(self.displayMgr.enable)
     self.powerMgr = shutdown(self.settingsMgr.getUser('shutdown-pin'))

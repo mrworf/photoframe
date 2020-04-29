@@ -22,6 +22,7 @@ class path:
   COLORMATCH    = '/root/photoframe_config/colortemp.sh'
   OPTIONSFILE   = '/root/photoframe_config/options'
   CACHEFOLDER   = '/root/cache/'
+  HISTORYFOLDER = '/root/history/'
 
   DRV_BUILTIN   = '/root/photoframe/display-drivers'
   DRV_EXTERNAL  = '/root/photoframe_config/display-drivers/'
@@ -30,7 +31,7 @@ class path:
 
   def reassignConfigTxt(self, newconfig):
     path.CONFIG_TXT = newconfig
-    
+
   def reassignBase(self, newbase):
     path.CONFIGFOLDER   = path.CONFIGFOLDER.replace('/root/', newbase)
     path.CONFIGFILE     = path.CONFIGFILE.replace('/root/', newbase)
@@ -39,6 +40,7 @@ class path:
     path.DRV_BUILTIN    = path.DRV_BUILTIN.replace('/root/', newbase)
     path.DRV_EXTERNAL   = path.DRV_EXTERNAL.replace('/root/', newbase)
     path.CACHEFOLDER    = path.CACHEFOLDER.replace('/root/', newbase)
+    path.HISTORYFOLDER  = path.HISTORYFOLDER.replace('/root/', newbase)
 
   def validate(self):
     # Supercritical, since we store all photoframe files in a subdirectory, make sure to create it
