@@ -42,8 +42,7 @@ class ImageHistory:
     return next((entry for entry in self._HISTORY if entry.filename == file), None)
 
   def add(self, image):
-    if image.error is not None:
-      logging.warning('Will not store image errors, skipping')
+    if image is None or image.error is not None:
       return
     historyFile = os.path.join(syspath.HISTORYFOLDER, image.getCacheId())
     if not self._find(historyFile):

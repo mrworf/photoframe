@@ -42,8 +42,11 @@ class slideshow:
 
     self.imageCurrent = None
     self.imageMime = None
+
     self.imageOnScreen = False
     self.historyIndex = -1
+
+    self.minimumWait = 1
 
     self.supportedFormats = helper.getSupportedTypes()
 
@@ -247,8 +250,12 @@ class slideshow:
     if time_process < delay and self.imageOnScreen:
       self.delayer.wait(delay - time_process)
     elif not self.imageOnScreen:
-      self.delayer.wait(1) # Always wait ONE second to avoid busy waiting)
+      self.delayer.wait(self.minimumWait) # Always wait ONE second to avoid busy waiting)
     self.delayer.clear()
+    if self.imageOnScreen:
+      self.minimumWait = 1
+    else:
+      self.minimumWait = min(self.minimumWait * 2, 16)
 
   def showPreloadedImage(self, filename, mimetype, imageId):
     if not os.path.isfile(filename):
@@ -272,6 +279,7 @@ class slideshow:
 
     logging.info('Starting presentation')
     i = 0
+    result = None
     while self.running:
       i += 1
       time_process = time.time()
@@ -290,8 +298,6 @@ class slideshow:
           logging.info('Fetching history image %d of %d', self.historyIndex, self.history.getAvailable())
           result = self.history.getByIndex(self.historyIndex)
           self.historyIndex = max(-1, self.historyIndex-1)
-        if self.handleErrors(result):
-          continue
       except RequestNoNetwork:
         offline = self.settings.getUser('offline-behavior')
         if offline == 'wait':
@@ -300,16 +306,20 @@ class slideshow:
         elif offline == 'ignore':
           pass
 
-      filenameProcessed = self.process(result)
-      if filenameProcessed is None:
-        continue
+      if not self.handleErrors(result):
+        filenameProcessed = self.process(result)
+      else:
+        filenameProcessed = None
 
       time_process = time.time() - time_process
       logging.debug('Waiting %f seconds before showing', time_process)
       self.delayNextImage(time_process)
-      if self.running:
+
+      showNextImage = self.handleEvents()
+
+      if self.running and filenameProcessed is not None:
         # Skip this section if we were killed while waiting around
-        if self.handleEvents():
+        if showNextImage:
           self.showPreloadedImage(filenameProcessed, result.mimetype, result.id)
         else:
           self.imageOnScreen = False # Forces showing immediately
