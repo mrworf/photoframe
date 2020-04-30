@@ -17,7 +17,10 @@ from base import BaseService
 import os
 import json
 import logging
+import time
+
 from modules.network import RequestResult
+from modules.helper import helper
 
 class GooglePhotos(BaseService):
   SERVICE_NAME = 'GooglePhotos'
@@ -90,6 +93,60 @@ class GooglePhotos(BaseService):
     if keywords not in extras:
       return 'https://photos.google.com/'
     return extras[keywords]['sourceUrl']
+
+  def getKeywordDetails(self, index):
+    # Override so we can tell more, for google it means we simply review what we would show
+    keys = self.getKeywords()
+    if index < 0 or index >= len(keys):
+      return 'Out of range, index = %d' % index
+    keyword = keys[index]
+
+    # This is not going to be fast...
+    data = self.getImagesFor(keyword, rawReturn=True)
+    mimes = helper.getSupportedTypes()
+    memory = self.memory.getList(keyword)
+
+    countv = 0
+    counti = 0
+    countu = 0
+    types = {}
+    for entry in data:
+      if entry['mimeType'].startswith('video/'):
+        countv += 1
+      elif entry['mimeType'].startswith('image/'):
+        if entry['mimeType'].lower() in mimes:
+          counti += 1
+        else:
+          countu += 1
+
+      if entry['mimeType'] in types:
+        types[entry['mimeType']] += 1
+      else:
+        types[entry['mimeType']] = 1
+
+    longer = ['Below is a breakdown of the content found in this album']
+    unsupported = []
+    for i in types:
+      if i in mimes:
+        longer.append('%s has %d items' % (i, types[i]))
+      else:
+        unsupported.append('%s has %d items' % (i, types[i]))
+
+    extra = ''
+    if len(unsupported) > 0:
+      longer.append('')
+      longer.append('Mime types listed below were also found but are as of yet not supported:')
+      longer.extend(unsupported)
+    if countu > 0:
+      extra = ' where %d is not yet unsupported' % countu
+    return {
+      'short': '%d items fetched from album, %d images%s, %d videos, %d is unknown. %d has been shown' % (len(data), counti + countu, extra, countv, len(data) - counti - countv, len(memory)),
+      'long' : longer
+    }
+
+  def hasKeywordDetails(self):
+    # Override so we can tell more, for google it means we simply review what we would show
+    return True
 
   def removeKeywords(self, index):
     # Override since we need to delete our private data
@@ -202,7 +259,7 @@ class GooglePhotos(BaseService):
           source = data['albums'][i]['productUrl']
           break
       if albumid is None and 'nextPageToken' in data:
-        logging.info('Another page of albums available')
+        logging.debug('Another page of albums available')
         params['pageToken'] = data['nextPageToken']
         continue
       break
@@ -227,7 +284,7 @@ class GooglePhotos(BaseService):
             source = data['sharedAlbums'][i]['productUrl']
             break
         if albumid is None and 'nextPageToken' in data:
-          logging.info('Another page of shared albums available')
+          logging.debug('Another page of shared albums available')
           params['pageToken'] = data['nextPageToken']
           continue
         break
@@ -246,7 +303,20 @@ class GooglePhotos(BaseService):
     else:
       return BaseService.createImageHolder(self).setError('No (new) images could be found.\nCheck spelling or make sure you have added albums')
 
-  def getImagesFor(self, keyword):
+  def freshnessImagesFor(self, keyword):
+    filename = os.path.join(self.getStoragePath(), self.hashString(keyword) + '.json')
+    if not os.path.exists(filename):
+      return 0 # Superfresh
+    # Hours should be returned
+    return (time.time() - os.stat(filename).st_mtime) / 3600
+
+  def clearImagesFor(self, keyword):
+    filename = os.path.join(self.getStoragePath(), self.hashString(keyword) + '.json')
+    if os.path.exists(filename):
+      logging.info('Cleared image information for %s' % keyword)
+      os.unlink(filename)
+
+  def getImagesFor(self, keyword, rawReturn=False):
     filename = os.path.join(self.getStoragePath(), self.hashString(keyword) + '.json')
     result = []
     if not os.path.exists(filename):
@@ -299,9 +369,11 @@ class GooglePhotos(BaseService):
           logging.exception('Failed to save copy of corrupt file, deleting instead')
           os.unlink(filename)
         albumdata = None
-    return self.parseAlbumInfo(albumdata)
+    if rawReturn:
+      return albumdata
+    return self.parseAlbumInfo(albumdata, keyword)
 
-  def parseAlbumInfo(self, data):
+  def parseAlbumInfo(self, data, keyword):
     # parse GooglePhoto specific keys into a format that the base service can understand
     if data is None:
       return None
@@ -312,6 +384,8 @@ class GooglePhotos(BaseService):
       item.setSource(entry['productUrl']).setMimetype(entry['mimeType'])
       item.setDimensions(entry['mediaMetadata']['width'], entry['mediaMetadata']['height'])
       item.allowCache(True)
+      item.setContentProvider(self)
+      item.setContentSource(keyword)
       parsedImages.append(item)
     return parsedImages
 

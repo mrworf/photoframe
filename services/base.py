@@ -20,12 +20,17 @@ import random
 import logging
 import requests
 import time
+import uuid
 
 from modules.oauth import OAuth
 from modules.helper import helper
 from modules.network import RequestResult
 from modules.network import RequestNoNetwork
+from modules.network import RequestInvalidToken
+from modules.network import RequestExpiredToken
 from modules.images import ImageHolder
+
+from modules.memory import MemoryManager
 
 # This is the base implementation of a service. It provides all the
 # basic features like OAuth and Authentication as well as state and
@@ -74,28 +79,18 @@ class BaseService:
         '_KEYWORDS' : [],
         '_NUM_IMAGES' : {},
         '_NEXT_SCAN' : {},
-        '_EXTRAS' : None
+        '_EXTRAS' : None,
+        '_INDEX_IMAGE' : 0,
+        '_INDEX_KEYWORD' : 0
     }
     self._NEED_CONFIG = needConfig
     self._NEED_OAUTH = needOAuth
 
     self._DIR_BASE = self._prepareFolders(configDir)
-    self._DIR_MEMORY = os.path.join(self._DIR_BASE, 'memory')
     self._DIR_PRIVATE = os.path.join(self._DIR_BASE, 'private')
     self._FILE_STATE = os.path.join(self._DIR_BASE, 'state.json')
 
-    # MEMORY stores unique image ids of already displayed images
-    # it prevents an image from being shown multiple times, before ALL images have been displayed
-    # From time to time, memory is saved to disk as a backup.
-    self._MEMORY = None
-    self._MEMORY_KEY = None
-
-    # HISTORY stores (keywordId, imageId)-pairs
-    # That way it can be useful to determine any previously displayed image
-    # Unlike memory, the history is only stored in RAM
-    self._HISTORY = []
-
-    self.resetIndices()
+    self.memory = MemoryManager(os.path.join(self._DIR_BASE, 'memory'))
 
     self.loadState()
     self.preSetup()
@@ -142,7 +137,7 @@ class BaseService:
       self._CURRENT_STATE = BaseService.STATE_DO_OAUTH
     elif self.needKeywords() and len(self.getKeywords()) == 0:
       self._CURRENT_STATE = BaseService.STATE_NEED_KEYWORDS
-    elif self.getNumImages() == 0:
+    elif self.getImagesTotal() == 0:
       self._CURRENT_STATE = BaseService.STATE_NO_IMAGES
     else:
       self._CURRENT_STATE = BaseService.STATE_READY
@@ -181,16 +176,25 @@ class BaseService:
   def getId(self):
     return self._ID
 
-  def getNumImages(self, excludeUnsuported=True):
+  def getImagesTotal(self):
     # return the total number of images provided by this service
     if self.needKeywords():
       for keyword in self.getKeywords():
         if keyword not in self._STATE["_NUM_IMAGES"] or keyword not in self._STATE['_NEXT_SCAN'] or self._STATE['_NEXT_SCAN'][keyword] < time.time():
-          images = self.getImagesFor(keyword)
+          logging.debug('Keywords either not scanned or we need to scan now')
+          self._getImagesFor(keyword) # Will make sure to get images
           self._STATE['_NEXT_SCAN'][keyword] = time.time() + self.REFRESH_DELAY
-          if images is not None:
-            self._STATE["_NUM_IMAGES"][keyword] = len(images)
     return sum([self._STATE["_NUM_IMAGES"][k] for k in self._STATE["_NUM_IMAGES"]])
+
+  def getImagesSeen(self):
+    count = 0
+    if self.needKeywords():
+      for keyword in self.getKeywords():
+        count += self.memory.count(keyword)
+    return count
+
+  def getImagesRemaining(self):
+    return self.getImagesTotal() - self.getImagesSeen()
 
   def getMessages(self):
     # override this if you wish to show a message associated with
@@ -256,6 +260,12 @@ class BaseService:
     # returns False if we need to set it up
     return self._STATE['_OAUTH_CONTEXT'] is not None
 
+  def invalidateOAuth(self):
+    # Removes previously negotiated OAuth
+    self._STATE['_OAUTH_CONFIG'] = None
+    self._STATE['_OAUTH_CONTEXT'] = None
+    self.saveState()
+
   def startOAuth(self):
     # Returns a HTTP redirect to begin OAuth or None if
     # oauth isn't configured. Normally not overriden
@@ -311,14 +321,6 @@ class BaseService:
 
   ###[ Keyword management ]###########################
 
-  def resetIndices(self):
-    self.keywordIndex = 0
-    self.imageIndex = 0
-
-  def resetToLastAlbum(self):
-    self.keywordIndex = max(0, len(self.getKeywords())-1)
-    self.imageIndex = 0
-
   def validateKeywords(self, keywords):
     # Quick check, don't allow duplicates!
     if keywords in self.getKeywords():
@@ -352,6 +354,16 @@ class BaseService:
     # Override to provide a source link
     return None
 
+  def getKeywordDetails(self, index):
+    # Override so we can tell more
+    # Format of data is:
+    # ('short': short, 'long' : ["line1", "line2", ...]) where short is a string and long is a string array
+    return None
+
+  def hasKeywordDetails(self):
+    # Override so we can tell more
+    return False
+
   def hasKeywordSourceUrl(self):
     # Override to provide source url support
     return False
@@ -364,6 +376,8 @@ class BaseService:
     if kw in self._STATE['_NUM_IMAGES']:
       del self._STATE['_NUM_IMAGES'][kw]
     self.saveState()
+    # Also kill the memory of this keyword
+    self.memory.forget(kw)
     return True
 
   def needKeywords(self):
@@ -376,7 +390,7 @@ class BaseService:
 
   def getRandomKeywordIndex(self):
     # select keyword index at random but weighted by the number of images of each album
-    totalImages = self.getNumImages()
+    totalImages = self.getImagesTotal()
     if totalImages == 0:
       return 0
     numImages = [self._STATE['_NUM_IMAGES'][kw] for kw in self._STATE['_NUM_IMAGES']]
@@ -417,13 +431,32 @@ class BaseService:
     # You will probably only need to implement 'getImagesFor' and 'addUrlParams'
 
     if self.needKeywords():
-      result = self.selectImageFromAlbum(destinationFile, supportedMimeTypes, displaySize, randomize)
+      if len(self.getKeywords()) == 0:
+        return ImageHolder().setError('No albums have been specified')
+
+      if randomize:
+        result = self.selectRandomImageFromAlbum(destinationFile, supportedMimeTypes, displaySize)
+      else:
+        result = self.selectNextImageFromAlbum(destinationFile, supportedMimeTypes, displaySize)
       if result is None:
         result = ImageHolder().setError('No (new) images could be found')
     else:
       result = ImageHolder().setError('prepareNextItem() not implemented')
 
     return result
+
+  def _getImagesFor(self, keyword):
+    images = self.getImagesFor(keyword)
+    if images is None:
+      logging.warning('Function returned None, this is used sometimes when a temporary error happens. Still logged')
+
+    if images is not None and len(images) > 0:
+      self._STATE["_NUM_IMAGES"][keyword] = len(images)
+      # Change next time for refresh (postpone if you will)
+      self._STATE['_NEXT_SCAN'][keyword] = time.time() + self.REFRESH_DELAY
+    else:
+      self._STATE["_NUM_IMAGES"][keyword] = 0
+    return images
 
   def getImagesFor(self, keyword):
     # You need to override this function if your service needs keywords and
@@ -440,7 +473,23 @@ class BaseService:
     # "filename": the original filename of the image or None if unknown (only used for debugging purposes)
     # "error":    If present, will generate an error shown to the user with the text within this key as the message
 
-    return ImageHolder().setError('getImagesFor() not implemented')
+    return [ ImageHolder().setError('getImagesFor() not implemented') ]
+
+  def _clearImagesFor(self, keyword):
+    self._STATE["_NUM_IMAGES"].pop(keyword, None)
+    self._STATE['_NEXT_SCAN'].pop(keyword, None)
+    self.memory.forget(keyword)
+    self.clearImagesFor(keyword)
+
+  def clearImagesFor(self, keyword):
+    # You can hook this function to do any additional needed cleanup
+    # keyword is the item for which you need to clear the images for
+    pass
+
+  def freshnessImagesFor(self, keyword):
+    # You need to implement this function if you intend to support refresh of content
+    # keyword is the item for which you need to clear the images for. Should return age of content in hours
+    return 0
 
   def getContentUrl(self, image, hints):
     # Allows a content provider to do extra operations as needed to
@@ -457,110 +506,166 @@ class BaseService:
 
   ###[ Helpers ]######################################
 
-  def selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize):
+  def selectRandomImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize):
     # chooses an album and selects an image from that album. Returns an image object or None
     # if no images are available.
 
-    keywordList = list(self.getKeywords())
-    keywordCount = len(keywordList)
-    if keywordCount == 0:
-      return ImageHolder().setError('No albums have been specified')
+    keywords = self.getKeywords()
+    index = self.getRandomKeywordIndex()
 
-    if randomize:
-      index = self.getRandomKeywordIndex()
-    else:
-      index = self.keywordIndex
+    # if current keywordList[index] does not contain any new images --> just run through all albums
+    for i in range(0, len(keywords)):
+      self.setIndex(keyword = (index + i) % len(keywords))
+      keyword = keywords[self.getIndexKeyword()]
+
+      # a provider-specific implementation for 'getImagesFor' is obligatory!
+      # We use a wrapper to clear things up
+      images = self._getImagesFor(keyword)
+      if images is None or len(images) == 0:
+        self.setIndex(0)
+        continue
+      elif images[0].error is not None:
+        # Something went wrong, only return first image since it holds the error
+        return images[0]
+      self.saveState()
+
+      image = self.selectRandomImage(keyword, images, supportedMimeTypes, displaySize)
+      if image is None:
+        self.setIndex(0)
+        continue
+
+      return self.fetchImage(image, destinationDir, supportedMimeTypes, displaySize)
+    return None
+
+  def generateFilename(self):
+    return str(uuid.uuid4())
+
+  def fetchImage(self, image, destinationDir, supportedMimeTypes, displaySize):
+    filename = os.path.join(destinationDir, self.generateFilename())
+
+    if image.cacheAllow:
+      # Look it up in the cache mgr
+      if self._CACHEMGR is None:
+        logging.error('CacheManager is not available')
+      else:
+        cacheFile = self._CACHEMGR.getCachedImage(image.getCacheId(), filename)
+        if cacheFile:
+          image.setFilename(cacheFile)
+          image.cacheUsed = True
+
+    if not image.cacheUsed:
+      recommendedSize = self.calcRecommendedSize(image.dimensions, displaySize)
+      if recommendedSize is None:
+        recommendedSize = displaySize
+      url = self.getContentUrl(image, {'size' : recommendedSize, 'display' : displaySize})
+      if url is None:
+        return ImageHolder().setError('Unable to download image, no URL')
+
+      try:
+        result = self.requestUrl(url, destination=filename)
+      except (RequestResult.RequestExpiredToken, RequestInvalidToken):
+        logging.exception('Cannot fetch due to token issues')
+        result = RequestResult().setResult(RequestResult.OAUTH_INVALID)
+        self._OAUTH = None
+      except requests.exceptions.RequestException:
+        logging.exception('request to download image failed')
+        result = RequestResult().setResult(RequestResult.NO_NETWORK)
+
+      if not result.isSuccess():
+        return ImageHolder().setError('%d: Unable to download image!' % result.httpcode)
+      else:
+        image.setFilename(filename)
+    if image.filename is not None:
+      image.setMimetype(helper.getMimetype(image.filename))
+    return image
+
+  def selectNextImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize):
+    # chooses an album and selects an image from that album. Returns an image object or None
+    # if no images are available.
+
+    keywordList = self.getKeywords()
+    keywordCount = len(keywordList)
+    index = self.getIndexKeyword()
 
     # if current keywordList[index] does not contain any new images --> just run through all albums
     for i in range(0, keywordCount):
-      if not randomize and (index + i) >= keywordCount:
+      if (index + i) >= keywordCount:
         # (non-random image order): return if the last album is exceeded --> serviceManager should use next service
         break
-      self.keywordIndex = (index + i) % keywordCount
-      keyword = keywordList[self.keywordIndex]
+      self.setIndex(keyword = (index + i) % keywordCount)
+      keyword = keywordList[self.getIndexKeyword()]
 
       # a provider-specific implementation for 'getImagesFor' is obligatory!
-      images = self.getImagesFor(keyword)
-      if images is None:
-        logging.warning('Function returned None, this is used sometimes when a temporary error happens. Still logged')
-        self.imageIndex = 0
+      # We use a wrapper to clear things up
+      images = self._getImagesFor(keyword)
+      if images is None or len(images) == 0:
+        self.setIndex(0)
         continue
-      if len(images) > 0 and images[0].error is not None:
+      elif images[0].error is not None:
+        # Something went wrong, only return first image since it holds the error
         return images[0]
-      self._STATE["_NUM_IMAGES"][keyword] = len(images)
-      self._STATE['_NEXT_SCAN'][keyword] = time.time() + self.REFRESH_DELAY
-      if len(images) == 0:
-        self.imageIndex = 0
-        continue
       self.saveState()
 
-      image = self.selectImage(images, supportedMimeTypes, displaySize, randomize)
+      image = self.selectNextImage(keyword, images, supportedMimeTypes, displaySize)
       if image is None:
-        self.imageIndex = 0
+        self.setIndex(0)
         continue
 
-      filename = os.path.join(destinationDir, image.id)
-
-      if image.cacheAllow:
-        # Look it up in the cache mgr
-        if self._CACHEMGR is None:
-          logging.error('CacheManager is not available')
-        else:
-          cacheFile = self._CACHEMGR.getCachedImage(image.getCacheId(), filename)
-          if cacheFile:
-            image.setFilename(cacheFile)
-            image.cacheUsed = True
-
-      if not image.cacheUsed:
-        recommendedSize = self.calcRecommendedSize(image.dimensions, displaySize)
-        if recommendedSize is None:
-          recommendedSize = displaySize
-        url = self.getContentUrl(image, {'size' : recommendedSize, 'display' : displaySize})
-        if url is None:
-          return ImageHolder().setError('Unable to download image, no URL')
-
-        try:
-          result = self.requestUrl(url, destination=filename)
-        except requests.exceptions.RequestException:
-          logging.exception('request to download image failed')
-          result = RequestResult().setResult(RequestResult.NO_NETWORK)
-
-        if not result.isSuccess():
-          return ImageHolder().setError('%d: Unable to download image!' % result.httpcode)
-        else:
-          image.setFilename(filename)
-      image.setMimetype(helper.getMimetype(image.filename))
-      return image
-
-    self.resetIndices()
+      return self.fetchImage(image, destinationDir, supportedMimeTypes, displaySize)
     return None
 
-  def selectImage(self, images, supportedMimeTypes, displaySize, randomize):
+  def selectRandomImage(self, keywords, images, supportedMimeTypes, displaySize):
     imageCount = len(images)
-    if randomize:
-      index = random.SystemRandom().randint(0, imageCount-1)
-    else:
-      index = self.imageIndex
+    index = random.SystemRandom().randint(0, imageCount-1)
 
+    logging.debug('There are %d images total' % imageCount)
     for i in range(0, imageCount):
-      if not randomize and (index + i) >= imageCount:
-        break
-
-      self.imageIndex = (index + i) % imageCount
-      image = images[self.imageIndex]
+      image = images[(index + i) % imageCount]
 
       orgFilename = image.filename if image.filename is not None else image.id
-      if randomize and self.memorySeen(image.id):
+      if self.memory.seen(image.id, keywords):
         logging.debug("Skipping already displayed image '%s'!" % orgFilename)
         continue
+
+      # No matter what, we need to track that we considered this image
+      self.memory.remember(image.id, keywords)
+
       if not self.isCorrectOrientation(image.dimensions, displaySize):
         logging.debug("Skipping image '%s' due to wrong orientation!" % orgFilename)
         continue
       if image.mimetype is not None and image.mimetype not in supportedMimeTypes:
         # Make sure we don't get a video, unsupported for now (gif is usually bad too)
-        logging.debug('Unsupported media: %s' % (image.mimetype))
+        logging.debug('Skipping unsupported media: %s' % (image.mimetype))
         continue
 
+      self.setIndex((index + i) % imageCount)
+      return image
+    return None
+
+  def selectNextImage(self, keywords, images, supportedMimeTypes, displaySize):
+    imageCount = len(images)
+    index = self.getIndexImage()
+
+    for i in range(index, imageCount):
+      image = images[i]
+
+      orgFilename = image.filename if image.filename is not None else image.id
+      if self.memory.seen(image.id, keywords):
+        logging.debug("Skipping already displayed image '%s'!" % orgFilename)
+        continue
+
+      # No matter what, we need to track that we considered this image
+      self.memory.remember(image.id, keywords)
+
+      if not self.isCorrectOrientation(image.dimensions, displaySize):
+        logging.debug("Skipping image '%s' due to wrong orientation!" % orgFilename)
+        continue
+      if image.mimetype is not None and image.mimetype not in supportedMimeTypes:
+        # Make sure we don't get a video, unsupported for now (gif is usually bad too)
+        logging.debug('Skipping unsupported media: %s' % (image.mimetype))
+        continue
+
+      self.setIndex(i)
       return image
     return None
 
@@ -569,7 +674,15 @@ class BaseService:
 
     if self._OAUTH is not None:
       # Use OAuth path
-      result = self._OAUTH.request(url, destination, params, data=data, usePost=usePost)
+      try:
+        result = self._OAUTH.request(url, destination, params, data=data, usePost=usePost)
+      except (RequestExpiredToken, RequestInvalidToken):
+        logging.exception('Cannot fetch due to token issues')
+        result = RequestResult().setResult(RequestResult.OAUTH_INVALID)
+        self.invalidateOAuth()
+      except requests.exceptions.RequestException:
+        logging.exception('request to download image failed')
+        result = RequestResult().setResult(RequestResult.NO_NETWORK)
     else:
       tries = 0
       while tries < 5:
@@ -656,112 +769,46 @@ class BaseService:
   def createImageHolder(self):
     return ImageHolder()
 
-  ###[ Memory management ]=======================================================
+  def setIndex(self, image = None, keyword = None, addImage = 0, addKeyword = 0):
+    wrapped = False
+    if addImage != 0:
+      self._STATE['_INDEX_IMAGE'] += addImage
+    elif image is not None:
+      self._STATE['_INDEX_IMAGE'] = image
+    if addKeyword != 0:
+      self._STATE['_INDEX_KEYWORD'] += addKeyword
+    elif keyword is not None:
+      self._STATE['_INDEX_KEYWORD'] = keyword
 
-  def _fetchMemory(self, key):
-    if key is None:
-      key = ''
-    h = self.hashString(key)
-    if self._MEMORY_KEY == h:
-      return
-    # Save work and swap
-    if self._MEMORY is not None and len(self._MEMORY) > 0:
-      with open(os.path.join(self._DIR_MEMORY, '%s.json' % self._MEMORY_KEY), 'w') as f:
-        json.dump(self._MEMORY, f)
-    if os.path.exists(os.path.join(self._DIR_MEMORY, '%s.json' % h)):
-      try:
-        with open(os.path.join(self._DIR_MEMORY, '%s.json' % h), 'r') as f:
-          self._MEMORY = json.load(f)
-      except:
-        logging.exception('File %s is corrupt' % os.path.join(self._DIR_MEMORY, '%s.json' % h))
-        self._MEMORY = []
-    else:
-      self._MEMORY = []
-    self._MEMORY_KEY = h
+    # Sanity
+    if self._STATE['_INDEX_KEYWORD'] > len(self._STATE['_KEYWORDS']):
+      if addKeyword != 0:
+        self._STATE['_INDEX_KEYWORD'] = 0 # Wraps when adding
+        wrapped = True
+      else:
+        self._STATE['_INDEX_KEYWORD'] = len(self._STATE['_KEYWORDS'])-1
+    elif self._STATE['_INDEX_KEYWORD'] < 0:
+      if addKeyword != 0:
+        self._STATE['_INDEX_KEYWORD'] = len(self._STATE['_KEYWORDS'])-1 # Wraps when adding
+        wrapped = True
+      else:
+        self._STATE['_INDEX_KEYWORD'] = 0
+    return wrapped
 
-  def _differentThanLastHistory(self, keywordindex, imageIndex):
-    # just a little helper function to compare indices with the indices of the previously displayed image
-    if len(self._HISTORY) == 0:
-      return True
-    if keywordindex == self._HISTORY[-1][0] and imageIndex == self._HISTORY[-1][1]:
-      return False
-    return True
+  def getIndexImage(self):
+    return self._STATE['_INDEX_IMAGE']
 
-  def memoryRemember(self, itemId, keywords=None, alwaysRemember=True):
-    # some debug info about the service of the currently displayed image
-    logging.debug("Displaying new image")
-    logging.debug(self._NAME)
-    logging.debug("keyword: %d; index: %d" % (self.keywordIndex, self.imageIndex))
-
-    # The MEMORY makes sure that this image won't be shown again until memoryForget is called
-    self._fetchMemory(keywords)
-    h = self.hashString(itemId)
-    if h not in self._MEMORY:
-      self._MEMORY.append(h)
-    # save memory
-    if (len(self._MEMORY) % 20) == 0:
-      logging.info('Interim saving of memory every 20 entries')
-      with open(os.path.join(self._DIR_MEMORY, '%s.json' % self._MEMORY_KEY), 'w') as f:
-        json.dump(self._MEMORY, f)
-
-    # annoying behaviour fix: only remember current image in history if the image has actually changed
-    rememberInHistory = alwaysRemember or self._differentThanLastHistory(self.keywordIndex, self.imageIndex)
-    if rememberInHistory:
-      # The HISTORY makes it possible to show previously displayed images
-      self._HISTORY.append((self.keywordIndex, self.imageIndex))
-
-    # (non-random image order only): on 'prepareNextItem' --> make sure to preload the following image
-    self.imageIndex += 1
-
-    return rememberInHistory
-
-  def memorySeen(self, itemId, keywords=None):
-    self._fetchMemory(keywords)
-    h = self.hashString(itemId)
-    return h in self._MEMORY
-
-  def memoryForgetLast(self, keywords=None):
-    # remove the currently displayed image from memory as well as history
-    # implications:
-    # - the image will be treated as never seen before (random image order)
-    # - the same image will be preloaded again during 'prepareNextItem' (non-random image order)
-    self._fetchMemory(keywords)
-    if len(self._MEMORY) != 0:
-      self._MEMORY.pop()
-    if len(self._HISTORY) != 0:
-      self.keywordIndex, self.imageIndex = self._HISTORY.pop()
-    else:
-      logging.warning("Trying to forget a single memory, but 'self._HISTORY' is empty. This should have never happened!")
-
-  def memoryForget(self, keywords=None, forgetHistory=False):
-    self._fetchMemory(keywords)
-    n = os.path.join(self._DIR_MEMORY, '%s.json' % self._MEMORY_KEY)
-    if os.path.exists(n):
-      os.unlink(n)
-    self._MEMORY = []
-    if forgetHistory:
-      self._HISTORY = []
-    self._STATE['_NUM_IMAGES'] = {k: v for k, v in self._STATE['_NUM_IMAGES'].items() if v != 0}
-    self.saveState()
+  def getIndexKeyword(self):
+    return self._STATE['_INDEX_KEYWORD']
 
   ###[ Slideshow controls ]=======================================================
 
   def nextAlbum(self):
     # skip to the next album
     # return False if service is out of albums to tell the serviceManager that it should use the next Service instead
-    self.imageIndex = 0
-    self.keywordIndex += 1
-    if self.keywordIndex >= len(self._STATE['_KEYWORDS']):
-      self.keywordIndex = 0
-      return False
-    return True
+    return not self.setIndex(0, addKeyword=1)
 
   def prevAlbum(self):
     # skip to the previous album
     # return False if service is already on its first album to tell the serviceManager that it should use the previous Service instead
-    self.imageIndex = 0
-    self.keywordIndex -= 1
-    if self.keywordIndex < 0:
-      self.keywordIndex = len(self._STATE['_KEYWORDS']) - 1
-      return False
-    return True
+    return not self.setIndex(0, addKeyword=-1)

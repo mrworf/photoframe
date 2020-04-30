@@ -35,6 +35,21 @@ class ImageHolder:
     self.cacheAllow = False
     self.cacheUsed = False
 
+    self.contentProvider = None
+    self.contentSource = None
+
+  def setContentProvider(self, provider):
+    if provider is None:
+      raise Exception('setContentProvider cannot be None')
+    self.contentProvider = repr(provider)
+    return self
+
+  def setContentSource(self, source):
+    if source is None:
+      raise Exception('setContentSource cannot be None')
+    self.contentSource = repr(source)
+    return self
+
   def setId(self, id):
     self.id = id
     return self
@@ -71,3 +86,19 @@ class ImageHolder:
     if self.id is None:
       return None
     return hashlib.sha1(self.id).hexdigest()
+
+  def copy(self):
+    copy = ImageHolder()
+    copy.id = self.id
+    copy.mimetype = self.mimetype
+    copy.error = self.error
+    copy.source = self.source
+    copy.url = self.url
+    copy.filename = self.filename
+    copy.dimensions = self.dimensions
+    copy.cacheAllow = self.cacheAllow
+    copy.cacheUsed = self.cacheUsed
+
+    copy.contentProvider = self.contentProvider
+    copy.contentSource = self.contentSource
+    return copy

@@ -26,11 +26,14 @@ class RouteKeywords(BaseRoute):
     self.addUrl('/keywords/<service>/add').clearMethods().addMethod('POST')
     self.addUrl('/keywords/<service>/delete').clearMethods().addMethod('POST')
     self.addUrl('/keywords/<service>/source/<int:index>')
+    self.addUrl('/keywords/<service>/details/<int:index>')
 
   def handle(self, app, service, index=None):
     if self.getRequest().method == 'GET':
       if 'source' in self.getRequest().url:
         return self.redirect(self.servicemgr.sourceServiceKeywords(service, index))
+      elif 'details' in self.getRequest().url:
+        return self.jsonify(self.servicemgr.detailsServiceKeywords(service, index))
       elif 'help' in self.getRequest().url:
         return self.jsonify({'message' : self.servicemgr.helpServiceKeywords(service)})
       else:

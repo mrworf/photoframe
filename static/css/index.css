@@ -150,6 +150,39 @@ div.help div:first-child h3:first-child {
   margin-top: 0pt;
 }
 
+div.details {
+  position:fixed;
+  width:100%;
+  height:100%;
+  top:0px;
+  left:0px;
+  z-index:1000;
+}
+
+div.details div:first-child {
+  overflow: scroll;
+  opacity: 1;
+  background-color: #ffffff;
+  margin: auto;
+  display: inline-block;
+  border: 2px solid;
+  width: 75%;
+  height: 75%;
+  padding: 10pt;
+}
+
+div.details div:first-child h3:first-child {
+  margin-top: 0pt;
+}
+
+div.details_scroll {
+  overflow: scroll;
+  display: block;
+  height: 75%;
+  border: 1px inset;
+  white-space: pre;
+}
+
 p.message {
   margin: 2pt;
   font-weight: bold;

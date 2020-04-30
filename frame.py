@@ -36,6 +36,8 @@ from modules.servicemanager import ServiceManager
 from modules.cachemanager import CacheManager
 from modules.path import path
 from modules.server import WebServer
+from modules.events import Events
+from modules.history import ImageHistory
 
 # Make sure we run from our own directory
 os.chdir(os.path.dirname(sys.argv[0]))
@@ -69,17 +71,21 @@ class Photoframe:
     if not path().validate():
       sys.exit(255)
 
+    self.eventMgr = Events()
+    self.eventMgr.add('Hello world')
+
     self.cacheMgr = CacheManager()
     self.settingsMgr = settings()
     self.displayMgr = display(self.emulator)
     # Validate all settings, prepopulate with defaults if needed
     self.validateSettings()
 
+    self.imageHistory = ImageHistory(self.settingsMgr)
     self.driverMgr = drivers()
     self.serviceMgr = ServiceManager(self.settingsMgr, self.cacheMgr)
 
     self.colormatch = colormatch(self.settingsMgr.get('colortemp-script'), 2700) # 2700K = Soft white, lowest we'll go
-    self.slideshow = slideshow(self.displayMgr, self.settingsMgr, self.colormatch)
+    self.slideshow = slideshow(self.displayMgr, self.settingsMgr, self.colormatch, self.imageHistory)
     self.timekeeperMgr = timekeeper()
     self.timekeeperMgr.registerListener(self.displayMgr.enable)
     self.powerMgr = shutdown(self.settingsMgr.getUser('shutdown-pin'))
@@ -130,11 +136,12 @@ class Photoframe:
     self._loadRoute('orientation', 'RouteOrientation', self.cacheMgr)
     self._loadRoute('overscan', 'RouteOverscan', self.cacheMgr)
     self._loadRoute('maintenance', 'RouteMaintenance', self.emulator, self.driverMgr, self.slideshow)
-    self._loadRoute('details', 'RouteDetails', self.displayMgr, self.driverMgr, self.colormatch, self.slideshow)
+    self._loadRoute('details', 'RouteDetails', self.displayMgr, self.driverMgr, self.colormatch, self.slideshow, self.serviceMgr, self.settingsMgr)
     self._loadRoute('upload', 'RouteUpload', self.settingsMgr, self.driverMgr)
     self._loadRoute('oauthlink', 'RouteOAuthLink', self.serviceMgr, self.slideshow)
     self._loadRoute('service', 'RouteService', self.serviceMgr, self.slideshow)
     self._loadRoute('control', 'RouteControl', self.slideshow)
+    self._loadRoute('events', 'RouteEvents', self.eventMgr)
 
   def validateSettings(self):
     if not self.settingsMgr.load():

@@ -339,6 +339,26 @@ $("#shutdown").click(function() {
 $("input[class='keyword-search']").click(function(){
   window.open("/keywords/" + $(this).data('service') + '/source/' + $(this).data('index'), "_blank");
 });
+$("input[class='keyword-details']").click(function(){
+  console.log('Show details');
+  $('#details_short').html('Loading...');
+  $('#details_long').html('Loading...');
+  $('#help_details').show();
+  $("button[name=details_close]").click(function() {
+    $(this).parent().parent().hide();
+  });
+  $.ajax({
+    url:"/keywords/" + $(this).data('service') + "/details/" + $(this).data('index')
+  }).done(function(data){
+    $('#details_short').text(data.short);
+    str = "";
+    for (line in data.long) {
+      str += data.long[line] + "\n";
+    }
+    $('#details_long').text(str);
+  });
+  //window.open("/details.html?service=" + $(this).data('service') + '&index=' + $(this).data('index'), "_blank");
+});
 $("input[class='keyword-delete']").click(function(){
   if (confirm("Are you sure?")) {
     $.ajax({

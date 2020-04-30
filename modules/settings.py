@@ -43,7 +43,7 @@ class settings:
       'interval' : 60,					# Delay in seconds between images (minimum)
       'display-off' : 22,				# What hour (24h) to disable display and sleep
       'display-on' : 4,					# What hour (24h) to enable display and continue
-      'refresh-content' : 24,		# After how many hours we should force reload of image lists from server
+      'refresh' : 0,		# After how many hours we should force reload of image lists from server (zero means when all is shown)
       'autooff-lux' : 0.01,
       'autooff-time' : 0,
       'powersave' : '',
@@ -68,6 +68,10 @@ class settings:
           tmp2 = self.settings['cfg']
           self.settings['cfg'] = tmp
           self.settings['cfg'].update(tmp2)
+
+          if 'refresh-content' in self.settings['cfg']:
+            self.settings['cfg']['refresh'] = self.settings['cfg']['refresh-content']
+            self.settings['cfg'].pop('refresh-content', None)
 
           # Remove deprecated fields
           for field in settings.DEPRECATED_USER:

@@ -22,11 +22,13 @@ from modules.helper import helper
 from baseroute import BaseRoute
 
 class RouteDetails(BaseRoute):
-  def setupex(self, displaymgr, drivermgr, colormatch, slideshow):
+  def setupex(self, displaymgr, drivermgr, colormatch, slideshow, servicemgr, settings):
     self.displaymgr = displaymgr
     self.drivermgr = drivermgr
     self.colormatch = colormatch
     self.slideshow = slideshow
+    self.servicemgr = servicemgr
+    self.settings = settings
 
     self.void = open(os.devnull, 'wb')
 
@@ -86,5 +88,14 @@ class RouteDetails(BaseRoute):
         'temperature' : h & (1 << 3 | 1 << 19) > 0
       }
       return self.jsonify(result)
+    elif about == 'messages':
+      # This should be made more general purpose since other parts need similar service
+      msgs = []
+      images = self.servicemgr.getTotalImageCount
+      timeneeded = images * self.settings.getUser('interval')
+      timeavailable = self.settings.getUser('refresh') * 3600
+      if timeavailable > 0 and timeneeded > timeavailable:
+        msgs.append({'level':'WARNING', 'message' : 'Change every %d seconds with %d images will take %dh, refresh keywords is %dh' % (self.settings.getUser('interval'), images, timeneeded/3600, timeavailable/3600), 'link' : None})
 
+      return self.jsonify(msgs)
     self.setAbort(404)

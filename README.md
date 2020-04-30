@@ -80,9 +80,15 @@ You're done! Reboot your RPi3 (So I2C gets enabled) and from now on, all images 
 
 If photoframe is unable to use the sensor, it "usually" gives you helpful hints. Check the `/var/log/syslog` file for `frame.py` entries.
 
+*Note*
+
+The sensor is automatically detected as long as it is a TCS34725 device and it's connected correctly to the I2C bus of the raspberry pi. Once detected you'll get a new read-out in the web interface which details both white balance (kelvin) and light (lux).
+
+If you don't get this read-out, look at your logfile. There will be hints like sensor not found or sensor not being the expected one, etc.
+
 ## Annoyed with the LED showing on the TCS34725 board from Adafruit?
 
-Just ground the LED pin (for example by connecting it to Pin 9 on your RPi3)
+Just ground the LED pin on the Adafruit board (for example by connecting it to Pin 9 on your RPi3)
 
 ## Ambient powersave?
 
@@ -94,7 +100,7 @@ regardless of what the sensor says. The sensor is only used to extend the period
 
 # Power on/off?
 
-Photoframe listens to GPIO 26 to power off (and also power on). If you connect a switch between pin 37 (GPIO 26) and pin 39 (GND), you'll be able
+Photoframe listens to GPIO 26 (default, can be changed) to power off (and also power on). If you connect a switch between pin 37 (GPIO 26) and pin 39 (GND), you'll be able
 to do a graceful shutdown as well as power on.
 
 # How come you contact photoframe.sensenet.nu ???
@@ -184,3 +190,20 @@ sudo apt install exfat-fuse exfat-utils
 
 After this, you should be able to use exFAT
 
+## How does "Refresh keywords" option work?
+
+By default, most photo providers will fetch a list of available photos for a given keyword. This list isn't refreshed until one of the following events happen:
+
+- No more photos are available from ANY photo provider in your frame
+- User presses "Forget Memory" in web UI
+- The age of the downloaded index exceeds the hours specified by "Refresh keywords" option
+
+To disable the last item on that list, set the "Refresh keywords" to 0 (zero). This effectively disables this and now the frame will only refresh if no more photos are available or if user presses the forget memory item.
+
+## Why isn't it showing all my photos?
+
+Given you haven't set any options to limit based on orientation or a refresh which is too short to show them all, it should walk through the provided list from your provider.
+
+*however*
+
+Not all content is supported. To help troubleshoot why some content is missing, you can press "Details" for any keyword (given that the provider supports it) and the frame will let you know what content it has found. It should also give you an indication if there's a lot of content which is currently unsupported.
