@@ -217,6 +217,10 @@ class helper:
 
 			logging.debug('Size of image is %dx%d, screen is %dx%d. New size is %dx%d', width, height, displayWidth, displayHeight, adjWidth, adjHeight)
 
+			if width < 100 or height < 100:
+				logging.error('Image size is REALLY small, please check "%s" ... something isn\'t right', filename)
+				#a=1/0
+
 			if adjHeight < displayHeight:
 				border = '0x%d' % width_border
 				spacing = '0x%d' % width_spacing

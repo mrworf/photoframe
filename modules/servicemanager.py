@@ -52,6 +52,9 @@ class ServiceManager:
     # Tracks current service showing the image
     self.currentService = None
 
+    # Track configuration changes
+    self.configChanges = 0
+
     self._detectServices()
     self._load()
 
@@ -131,6 +134,12 @@ class ServiceManager:
   def _hash(self, text):
     return hashlib.sha1(text).hexdigest()
 
+  def _configChanged(self):
+    self.configChanges += 1
+
+  def getConfigChange(self):
+    return self.configChanges
+
   def addService(self, type, name):
     svcname = self._resolveService(type)
     if svcname is None:
@@ -143,6 +152,7 @@ class ServiceManager:
       svc.setCacheManager(self._CACHEMGR)
       self._SERVICES[genid] = {'service' : svc, 'id' : svc.getId(), 'name' : svc.getName()}
       self._save()
+      self._configChanged()
       return genid
     return None
 
@@ -161,6 +171,7 @@ class ServiceManager:
     self._HISTORY = filter(lambda h: h != self._SERVICES[id]['service'], self._HISTORY)
     del self._SERVICES[id]
     self._deletefolder(os.path.join(self._BASEDIR, id))
+    self._configChanged()
     self._save()
 
   def oauthCallback(self, request):
@@ -230,6 +241,7 @@ class ServiceManager:
       return {'error' : 'Service does not use keywords'}
     if svc in self._OUT_OF_IMAGES:
       self._OUT_OF_IMAGES.remove(svc)
+    self._configChanged()
     return svc.addKeywords(keywords)
 
   def removeServiceKeywords(self, service, index):
@@ -240,6 +252,7 @@ class ServiceManager:
     if not svc.needKeywords():
       logging.error('removeServiceKeywords: Does not use keywords')
       return False
+    self._configChanged()
     return svc.removeKeywords(index)
 
   def sourceServiceKeywords(self, service, index):
@@ -457,13 +470,6 @@ class ServiceManager:
       for k in svc.getKeywords():
         logging.info('%s was %d hours old when we refreshed' % (k, svc.freshnessImagesFor(k)))
         svc._clearImagesFor(k)
-
-  def nextImage(self):
-    #No need to change anything; all done in slideshow.py
-    pass
-
-  def prevImage(self):
-    return False
 
   def nextAlbum(self):
     return False

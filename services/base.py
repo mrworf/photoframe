@@ -20,6 +20,7 @@ import random
 import logging
 import requests
 import time
+import uuid
 
 from modules.oauth import OAuth
 from modules.helper import helper
@@ -375,6 +376,8 @@ class BaseService:
     if kw in self._STATE['_NUM_IMAGES']:
       del self._STATE['_NUM_IMAGES'][kw]
     self.saveState()
+    # Also kill the memory of this keyword
+    self.memory.forget(kw)
     return True
 
   def needKeywords(self):
@@ -486,7 +489,7 @@ class BaseService:
   def freshnessImagesFor(self, keyword):
     # You need to implement this function if you intend to support refresh of content
     # keyword is the item for which you need to clear the images for. Should return age of content in hours
-    return ImageHolder().setError('freshnessImagesFor() not implemented')
+    return 0
 
   def getContentUrl(self, image, hints):
     # Allows a content provider to do extra operations as needed to
@@ -534,8 +537,11 @@ class BaseService:
       return self.fetchImage(image, destinationDir, supportedMimeTypes, displaySize)
     return None
 
+  def generateFilename(self):
+    return str(uuid.uuid4())
+
   def fetchImage(self, image, destinationDir, supportedMimeTypes, displaySize):
-    filename = os.path.join(destinationDir, image.id)
+    filename = os.path.join(destinationDir, self.generateFilename())
 
     if image.cacheAllow:
       # Look it up in the cache mgr

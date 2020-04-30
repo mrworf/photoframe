@@ -33,11 +33,11 @@ def _stringify(args):
   return result.replace('\n', '\\n')
 
 def subprocess_call(cmds, stderr=None, stdout=None):
-  logging.debug('subprocess.call(%s)', _stringify(cmds))
+  #logging.debug('subprocess.call(%s)', _stringify(cmds))
   return subprocess.call(cmds, stderr=stderr, stdout=stdout)
 
 def subprocess_check_output(cmds, stderr=None):
-  logging.debug('subprocess.check_output(%s)', _stringify(cmds))
+  #logging.debug('subprocess.check_output(%s)', _stringify(cmds))
   return subprocess.check_output(cmds, stderr=stderr)
 
 def stacktrace():
