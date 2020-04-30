@@ -311,7 +311,7 @@ class slideshow:
         result = None
 
       time_process = time.time() - time_process
-      logging.debug('Took %f seconds to process, next image is %s', time_process, result.filename)
+      logging.debug('Took %f seconds to process, next image is %s', time_process, result.filename if result is not None else "None")
       self.delayNextImage(time_process)
 
       showNextImage = self.handleEvents()
