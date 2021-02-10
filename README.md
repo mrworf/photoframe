@@ -26,7 +26,7 @@ the images to meld better with the room where it's running.
 - Power control via GPIO (turn RPi on/off)
 - Non-HDMI displays (SPI, DPI, etc)
 
-# requires
+# requirements
 
 - Raspberry Pi 1, 3 or Zero
 - Display of some sort (HDMI or SPI/DPI displays)
