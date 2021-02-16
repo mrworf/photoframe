@@ -293,11 +293,11 @@ class USB_Photos(BaseService):
       return []
     images = []
     if keyword == "_PHOTOFRAME_":
-      files = self.getBaseDirImages()
+      files = filter(lambda x: not x.startswith("."), self.getBaseDirImages())
       images = self.getAlbumInfo(self.baseDir, files)
     else:
       if os.path.isdir(os.path.join(self.baseDir, keyword)):
-        files = os.listdir(os.path.join(self.baseDir, keyword))
+        files = filter(lambda x: not x.startswith("."), os.listdir(os.path.join(self.baseDir, keyword)))
         images = self.getAlbumInfo(os.path.join(self.baseDir, keyword), files)
       else:
         logging.warning("The album '%s' does not exist. Did you unplug the storage device associated with '%s'?!" % (os.path.join(self.baseDir, keyword), self.device))
