@@ -15,7 +15,7 @@
 #
 
 from modules.sysconfig import sysconfig
-from baseroute import BaseRoute
+from .baseroute import BaseRoute
 
 #@auth.login_required
 class RouteOverscan(BaseRoute):

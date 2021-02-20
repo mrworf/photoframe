@@ -114,7 +114,6 @@ class slideshow:
 
   def handleEvents(self):
     showNext = True
-    isRandom = self.settings.getUser("randomize_images")
     while len(self.eventList) > 0:
       event = self.eventList.pop(0)
 
@@ -258,7 +257,7 @@ class slideshow:
 
   def showPreloadedImage(self, image):
     if not os.path.isfile(image.filename):
-      logging.warning("Trying to show image '%s', but file does not exist!" % filename)
+      logging.warning("Trying to show image '%s', but file does not exist!" % image.filename)
       self.delayer.set()
       return
     self.display.image(image.filename)

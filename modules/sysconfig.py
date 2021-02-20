@@ -18,7 +18,7 @@ import json
 import re
 import subprocess
 
-from path import path
+from .path import path
 import logging
 
 class sysconfig:
@@ -162,7 +162,7 @@ class sysconfig:
     # First, make sure it's legal
     name = re.sub(' ', '-', name.strip());
     name = re.sub('[^a-zA-Z0-9\-]', '', name).strip()
-    if name is '' or len(name) > 63:
+    if not name or len(name) > 63:
       return False
 
     # Next, let's edit the relevant files....

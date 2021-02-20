@@ -19,7 +19,7 @@ import logging
 
 from modules.helper import helper
 
-from baseroute import BaseRoute
+from .baseroute import BaseRoute
 
 class RouteDetails(BaseRoute):
   def setupex(self, displaymgr, drivermgr, colormatch, slideshow, servicemgr, settings):
@@ -46,7 +46,7 @@ class RouteDetails(BaseRoute):
       response.headers.set('Content-Type', mime)
       return response
     elif about == 'drivers':
-      result = self.drivermgr.list().keys()
+      result = list(self.drivermgr.list().keys())
       return self.jsonify(result)
     elif about == 'timezone':
       result = helper.timezoneList()

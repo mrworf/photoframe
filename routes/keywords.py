@@ -14,7 +14,7 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from baseroute import BaseRoute
+from .baseroute import BaseRoute
 
 class RouteKeywords(BaseRoute):
   def setupex(self, servicemgr, slideshow):

@@ -26,7 +26,7 @@ class MemoryManager:
     self._MEMORY_COUNT = {}
 
   def _hashString(self, text):
-    if type(text) is not unicode:
+    if type(text) is not str:
       # make sure it's unicode
       a = text.decode('ascii', errors='replace')
     else:

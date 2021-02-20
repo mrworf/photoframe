@@ -14,7 +14,6 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 import subprocess
-import logging
 import os
 import datetime
 import sys
@@ -43,7 +42,7 @@ def subprocess_check_output(cmds, stderr=None):
 def stacktrace():
   title = 'Stacktrace of all running threads'
   lines = []
-  for threadId, stack in sys._current_frames().items():
+  for threadId, stack in list(sys._current_frames().items()):
       lines.append("\n# ThreadID: %s" % threadId)
       for filename, lineno, name, line in traceback.extract_stack(stack):
           lines.append('File: "%s", line %d, in %s' % (filename, lineno, name))

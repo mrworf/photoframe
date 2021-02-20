@@ -35,15 +35,15 @@ class NoAuth:
   def login_required(self, fn):
     def wrap(*args, **kwargs):
       return fn(*args, **kwargs)
-    wrap.func_name = fn.func_name
+    wrap.__name__ = fn.__name__
     return wrap
 
 class WebServer(Thread):
-  def __init__(self, async=False, port=7777, listen='0.0.0.0'):
+  def __init__(self, run_async=False, port=7777, listen='0.0.0.0'):
     Thread.__init__(self)
     self.port = port
     self.listen = listen
-    self.async = async
+    self.run_async = run_async
 
     self.app = Flask(__name__, static_url_path='/--do--not--ever--use--this--')
     self.app.config['UPLOAD_FOLDER'] = '/tmp/'
@@ -78,7 +78,7 @@ class WebServer(Thread):
     return self.authmethod()
 
   def start(self):
-    if self.async:
+    if self.run_async:
       self.start()
     else:
       self.run()
@@ -99,7 +99,7 @@ class WebServer(Thread):
   def run(self):
     try:
       self.app.run(debug=False, port=self.port, host=self.listen )
-    except RuntimeError, msg:
+    except RuntimeError as msg:
       if str(msg) == "Server shutdown":
         pass # or whatever you want to do when the server goes down
       else:

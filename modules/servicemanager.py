@@ -96,7 +96,7 @@ class ServiceManager:
   def listServices(self):
     result = []
     # Make sure it retains the ID sort order
-    for key, value in sorted(self._SVC_INDEX.iteritems(), key=lambda (k,v): (v['id'],k)):
+    for key, value in sorted(iter(self._SVC_INDEX.items()), key=lambda k_v: (k_v[1]['id'],k_v[0])):
       result.append(self._SVC_INDEX[key])
     return result;
 
@@ -168,7 +168,7 @@ class ServiceManager:
     if id not in self._SERVICES:
       return
 
-    self._HISTORY = filter(lambda h: h != self._SERVICES[id]['service'], self._HISTORY)
+    self._HISTORY = [h for h in self._HISTORY if h != self._SERVICES[id]['service']]
     del self._SERVICES[id]
     self._deletefolder(os.path.join(self._BASEDIR, id))
     self._configChanged()

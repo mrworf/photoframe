@@ -209,7 +209,7 @@ class BaseService:
               'link': None
           }
       )
-    if 0 in self._STATE["_NUM_IMAGES"].values():
+    if 0 in list(self._STATE["_NUM_IMAGES"].values()):
       # Find first keyword with zero (unicode issue)
       removeme = []
       for keyword in self._STATE["_KEYWORDS"]:
@@ -218,7 +218,7 @@ class BaseService:
       msgs.append(
           {
               'level': 'WARNING',
-              'message': 'The following keyword(s) do not yield any photos: %s' % ', '.join(map(u'"{0}"'.format, removeme)),
+              'message': 'The following keyword(s) do not yield any photos: %s' % ', '.join(map('"{0}"'.format, removeme)),
               'link': None
           }
       )
@@ -758,7 +758,7 @@ class BaseService:
     return self._DIR_PRIVATE
 
   def hashString(self, text):
-    if type(text) is not unicode:
+    if type(text) is not str:
       # make sure it's unicode
       a = text.decode('ascii', errors='replace')
     else:

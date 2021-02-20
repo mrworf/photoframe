@@ -15,7 +15,7 @@
 #
 
 from modules.sysconfig import sysconfig
-from baseroute import BaseRoute
+from .baseroute import BaseRoute
 
 #@app.route('/options/<cmd>')
 class RouteOptions(BaseRoute):

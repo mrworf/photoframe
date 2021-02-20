@@ -14,7 +14,7 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from baseroute import BaseRoute
+from .baseroute import BaseRoute
 
 #@app.route('/service/<action>',  methods=['GET', 'POST'])
 #@auth.login_required

@@ -17,7 +17,7 @@ import os
 import json
 import logging
 import random
-from path import path
+from .path import path
 
 class settings:
   DEPRECATED_USER = ['resolution']
@@ -94,7 +94,7 @@ class settings:
           logging.exception('Failed to load settings.json, corrupt file?')
           return False
       # make sure old settings.json files are still compatible and get updated with new keys
-      if "cachefolder" not in self.settings.keys():
+      if "cachefolder" not in list(self.settings.keys()):
         self.settings["cachefolder"] = path.CACHEFOLDER
       return True
     else:

@@ -14,7 +14,7 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from base import BaseService
+from .base import BaseService
 import subprocess
 import os
 import logging
@@ -124,7 +124,7 @@ class USB_Photos(BaseService):
       # No, you can't have an album called /photoframe/ALLALBUMS ...
       keywords.remove("ALLALBUMS")
       albums = self.getAllAlbumNames()
-      keywords.extend(filter(lambda a: a not in keywords, albums))
+      keywords.extend([a for a in albums if a not in keywords])
 
       if "ALLALBUMS" in albums:
         logging.error("You should not have a album called 'ALLALBUMS'!")
@@ -253,7 +253,7 @@ class USB_Photos(BaseService):
           self.device = candidate
           self.checkForInvalidKeywords()
           return True
-      except subprocess.CalledProcessError:
+      except subprocess.CalledProcessError as e:
         logging.warning('Unable to mount storage device "%s" to "%s"!' % (candidate.device, self.usbDir))
         logging.warning('Output: %s' % repr(e.output))
       self.unmountBaseDir()
@@ -270,10 +270,10 @@ class USB_Photos(BaseService):
 
   # All images directly inside '/photoframe' directory will be displayed without any keywords
   def getBaseDirImages(self):
-    return filter(lambda x: os.path.isfile(os.path.join(self.baseDir, x)), os.listdir(self.baseDir))
+    return [x for x in os.listdir(self.baseDir) if os.path.isfile(os.path.join(self.baseDir, x))]
 
   def getAllAlbumNames(self):
-    return filter(lambda x: os.path.isdir(os.path.join(self.baseDir, x)), os.listdir(self.baseDir))
+    return [x for x in os.listdir(self.baseDir) if os.path.isdir(os.path.join(self.baseDir, x))]
 
   def selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize):
     if self.device is None:
@@ -293,11 +293,11 @@ class USB_Photos(BaseService):
       return []
     images = []
     if keyword == "_PHOTOFRAME_":
-      files = filter(lambda x: not x.startswith("."), self.getBaseDirImages())
+      files = [x for x in self.getBaseDirImages() if not x.startswith(".")]
       images = self.getAlbumInfo(self.baseDir, files)
     else:
       if os.path.isdir(os.path.join(self.baseDir, keyword)):
-        files = filter(lambda x: not x.startswith("."), os.listdir(os.path.join(self.baseDir, keyword)))
+        files = [x for x in os.listdir(os.path.join(self.baseDir, keyword)) if not x.startswith(".")]
         images = self.getAlbumInfo(os.path.join(self.baseDir, keyword), files)
       else:
         logging.warning("The album '%s' does not exist. Did you unplug the storage device associated with '%s'?!" % (os.path.join(self.baseDir, keyword), self.device))

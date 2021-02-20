@@ -14,7 +14,7 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from baseroute import BaseRoute
+from .baseroute import BaseRoute
 
 class RouteEvents(BaseRoute):
   def setupex(self, events):

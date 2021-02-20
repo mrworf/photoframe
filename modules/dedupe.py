@@ -13,12 +13,13 @@
 # You should have received a copy of the GNU General Public License
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
+import logging
 
 class DedupeManager:
   def __init__(self, memoryLocation):
     try:
-      from PIL import Image
-      import imagehash
+      #from PIL import Image
+      #import imagehash
       self.hasImageHash = True
       logging.info('ImageHash functionality is available')
     except:

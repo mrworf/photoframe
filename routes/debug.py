@@ -15,7 +15,7 @@
 #
 
 import modules.debug as debug
-from baseroute import BaseRoute
+from .baseroute import BaseRoute
 
 class RouteDebug(BaseRoute):
   SIMPLE = True # We have no dependencies to the rest of the system

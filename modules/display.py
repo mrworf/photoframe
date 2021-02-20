@@ -19,10 +19,10 @@ import logging
 import time
 import re
 import json
-import debug
+from . import debug
 
-from sysconfig import sysconfig
-from helper import helper
+from .sysconfig import sysconfig
+from .helper import helper
 
 class display:
   def __init__(self, use_emulator=False, emulate_width=1280, emulate_height=720):

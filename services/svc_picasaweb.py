@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
-from base import BaseService
+from .base import BaseService
 import random
 import os
 import json
@@ -154,5 +154,5 @@ class PicasaWeb(BaseService):
     if os.path.exists(filename):
       with open(filename, 'r') as f:
         images = json.load(f)
-    print(repr(images))
+    print((repr(images)))
     return images

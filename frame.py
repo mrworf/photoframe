@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # This file is part of photoframe (https://github.com/mrworf/photoframe).
 #
@@ -61,7 +61,7 @@ else:
 class Photoframe:
   def __init__(self, cmdline):
     self.void = open(os.devnull, 'wb')
-    random.seed(long(time.clock()))
+    random.seed(int(time.monotonic()))
 
     self.emulator = cmdline.emulate
     if self.emulator:

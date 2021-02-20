@@ -17,7 +17,7 @@
 import logging
 import json
 
-from baseroute import BaseRoute
+from .baseroute import BaseRoute
 
 class RouteOAuthLink(BaseRoute):
     def setupex(self, servicemgr, slideshow):
@@ -29,7 +29,7 @@ class RouteOAuthLink(BaseRoute):
         self.addUrl('/service/<service>/oauth').clearMethods().addMethod('POST')
 
     def handle(self, app, **kwargs):
-      print(self.getRequest().url)
+      print((self.getRequest().url))
       if '/callback?' in self.getRequest().url:
           # Figure out who should get this result...
           old = self.servicemgr.hasReadyServices()
