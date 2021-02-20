@@ -20,46 +20,47 @@ import os
 import socket
 import logging
 
+
 class shutdown(Thread):
-	def __init__(self, usePIN=26):
-		Thread.__init__(self)
-		self.daemon = True
-		self.gpio = usePIN
-		self.void = open(os.devnull, 'wb')
-		self.client, self.server = socket.socketpair()
-		self.start()
+    def __init__(self, usePIN=26):
+        Thread.__init__(self)
+        self.daemon = True
+        self.gpio = usePIN
+        self.void = open(os.devnull, 'wb')
+        self.client, self.server = socket.socketpair()
+        self.start()
 
-	def stopmonitor(self):
-		self.client.close()
+    def stopmonitor(self):
+        self.client.close()
 
-	def run(self):
-		logging.info('GPIO shutdown can be triggered by GPIO %d', self.gpio)
-		# Shutdown can be initated from GPIO26
-		poller = select.poll()
-		try:
-			with open('/sys/class/gpio/export', 'wb') as f:
-				f.write('%d' % self.gpio)
-		except:
-			# Usually it means we ran this before
-			pass
-		try:
-			with open('/sys/class/gpio/gpio%d/direction' % self.gpio, 'wb') as f:
-				f.write('in')
-		except:
-			logging.warn('Either no GPIO subsystem or no access')
-			return
-		with open('/sys/class/gpio/gpio%d/edge' % self.gpio, 'wb') as f:
-			f.write('both')
-		with open('/sys/class/gpio/gpio%d/active_low' % self.gpio, 'wb') as f:
-			f.write('1')
-		with open('/sys/class/gpio/gpio%d/value' % self.gpio, 'rb') as f:
-			f.read()
-			poller.register(f, select.POLLPRI)
-			poller.register(self.server, select.POLLHUP)
-			i = poller.poll(None)
-			for (fd, event) in i:
-				if f.fileno() == fd:
-					subprocess.call(['/sbin/poweroff'], stderr=self.void);
-					logging.debug('Shutdown GPIO triggered')
-				elif self.server.fileno() == fd:
-					logging.debug('Quitting shutdown manager')
+    def run(self):
+        logging.info('GPIO shutdown can be triggered by GPIO %d', self.gpio)
+        # Shutdown can be initated from GPIO26
+        poller = select.poll()
+        try:
+            with open('/sys/class/gpio/export', 'wb') as f:
+                f.write('%d' % self.gpio)
+        except:
+            # Usually it means we ran this before
+            pass
+        try:
+            with open('/sys/class/gpio/gpio%d/direction' % self.gpio, 'wb') as f:
+                f.write('in')
+        except:
+            logging.warn('Either no GPIO subsystem or no access')
+            return
+        with open('/sys/class/gpio/gpio%d/edge' % self.gpio, 'wb') as f:
+            f.write('both')
+        with open('/sys/class/gpio/gpio%d/active_low' % self.gpio, 'wb') as f:
+            f.write('1')
+        with open('/sys/class/gpio/gpio%d/value' % self.gpio, 'rb') as f:
+            f.read()
+            poller.register(f, select.POLLPRI)
+            poller.register(self.server, select.POLLHUP)
+            i = poller.poll(None)
+            for (fd, event) in i:
+                if f.fileno() == fd:
+                    subprocess.call(['/sbin/poweroff'], stderr=self.void)
+                    logging.debug('Shutdown GPIO triggered')
+                elif self.server.fileno() == fd:
+                    logging.debug('Quitting shutdown manager')

@@ -14,45 +14,46 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+
 class Events:
-  TYPE_PERSIST = 1
-  TYPE_NORMAL = 0
+    TYPE_PERSIST = 1
+    TYPE_NORMAL = 0
 
-  LEVEL_INFO = 0
-  LEVEL_WARN = 1
-  LEVEL_ERR = 2
-  LEVEL_DEBUG = 3
+    LEVEL_INFO = 0
+    LEVEL_WARN = 1
+    LEVEL_ERR = 2
+    LEVEL_DEBUG = 3
 
-  def __init__(self):
-    self.idcount = 0
-    self.msgs = []
+    def __init__(self):
+        self.idcount = 0
+        self.msgs = []
 
-  def add(self, message, unique=None, link=None, level=LEVEL_INFO, type=TYPE_NORMAL):
-    record = {'id': self.idcount, 'unique' : unique, 'type' : type, 'level' : level, 'message' : message, 'link' : link}
-    if unique is not None:
-      unique = repr(unique) # Make it a string to be safe
-      for i in range(0, len(self.msgs)):
-        if self.msgs[i]['unique'] == unique:
-          self.msgs[i] = record
-          record = None
-          break
+    def add(self, message, unique=None, link=None, level=LEVEL_INFO, type=TYPE_NORMAL):
+        record = {'id': self.idcount, 'unique': unique, 'type': type, 'level': level, 'message': message, 'link': link}
+        if unique is not None:
+            unique = repr(unique)  # Make it a string to be safe
+            for i in range(0, len(self.msgs)):
+                if self.msgs[i]['unique'] == unique:
+                    self.msgs[i] = record
+                    record = None
+                    break
 
-    if record is not None:
-      self.msgs.append(record)
-    self.idcount += 1
+        if record is not None:
+            self.msgs.append(record)
+        self.idcount += 1
 
-  def remove(self, id):
-    for i in range(0, len(self.msgs)):
-      if self.msgs[i]['id'] == id and self.msgs[i]['type'] != Events.TYPE_PERSIST:
-        self.msgs.pop(i)
-        break
+    def remove(self, id):
+        for i in range(0, len(self.msgs)):
+            if self.msgs[i]['id'] == id and self.msgs[i]['type'] != Events.TYPE_PERSIST:
+                self.msgs.pop(i)
+                break
 
-  def getAll(self):
-    return self.msgs
+    def getAll(self):
+        return self.msgs
 
-  def getSince(self, id):
-    ret = []
-    for msg in self.msgs:
-      if msg['id'] > id:
-        ret.append(msg)
-    return ret
+    def getSince(self, id):
+        ret = []
+        for msg in self.msgs:
+            if msg['id'] > id:
+                ret.append(msg)
+        return ret

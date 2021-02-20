@@ -17,22 +17,24 @@
 from modules.sysconfig import sysconfig
 from .baseroute import BaseRoute
 
-#@app.route('/options/<cmd>')
+# @app.route('/options/<cmd>')
+
+
 class RouteOptions(BaseRoute):
-  SIMPLE = True
+    SIMPLE = True
 
-  def setup(self):
-    self.addUrl('/options/<cmd>')
-    self.addUrl('/options/<cmd>/<arg>')
+    def setup(self):
+        self.addUrl('/options/<cmd>')
+        self.addUrl('/options/<cmd>/<arg>')
 
-  def handle(self, app, cmd, arg=None):
-    cmd = cmd.upper()
-    if cmd == 'DEBUG':
-      if arg is not None:
-        sysconfig.setOption('POSTCMD', '"--debug"' if arg == 'true' else '')
-      return self.jsonify({'debug' : '--debug' in sysconfig.getOption('POSTCMD')})
-    elif cmd == 'HOSTNAME':
-      if arg is not None:
-        sysconfig.setHostname(arg.strip())
-      return self.jsonify({'hostname' : sysconfig.getHostname()})
-    self.setAbort(404)
+    def handle(self, app, cmd, arg=None):
+        cmd = cmd.upper()
+        if cmd == 'DEBUG':
+            if arg is not None:
+                sysconfig.setOption('POSTCMD', '"--debug"' if arg == 'true' else '')
+            return self.jsonify({'debug': '--debug' in sysconfig.getOption('POSTCMD')})
+        elif cmd == 'HOSTNAME':
+            if arg is not None:
+                sysconfig.setHostname(arg.strip())
+            return self.jsonify({'hostname': sysconfig.getHostname()})
+        self.setAbort(404)

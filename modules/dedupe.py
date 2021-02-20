@@ -15,31 +15,32 @@
 #
 import logging
 
+
 class DedupeManager:
-  def __init__(self, memoryLocation):
-    try:
-      #from PIL import Image
-      #import imagehash
-      self.hasImageHash = True
-      logging.info('ImageHash functionality is available')
-    except:
-      self.hasImageHash = False
-      logging.info('ImageHash functionality is unavailable')
+    def __init__(self, memoryLocation):
+        try:
+            #from PIL import Image
+            #import imagehash
+            self.hasImageHash = True
+            logging.info('ImageHash functionality is available')
+        except:
+            self.hasImageHash = False
+            logging.info('ImageHash functionality is unavailable')
 
-  def _hamming_distance(self, i1, i2):
-      x = i1 ^ i2
-      setBits = 0
+    def _hamming_distance(self, i1, i2):
+        x = i1 ^ i2
+        setBits = 0
 
-      while (x > 0):
-          setBits += x & 1
-          x >>= 1
+        while (x > 0):
+            setBits += x & 1
+            x >>= 1
 
-      return setBits
+        return setBits
 
-  def _hamming(self, s1, s2):
-      h = 0
-      for i in range(0, len(s1)/2):
-          i1 = int(s1[i*2:i*2+2], 16)
-          i2 = int(s2[i*2:i*2+2], 16)
-          h += self._hamming_distance(i1, i2)
-      return h
+    def _hamming(self, s1, s2):
+        h = 0
+        for i in range(0, len(s1)/2):
+            i1 = int(s1[i*2:i*2+2], 16)
+            i2 = int(s2[i*2:i*2+2], 16)
+            h += self._hamming_distance(i1, i2)
+        return h

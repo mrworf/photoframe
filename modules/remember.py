@@ -18,47 +18,48 @@ import json
 import hashlib
 import logging
 
+
 class remember:
-	def __init__(self, filename, count):
-		self.filename = os.path.splitext(filename)[0] + '_memory.json'
-		self.count = count
-		try:
-			if os.path.exists(self.filename):
-				with open(self.filename, 'rb') as f:
-					self.memory = json.load(f)
-				if 'count' not in self.memory or self.memory['count'] == 0:
-					self.memory['count'] = count
-				else:
-					self.debug()
-			else:
-				self.memory = {'seen':[], 'count':count}
-		except:
-			logging.exception('Failed to load database')
-			self.memory = {'seen':[], 'count':count}
+    def __init__(self, filename, count):
+        self.filename = os.path.splitext(filename)[0] + '_memory.json'
+        self.count = count
+        try:
+            if os.path.exists(self.filename):
+                with open(self.filename, 'rb') as f:
+                    self.memory = json.load(f)
+                if 'count' not in self.memory or self.memory['count'] == 0:
+                    self.memory['count'] = count
+                else:
+                    self.debug()
+            else:
+                self.memory = {'seen': [], 'count': count}
+        except:
+            logging.exception('Failed to load database')
+            self.memory = {'seen': [], 'count': count}
 
-	def forget(self):
-		self.memory = {'seen':[], 'count':0}
-		if os.path.exists(self.filename):
-			os.unlink(self.filename)
-		else:
-			logging.warning("Asked to delete %s but it doesn't exist", self.filename)
+    def forget(self):
+        self.memory = {'seen': [], 'count': 0}
+        if os.path.exists(self.filename):
+            os.unlink(self.filename)
+        else:
+            logging.warning("Asked to delete %s but it doesn't exist", self.filename)
 
-	def _hash(self, text):
-		return hashlib.sha1(text).hexdigest()
+    def _hash(self, text):
+        return hashlib.sha1(text).hexdigest()
 
-	def saw(self, url):
-		index = self._hash(url)
-		if index not in self.memory['seen']:
-			self.memory['seen'].append(index)
-			with open(self.filename, 'wb') as f:
-				json.dump(self.memory, f)
+    def saw(self, url):
+        index = self._hash(url)
+        if index not in self.memory['seen']:
+            self.memory['seen'].append(index)
+            with open(self.filename, 'wb') as f:
+                json.dump(self.memory, f)
 
-	def seenAll(self):
-		return len(self.memory['seen']) == self.count
+    def seenAll(self):
+        return len(self.memory['seen']) == self.count
 
-	def debug(self):
-		logging.info('[%s] Seen %d, expected to see %d', self.filename, len(self.memory['seen']), self.memory['count'])
+    def debug(self):
+        logging.info('[%s] Seen %d, expected to see %d', self.filename, len(self.memory['seen']), self.memory['count'])
 
-	def seen(self, id):
-		index = self._hash(id)
-		return index in self.memory['seen']
+    def seen(self, id):
+        index = self._hash(id)
+        return index in self.memory['seen']

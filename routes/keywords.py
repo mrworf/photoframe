@@ -16,45 +16,46 @@
 
 from .baseroute import BaseRoute
 
+
 class RouteKeywords(BaseRoute):
-  def setupex(self, servicemgr, slideshow):
-    self.servicemgr = servicemgr
-    self.slideshow = slideshow
+    def setupex(self, servicemgr, slideshow):
+        self.servicemgr = servicemgr
+        self.slideshow = slideshow
 
-    self.addUrl('/keywords/<service>/help')
-    self.addUrl('/keywords/<service>')
-    self.addUrl('/keywords/<service>/add').clearMethods().addMethod('POST')
-    self.addUrl('/keywords/<service>/delete').clearMethods().addMethod('POST')
-    self.addUrl('/keywords/<service>/source/<int:index>')
-    self.addUrl('/keywords/<service>/details/<int:index>')
+        self.addUrl('/keywords/<service>/help')
+        self.addUrl('/keywords/<service>')
+        self.addUrl('/keywords/<service>/add').clearMethods().addMethod('POST')
+        self.addUrl('/keywords/<service>/delete').clearMethods().addMethod('POST')
+        self.addUrl('/keywords/<service>/source/<int:index>')
+        self.addUrl('/keywords/<service>/details/<int:index>')
 
-  def handle(self, app, service, index=None):
-    if self.getRequest().method == 'GET':
-      if 'source' in self.getRequest().url:
-        return self.redirect(self.servicemgr.sourceServiceKeywords(service, index))
-      elif 'details' in self.getRequest().url:
-        return self.jsonify(self.servicemgr.detailsServiceKeywords(service, index))
-      elif 'help' in self.getRequest().url:
-        return self.jsonify({'message' : self.servicemgr.helpServiceKeywords(service)})
-      else:
-        return self.jsonify({'keywords' : self.servicemgr.getServiceKeywords(service)})
-    elif self.getRequest().method == 'POST' and self.getRequest().json is not None:
-      result = True
-      if 'id' not in self.getRequest().json:
-        hadKeywords = self.servicemgr.hasKeywords()
-        result = self.servicemgr.addServiceKeywords(service, self.getRequest().json['keywords'])
-        if result['error'] is not None:
-          result['status'] = False
-        else:
-          result['status'] = True
-          if hadKeywords != self.servicemgr.hasKeywords():
-            # Make slideshow show the change immediately, we have keywords
-            self.slideshow.trigger()
-      else:
-        if not self.servicemgr.removeServiceKeywords(service, self.getRequest().json['id']):
-          result = {'status':False, 'error' : 'Unable to remove keyword'}
-        else:
-          # Trigger slideshow, we have removed some keywords
-          self.slideshow.trigger()
-      return self.jsonify(result)
-    self.setAbort(500)
+    def handle(self, app, service, index=None):
+        if self.getRequest().method == 'GET':
+            if 'source' in self.getRequest().url:
+                return self.redirect(self.servicemgr.sourceServiceKeywords(service, index))
+            elif 'details' in self.getRequest().url:
+                return self.jsonify(self.servicemgr.detailsServiceKeywords(service, index))
+            elif 'help' in self.getRequest().url:
+                return self.jsonify({'message': self.servicemgr.helpServiceKeywords(service)})
+            else:
+                return self.jsonify({'keywords': self.servicemgr.getServiceKeywords(service)})
+        elif self.getRequest().method == 'POST' and self.getRequest().json is not None:
+            result = True
+            if 'id' not in self.getRequest().json:
+                hadKeywords = self.servicemgr.hasKeywords()
+                result = self.servicemgr.addServiceKeywords(service, self.getRequest().json['keywords'])
+                if result['error'] is not None:
+                    result['status'] = False
+                else:
+                    result['status'] = True
+                    if hadKeywords != self.servicemgr.hasKeywords():
+                        # Make slideshow show the change immediately, we have keywords
+                        self.slideshow.trigger()
+            else:
+                if not self.servicemgr.removeServiceKeywords(service, self.getRequest().json['id']):
+                    result = {'status': False, 'error': 'Unable to remove keyword'}
+                else:
+                    # Trigger slideshow, we have removed some keywords
+                    self.slideshow.trigger()
+            return self.jsonify(result)
+        self.setAbort(500)
