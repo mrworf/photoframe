@@ -120,7 +120,7 @@ class slideshow:
 
       if event == 'memoryForget' or event == 'clearCache':
         if event == 'memoryForget':
-          self.services.memoryForget()
+          self.services.memoryForgetAll()
         if event == 'clearCache':
           self.cacheMgr.empty()
         if self.imageCurrent:
