@@ -38,7 +38,7 @@ def subprocess_call(cmds, stderr=None, stdout=None):
 
 
 def subprocess_check_output(cmds, stderr=None):
-    return subprocess.check_output(cmds, stderr=stderr)
+    return subprocess.check_output(cmds, stderr=stderr).decode("utf-8")
 
 
 def stacktrace():

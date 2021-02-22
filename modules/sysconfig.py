@@ -146,7 +146,7 @@ class sysconfig:
             if os.path.exists(userfile):
                 logging.debug('Found "%s", loading the data' % userfile)
                 try:
-                    with open(userfile, 'rb') as f:
+                    with open(userfile, 'r') as f:
                         user = json.load(f)
                         if 'user' not in user or 'password' not in user:
                             logging.warning("\"%s\" doesn't contain a user and password key" % userfile)

@@ -391,6 +391,7 @@ class GooglePhotos(BaseService):
         # Now try loading
         if os.path.exists(filename):
             try:
+                print(filename)
                 with open(filename, 'r') as f:
                     albumdata = json.load(f)
             except Exception:
@@ -415,14 +416,18 @@ class GooglePhotos(BaseService):
             return None
         parsedImages = []
         for entry in data:
-            item = BaseService.createImageHolder(self)
-            item.setId(entry['id'])
-            item.setSource(entry['productUrl']).setMimetype(entry['mimeType'])
-            item.setDimensions(entry['mediaMetadata']['width'], entry['mediaMetadata']['height'])
-            item.allowCache(True)
-            item.setContentProvider(self)
-            item.setContentSource(keyword)
-            parsedImages.append(item)
+            try:
+                item = BaseService.createImageHolder(self)
+                item.setId(entry['id'])
+                item.setSource(entry['productUrl']).setMimetype(entry['mimeType'])
+                item.setDimensions(entry['mediaMetadata']['width'], entry['mediaMetadata']['height'])
+                item.allowCache(True)
+                item.setContentProvider(self)
+                item.setContentSource(keyword)
+                parsedImages.append(item)
+            except Exception:
+                logging.exception('Entry could not be loaded')
+                logging.debug('Contents of entry: ' + repr(entry))
         return parsedImages
 
     def getContentUrl(self, image, hints):

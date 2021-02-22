@@ -85,7 +85,7 @@ class SimpleUrl(BaseService):
         if retry > 0:
             return self.selectImageFromAlbum(destinationDir, supportedMimeTypes, displaySize, randomize, retry=retry-1)
         return BaseService.createImageHolder(self) \
-            .setError(f'{self.SERVICE_NAME} uses broken urls / unsupported images!')
+            .setError('%s uses broken urls / unsupported images!' % self.SERVICE_NAME)
 
     def getImagesFor(self, keyword):
         url = keyword
