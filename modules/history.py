@@ -37,7 +37,7 @@ class ImageHistory:
             for filename in [os.path.join(p, f) for f in files]:
                 try:
                     os.unlink(filename)
-                except:
+                except Exception:
                     logging.exception('Failed to delete "%s"' % filename)
 
     def _find(self, file):

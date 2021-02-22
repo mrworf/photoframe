@@ -60,7 +60,7 @@ class sysconfig:
                 else:
                     os.rename(path.CONFIG_TXT + '.old', path.CONFIG_TXT + '.original')
                 return True
-            except:
+            except Exception:
                 logging.exception('Failed to activate new config.txt, you may need to restore the config.txt')
 
     @staticmethod
@@ -153,7 +153,7 @@ class sysconfig:
                             user = None
                         else:
                             break
-                except:
+                except Exception:
                     logging.exception('Unable to load JSON from "%s"' % userfile)
                     user = None
         return user
@@ -162,7 +162,7 @@ class sysconfig:
     def setHostname(name):
         # First, make sure it's legal
         name = re.sub(' ', '-', name.strip())
-        name = re.sub('[^a-zA-Z0-9\-]', '', name).strip()
+        name = re.sub('[^a-zA-Z0-9\\-]', '', name).strip()
         if not name or len(name) > 63:
             return False
 
@@ -198,7 +198,7 @@ class sysconfig:
             except subprocess.CalledProcessError:
                 logging.exception('Couldnt restart avahi, not a deal breaker')
             return True
-        except:
+        except Exception:
             logging.exception('Failed to activate new hostname, you should probably reboot to restore')
         return False
 

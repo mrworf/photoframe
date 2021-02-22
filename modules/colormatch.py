@@ -49,10 +49,10 @@ class colormatch(Thread):
         return self.sensor
 
     def hasTemperature(self):
-        return self.temperature != None
+        return self.temperature is not None
 
     def hasLux(self):
-        return self.lux != None
+        return self.lux is not None
 
     def getTemperature(self):
         return self.temperature
@@ -88,7 +88,7 @@ class colormatch(Thread):
                 logging.warning('colormatch called without filename extension, lingering .cache file will stay behind')
 
             return result
-        except:
+        except Exception:
             logging.exception('Unable to run %s:', self.script)
             return False
 
@@ -137,7 +137,7 @@ class colormatch(Thread):
     def run(self):
         try:
             bus = smbus.SMBus(1)
-        except:
+        except Exception:
             logging.info('No SMB subsystem, color sensor unavailable')
             return
         # I2C address 0x29
@@ -145,7 +145,7 @@ class colormatch(Thread):
         # Register addresses must be OR'ed with 0x80
         try:
             bus.write_byte(0x29, 0x80 | 0x12)
-        except:
+        except Exception:
             logging.info('ColorSensor not available')
             return
         ver = bus.read_byte(0x29)
@@ -154,7 +154,9 @@ class colormatch(Thread):
             # Make sure we have the needed script
             if not os.path.exists(self.script):
                 logging.info(
-                    'No color temperature script, download it from http://www.fmwconcepts.com/imagemagick/colortemp/index.php and save as "%s"' % self.script)
+                    'No color temperature script, download it from '
+                    'http://www.fmwconcepts.com/imagemagick/colortemp/index.php and save as "%s"' % self.script
+                )
                 self.allowAdjust = False
             self.allowAdjust = True
 

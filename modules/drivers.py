@@ -31,7 +31,7 @@ class drivers:
         if not os.path.exists(path.DRV_EXTERNAL):
             try:
                 os.mkdir(path.DRV_EXTERNAL)
-            except:
+            except Exception:
                 logging.exception('Unable to create "%s"', path.DRV_EXTERNAL)
 
     def _list_dir(self, path):
@@ -63,7 +63,7 @@ class drivers:
     def _deletefolder(self, folder):
         try:
             shutil.rmtree(folder)
-        except:
+        except Exception:
             logging.exception('Failed to delete "%s"', folder)
 
     def _parse(self, installer):
@@ -123,13 +123,15 @@ class drivers:
                         elif value.lower() in ['false', 'no']:
                             value = False
                         config['options'][key] = value
-        except:
+        except Exception:
             logging.exception('Failed to read INSTALL manifest')
             return None
 
         # Support old INSTALL format
         if 'config' not in config:
-            logging.info('All drivers have typically ONE config value, this must be an old INSTALL file, try to compensate')
+            logging.info(
+                'All drivers have typically ONE config value, this must be an old INSTALL file, trying to compensate'
+            )
             config['config'] = []
             for k in config['options']:
                 config['config'].append('%s=%s' % (k, config['options'][k]))
@@ -147,7 +149,7 @@ class drivers:
         try:
             result = subprocess.check_call(
                 ['/usr/bin/unzip', file, '-d', os.path.join(folder, extra)], stdout=self.void, stderr=self.void)
-        except:
+        except Exception:
             result = 255
 
         if result != 0:
@@ -183,7 +185,7 @@ class drivers:
             files.append({'src': dst, 'dst': entry['dst']})
             try:
                 shutil.copyfile(os.path.join(folder, extra, src), os.path.join(dstfolder, dst))
-            except:
+            except Exception:
                 logging.exception('Failed to copy "%s" to "%s"', os.path.join(
                     folder, extra, src), os.path.join(dstfolder, dst))
                 # Shitty, but we cannot leave this directory with partial files
@@ -203,7 +205,7 @@ class drivers:
         try:
             int(value)
             return True
-        except:
+        except Exception:
             return False
 
     def activate(self, driver=None):
@@ -225,7 +227,7 @@ class drivers:
                 with open(os.path.join(driverlist[driver], 'manifest.json'), 'rb') as f:
                     config = json.load(f)
                 root = driverlist[driver]
-            except:
+            except Exception:
                 logging.exception('Failed to load manifest for %s', driver)
                 return None
             # Reformat old
@@ -242,7 +244,7 @@ class drivers:
         for copy in config['install']:
             try:
                 shutil.copyfile(os.path.join(root, copy['src']), copy['dst'])
-            except:
+            except Exception:
                 logging.exception('Failed to copy "%s" to "%s"', copy['src'], copy['dst'])
                 return None
 
@@ -255,7 +257,7 @@ class drivers:
                     if line == drivers.MARKER:
                         break
                     lines.append(line)
-        except:
+        except Exception:
             logging.exception('Failed to read /boot/config.txt')
             return None
 
@@ -270,7 +272,7 @@ class drivers:
             with open('/boot/config.txt.new', 'wb') as f:
                 for line in lines:
                     f.write('%s\n' % line)
-        except:
+        except Exception:
             logging.exception('Failed to generate new config.txt')
             return None
 
@@ -283,7 +285,7 @@ class drivers:
                 os.unlink('/boot/config.txt.old')
             else:
                 os.rename('/boot/config.txt.old', '/boot/config.txt.original')
-        except:
+        except Exception:
             logging.exception('Failed to activate new config.txt, you may need to restore the config.txt')
             return None
         if 'special' in config:

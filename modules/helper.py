@@ -22,7 +22,8 @@ import re
 import random
 import time
 
-# A regular expression to determine whether a url is valid or not (e.g. "www.example.de/someImg.jpg" is missing "http://")
+# A regular expression to determine whether a url is valid or not
+# (e.g. "www.example.de/someImg.jpg" is missing "http://")
 VALID_URL_REGEX = re.compile(
     r'^(?:http|ftp)s?://'  # http:// or https://
     r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
@@ -84,7 +85,7 @@ class helper:
         except ImportError:
             logging.error('User has not installed python-netifaces, using checkNetwork() instead (depends on internet)')
             return helper._checkNetwork()
-        except:
+        except Exception:
             logging.exception('netifaces call failed, using checkNetwork() instead (depends on internet)')
             return helper._checkNetwork()
 
@@ -97,7 +98,7 @@ class helper:
             ip = s.getsockname()[0]
 
             s.close()
-        except:
+        except Exception:
             logging.exception('Failed to get IP via old method')
         return ip
 
@@ -125,7 +126,7 @@ class helper:
         with open(os.devnull, 'wb') as void:
             try:
                 output = subprocess.check_output(cmd, stderr=void).strip("\n")
-                m = re.match('[^\:]+\: *([^;]+)', output)
+                m = re.match('[^\\:]+\\: *([^;]+)', output)
                 if m:
                     mimetype = m.group(1)
             except subprocess.CalledProcessError:
@@ -137,7 +138,7 @@ class helper:
     def copyFile(orgFilename, newFilename):
         try:
             shutil.copyfile(orgFilename, newFilename)
-        except:
+        except Exception:
             logging.exception('Unable copy file from "%s" to "%s"' % (orgFilename, newFilename))
             return False
         return True
@@ -170,7 +171,7 @@ class helper:
         with open(os.devnull, 'wb') as void:
             try:
                 output = subprocess.check_output(['/usr/bin/identify', filename], stderr=void)
-            except:
+            except Exception:
                 logging.exception('Failed to run identify to get image dimensions on %s', filename)
                 return None
 
@@ -252,12 +253,26 @@ class helper:
                 adjWidth = displayWidth
                 adjHeight = int(float(displayWidth) / oar)
                 logging.debug('Size of image is %dx%d, screen is %dx%d. New size is %dx%d  --> cropped to %dx%d',
-                              width, height, displayWidth, displayHeight, adjWidth, adjHeight, displayWidth, displayHeight)
+                              width,
+                              height,
+                              displayWidth,
+                              displayHeight,
+                              adjWidth,
+                              adjHeight,
+                              displayWidth,
+                              displayHeight)
             else:
                 adjWidth = int(float(displayHeight) * oar)
                 adjHeight = displayHeight
                 logging.debug('Size of image is %dx%d, screen is %dx%d. New size is %dx%d --> cropped to %dx%d',
-                              width, height, displayWidth, displayHeight, adjWidth, adjHeight, displayWidth, displayHeight)
+                              width,
+                              height,
+                              displayWidth,
+                              displayHeight,
+                              adjWidth,
+                              adjHeight,
+                              displayWidth,
+                              displayHeight)
 
         cmd = None
         try:
@@ -312,7 +327,7 @@ class helper:
                     '-composite',
                     filenameProcessed
                 ]
-        except:
+        except Exception:
             logging.exception('Error building command line')
             logging.debug('Filename: ' + repr(filename))
             logging.debug('filenameProcessed: ' + repr(filenameProcessed))
@@ -346,7 +361,7 @@ class helper:
         try:
             with open(os.devnull, 'wb') as void:
                 result = subprocess.check_call(['/usr/bin/timedatectl', 'set-timezone', zone], stderr=void)
-        except:
+        except Exception:
             logging.exception('Unable to change timezone')
             pass
         return result == 0
@@ -373,7 +388,9 @@ class helper:
     def autoRotate(ifile):
         if not os.path.exists('/usr/bin/jpegexiforient'):
             logging.warning(
-                'jpegexiforient is missing, no auto rotate available. Did you forget to run "apt install libjpeg-turbo-progs" ?')
+                'jpegexiforient is missing, no auto rotate available. '
+                'Did you forget to run "apt install libjpeg-turbo-progs" ?'
+            )
             return ifile
 
         p, f = os.path.split(ifile)

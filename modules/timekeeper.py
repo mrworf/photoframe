@@ -100,10 +100,28 @@ class timekeeper(Thread):
     def evaluatePower(self):
         # Either source can turn off display but scheduleOff takes priority on power on
         # NOTE! Schedule and sensor can be overriden
-        if not self.standby and ((not self.ignoreSchedule and self.scheduleOff) or (not self.ignoreSensor and self.ambientOff)):
+        if (
+            not self.standby
+            and (
+                (
+                    not self.ignoreSchedule and self.scheduleOff
+                )
+                or (
+                    not self.ignoreSensor and self.ambientOff
+                )
+            )
+        ):
             self.standby = True
             self.notifyListeners(False)
-        elif self.standby and (self.ignoreSchedule or not self.scheduleOff) and (self.ignoreSensor or not self.ambientOff):
+        elif (
+            self.standby
+            and (
+                self.ignoreSchedule or not self.scheduleOff
+            )
+            and (
+                self.ignoreSensor or not self.ambientOff
+            )
+        ):
             self.standby = False
             self.notifyListeners(True)
 

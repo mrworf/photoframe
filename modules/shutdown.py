@@ -40,13 +40,13 @@ class shutdown(Thread):
         try:
             with open('/sys/class/gpio/export', 'wb') as f:
                 f.write('%d' % self.gpio)
-        except:
+        except Exception:
             # Usually it means we ran this before
             pass
         try:
             with open('/sys/class/gpio/gpio%d/direction' % self.gpio, 'wb') as f:
                 f.write('in')
-        except:
+        except Exception:
             logging.warn('Either no GPIO subsystem or no access')
             return
         with open('/sys/class/gpio/gpio%d/edge' % self.gpio, 'wb') as f:

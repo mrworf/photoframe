@@ -74,18 +74,23 @@ class ServiceManager:
                     for line in f:
                         line = line.strip()
                         if line.startswith('class ') and line.endswith('(BaseService):'):
-                            m = re.search('class +([^\(]+)\(', line)
+                            m = re.search('class +([^\\(]+)\\(', line)
                             if m is not None:
                                 klass = self._instantiate(item[0:-3], m.group(1))
                                 logging.info('Loading service %s from %s', klass.__name__, item)
-                                self._SVC_INDEX[m.group(1)] = {'id': klass.SERVICE_ID, 'name': klass.SERVICE_NAME,
-                                                               'module': item[0:-3], 'class': m.group(1), 'deprecated': klass.SERVICE_DEPRECATED}
+                                self._SVC_INDEX[m.group(1)] = {
+                                    'id': klass.SERVICE_ID,
+                                    'name': klass.SERVICE_NAME,
+                                    'module': item[0:-3],
+                                    'class': m.group(1),
+                                    'deprecated': klass.SERVICE_DEPRECATED
+                                }
                             break
 
     def _deletefolder(self, folder):
         try:
             shutil.rmtree(folder)
-        except:
+        except Exception:
             logging.exception('Failed to delete "%s"', folder)
 
     def _resolveService(self, id):
@@ -116,7 +121,7 @@ class ServiceManager:
         try:
             with open(self._CONFIGFILE, 'r') as f:
                 data = json.load(f)
-        except:
+        except Exception:
             logging.error('%s is corrupt, skipping' % self._CONFIGFILE)
             os.unlink(self._CONFIGFILE)
             return

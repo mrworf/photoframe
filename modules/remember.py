@@ -33,7 +33,7 @@ class remember:
                     self.debug()
             else:
                 self.memory = {'seen': [], 'count': count}
-        except:
+        except Exception:
             logging.exception('Failed to load database')
             self.memory = {'seen': [], 'count': count}
 

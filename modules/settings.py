@@ -89,11 +89,15 @@ class settings:
                     # Lastly, correct the tvservice field, should be "TEXT NUMBER TEXT"
                     # This is a little bit of a cheat
                     parts = self.settings['cfg']['tvservice'].split(' ')
-                    if len(parts) == 3 and type(self.convertToNative(parts[1])) != int and type(self.convertToNative(parts[2])) == int:
+                    if (
+                        len(parts) == 3
+                        and type(self.convertToNative(parts[1])) != int
+                        and type(self.convertToNative(parts[2])) == int
+                    ):
                         logging.debug('Reordering tvservice value due to old bug')
                         self.settings['cfg']['tvservice'] = "%s %s %s" % (parts[0], parts[2], parts[1])
                         self.save()
-                except:
+                except Exception:
                     logging.exception('Failed to load settings.json, corrupt file?')
                     return False
             # make sure old settings.json files are still compatible and get updated with new keys
@@ -112,7 +116,7 @@ class settings:
             if '.' in value:
                 return float(value)
             return int(value)
-        except:
+        except Exception:
             return value
 
     def setUser(self, key, value):
@@ -128,7 +132,7 @@ class settings:
         try:
             a = 1 / 0
             a += 1
-        except:
+        except Exception:
             logging.exception('Where did this come from??')
         return None
 

@@ -73,14 +73,14 @@ class RouteDetails(BaseRoute):
             output = ''
             try:
                 output = subprocess.check_output(['/opt/vc/bin/vcgencmd', 'get_throttled'], stderr=self.void)
-            except:
+            except Exception:
                 logging.exception('Unable to execute /opt/vc/bin/vcgencmd')
             if not output.startswith('throttled='):
                 logging.error('Output from vcgencmd get_throttled has changed')
                 output = 'throttled=0x0'
             try:
                 h = int(output[10:].strip(), 16)
-            except:
+            except Exception:
                 logging.exception('Unable to convert output from vcgencmd get_throttled')
             result = {
                 'undervoltage': h & (1 << 0 | 1 << 16) > 0,
@@ -96,8 +96,12 @@ class RouteDetails(BaseRoute):
             timeneeded = images * self.settings.getUser('interval')
             timeavailable = self.settings.getUser('refresh') * 3600
             if timeavailable > 0 and timeneeded > timeavailable:
-                msgs.append({'level': 'WARNING', 'message': 'Change every %d seconds with %d images will take %dh, refresh keywords is %dh' % (
-                    self.settings.getUser('interval'), images, timeneeded/3600, timeavailable/3600), 'link': None})
+                msgs.append({
+                    'level': 'WARNING',
+                    'message': 'Change every %d seconds with %d images will take %dh, refresh keywords is %dh' % (
+                        self.settings.getUser('interval'), images, timeneeded/3600, timeavailable/3600
+                    ),
+                    'link': None})
 
             return self.jsonify(msgs)
         self.setAbort(404)

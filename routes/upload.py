@@ -67,7 +67,7 @@ class RouteUpload(BaseRoute):
 
         try:
             os.remove(filename)
-        except:
+        except Exception:
             pass
         if retval['status'] == 200:
             return self.jsonify(retval['return'])

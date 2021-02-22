@@ -41,7 +41,7 @@ class OAuth:
         self.oauth = oauth
 
     def hasOAuth(self):
-        return self.oauth != None
+        return self.oauth is not None
 
     def getSession(self, refresh=False):
         if not refresh:
@@ -50,7 +50,8 @@ class OAuth:
             auth = OAuth2Session(self.oauth['client_id'],
                                  token=self.cbGetToken(),
                                  auto_refresh_kwargs={
-                                     'client_id': self.oauth['client_id'], 'client_secret': self.oauth['client_secret']},
+                                     'client_id': self.oauth['client_id'],
+                                     'client_secret': self.oauth['client_secret']},
                                  auto_refresh_url=self.oauth['token_uri'],
                                  token_updater=self.cbSetToken)
         return auth
@@ -58,7 +59,7 @@ class OAuth:
     def request(self, uri, destination=None, params=None, data=None, usePost=False):
         ret = RequestResult()
         result = None
-        stream = destination != None
+        stream = destination is not None
         tries = 0
 
         while tries < 5:
@@ -89,7 +90,7 @@ class OAuth:
             except InvalidGrantError:
                 logging.error('Token is no longer valid, need to re-authenticate')
                 raise RequestInvalidToken
-            except:
+            except Exception:
                 logging.exception('Issues downloading')
             time.sleep(tries / 10)  # Back off 10, 20, ... depending on tries
             tries += 1
@@ -107,7 +108,7 @@ class OAuth:
                             handle.write(chunk)
                 ret.setResult(RequestResult.SUCCESS).setHTTPCode(result.status_code)
                 ret.setHeaders(result.headers)
-            except:
+            except Exception:
                 logging.exception('Failed to download %s' % uri)
                 ret.setResult(RequestResult.FAILED_SAVING)
         else:
@@ -147,6 +148,6 @@ class OAuth:
 
             self.cbSetToken(token)
             return True
-        except:
+        except Exception:
             logging.exception('Failed to complete OAuth')
         return False

@@ -34,12 +34,10 @@ def _stringify(args):
 
 
 def subprocess_call(cmds, stderr=None, stdout=None):
-    #logging.debug('subprocess.call(%s)', _stringify(cmds))
     return subprocess.call(cmds, stderr=stderr, stdout=stdout)
 
 
 def subprocess_check_output(cmds, stderr=None):
-    #logging.debug('subprocess.check_output(%s)', _stringify(cmds))
     return subprocess.check_output(cmds, stderr=stderr)
 
 
@@ -57,7 +55,7 @@ def stacktrace():
 
 def logfile(all=False):
     stats = os.stat('/var/log/syslog')
-    cmd = 'grep -a "photoframe\[" /var/log/syslog | tail -n 100'
+    cmd = 'grep -a "photoframe\\[" /var/log/syslog | tail -n 100'
     title = 'Last 100 lines from the photoframe log'
     if all:
         title = 'Last 100 lines from the system log (/var/log/syslog)'

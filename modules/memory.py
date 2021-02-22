@@ -49,7 +49,7 @@ class MemoryManager:
             try:
                 with open(os.path.join(self._DIR_MEMORY, '%s.json' % h), 'r') as f:
                     self._MEMORY = json.load(f)
-            except:
+            except Exception:
                 logging.exception('File %s is corrupt' % os.path.join(self._DIR_MEMORY, '%s.json' % h))
                 self._MEMORY = []
         else:

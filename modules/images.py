@@ -18,13 +18,15 @@ import hashlib
 
 class ImageHolder:
     def __init__(self):
-        #  "id" : a unique - preferably not-changing - ID to identify the same image in future requests, e.g. hashString(imageUrl)
-        #  "mimetype" : the filetype you downloaded, for example "image/jpeg"
-        #  "error" : None or a human readable text string as to why you failed
-        #  "source" : Link to where the item came from or None if not provided
-        # "url":      Link to the actual image file
-        # "dimensions":     a key/value map containing "width" and "height" of the image
-        #             can be None, but the service won't be able to determine a recommendedImageSize for 'addUrlParams'
+        # "id" : a unique - preferably not-changing - ID to identify the same image in future requests,
+        #        e.g. hashString(imageUrl)
+        # "mimetype" : the filetype you downloaded, for example "image/jpeg"
+        # "error" : None or a human readable text string as to why you failed
+        # "source" : Link to where the item came from or None if not provided
+        # "url": Link to the actual image file
+        # "dimensions": a key/value map containing "width" and "height" of the image
+        #               can be None, but the service won't be able to determine a recommendedImageSize
+        #               for 'addUrlParams'
         # "filename": the original filename of the image or None if unknown (only used for debugging purposes)
         self.id = None
         self.mimetype = None

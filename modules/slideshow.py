@@ -177,9 +177,11 @@ class slideshow:
         if result is None:
             serviceStates = self.services.getAllServiceStates()
             if len(serviceStates) == 0:
-                msg = 'Photoframe isn\'t ready yet\n\nPlease direct your webbrowser to\n\nhttp://%s:7777/\n\nand add one or more photo providers' % helper.getDeviceIp()
+                msg = 'Photoframe isn\'t ready yet\n\nPlease direct your webbrowser to\n\n'
+                msg += 'http://%s:7777/\n\nand add one or more photo providers' % helper.getDeviceIp()
             else:
-                msg = 'Please direct your webbrowser to\n\nhttp://%s:7777/\n\nto complete the setup process' % helper.getDeviceIp()
+                msg = 'Please direct your webbrowser to\n\n'
+                msg += 'http://%s:7777/\n\nto complete the setup process' % helper.getDeviceIp()
                 for svcName, state, additionalInfo in serviceStates:
                     msg += "\n\n"+svcName+": "
                     if state == 'OAUTH':

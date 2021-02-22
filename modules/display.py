@@ -259,8 +259,24 @@ class display:
                                               stderr=self.void, stdout=self.void)
                     time.sleep(1)
                     debug.subprocess_call(['/bin/fbset', '-fb', self.getDevice(), '-depth', '8'], stderr=self.void)
-                    debug.subprocess_call(['/bin/fbset', '-fb', self.getDevice(), '-depth', str(self.depth), '-xres', str(
-                        self.width), '-yres', str(self.height), '-vxres', str(self.width), '-vyres', str(self.height)], stderr=self.void)
+                    debug.subprocess_call(
+                        [
+                            '/bin/fbset',
+                            '-fb',
+                            self.getDevice(),
+                            '-depth',
+                            str(self.depth),
+                            '-xres',
+                            str(self.width),
+                            '-yres',
+                            str(self.height),
+                            '-vxres',
+                            str(self.width),
+                            '-vyres',
+                            str(self.height)
+                        ],
+                        stderr=self.void
+                    )
                 else:
                     debug.subprocess_call(['/usr/bin/vcgencmd', 'display_power', '1'], stderr=self.void)
         else:
@@ -334,7 +350,10 @@ class display:
             output = debug.subprocess_check_output(['/opt/vc/bin/tvservice', '-s'], stderr=subprocess.STDOUT)
             # state 0x120006 [DVI DMT (82) RGB full 16:9], 1920x1080 @ 60.00Hz, progressive
             m = re.search(
-                'state 0x[0-9a-f]* \[([A-Z]*) ([A-Z]*) \(([0-9]*)\) [^,]*, ([0-9]*)x([0-9]*) \@ ([0-9]*)\.[0-9]*Hz, (.)', output)
+                'state 0x[0-9a-f]* \\[([A-Z]*) ([A-Z]*) \\(([0-9]*)\\) [^,]*, '
+                '([0-9]*)x([0-9]*) \\@ ([0-9]*)\\.[0-9]*Hz, (.)',
+                output
+            )
             if m is None:
                 return None
             result = {

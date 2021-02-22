@@ -48,7 +48,7 @@ class path:
         if not os.path.exists(path.CONFIGFOLDER):
             try:
                 os.mkdir(path.CONFIGFOLDER)
-            except:
+            except Exception:
                 logging.exception('Unable to create configuration directory, cannot start')
                 return False
         elif not os.path.isdir(path.CONFIGFOLDER):
