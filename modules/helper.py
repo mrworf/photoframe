@@ -21,6 +21,7 @@ import shutil
 import re
 import random
 import time
+from . import debug
 
 # A regular expression to determine whether a url is valid or not
 # (e.g. "www.example.de/someImg.jpg" is missing "http://")
@@ -64,7 +65,7 @@ class helper:
     @staticmethod
     def getResolution():
         res = None
-        output = subprocess.check_output(['/bin/fbset'], stderr=subprocess.DEVNULL)
+        output = debug.subprocess_check_output(['/bin/fbset'], stderr=subprocess.DEVNULL)
         for line in output.split('\n'):
             line = line.strip()
             if line.startswith('mode "'):
@@ -125,7 +126,7 @@ class helper:
         cmd = ["/usr/bin/file", "--mime", filename]
         with open(os.devnull, 'wb') as void:
             try:
-                output = subprocess.check_output(cmd, stderr=void).strip("\n")
+                output = debug.subprocess_check_output(cmd, stderr=void).strip("\n")
                 m = re.match('[^\\:]+\\: *([^;]+)', output)
                 if m:
                     mimetype = m.group(1)
@@ -155,7 +156,7 @@ class helper:
         ]
 
         try:
-            subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+            debug.subprocess_check_output(cmd, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             logging.exception('Unable to reframe the image')
             logging.error('Output: %s' % repr(e.output))
@@ -170,7 +171,7 @@ class helper:
 
         with open(os.devnull, 'wb') as void:
             try:
-                output = subprocess.check_output(['/usr/bin/identify', filename], stderr=void)
+                output = debug.subprocess_check_output(['/usr/bin/identify', filename], stderr=void)
             except Exception:
                 logging.exception('Failed to run identify to get image dimensions on %s', filename)
                 return None
@@ -336,7 +337,7 @@ class helper:
             return filename
 
         try:
-            subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+            debug.subprocess_check_output(cmd, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             logging.exception('Unable to reframe the image')
             logging.error('Output: %s' % repr(e.output))

@@ -88,7 +88,7 @@ class ImageHolder:
     def getCacheId(self):
         if self.id is None:
             return None
-        return hashlib.sha1(self.id).hexdigest()
+        return hashlib.sha1(self.id.encode('utf-8')).hexdigest()
 
     def copy(self):
         copy = ImageHolder()
