@@ -20,7 +20,7 @@ import logging
 from modules.helper import helper
 
 from .baseroute import BaseRoute
-
+from modules import debug
 
 class RouteDetails(BaseRoute):
     def setupex(self, displaymgr, drivermgr, colormatch, slideshow, servicemgr, settings):
@@ -53,11 +53,11 @@ class RouteDetails(BaseRoute):
             result = helper.timezoneList()
             return self.jsonify(result)
         elif about == 'version':
-            output = subprocess.check_output(['git', 'log', '-n1'], stderr=self.void)
+            output = debug.subprocess_check_output(['git', 'log', '-n1'], stderr=self.void)
             lines = output.split('\n')
             infoDate = lines[2][5:].strip()
             infoCommit = lines[0][7:].strip()
-            output = subprocess.check_output(['git', 'status'], stderr=self.void)
+            output = debug.subprocess_check_output(['git', 'status'], stderr=self.void)
             lines = output.split('\n')
             infoBranch = lines[0][10:].strip()
             return self.jsonify({'date': infoDate, 'commit': infoCommit, 'branch': infoBranch})
@@ -72,7 +72,7 @@ class RouteDetails(BaseRoute):
         elif about == 'hardware':
             output = ''
             try:
-                output = subprocess.check_output(['/opt/vc/bin/vcgencmd', 'get_throttled'], stderr=self.void)
+                output = debug.subprocess_check_output(['/opt/vc/bin/vcgencmd', 'get_throttled'], stderr=self.void)
             except Exception:
                 logging.exception('Unable to execute /opt/vc/bin/vcgencmd')
             if not output.startswith('throttled='):

@@ -42,11 +42,12 @@ class NoAuth:
 
 
 class WebServer(Thread):
-    def __init__(self, run_async=False, port=7777, listen='0.0.0.0'):
+    def __init__(self, run_async=False, port=7777, listen='0.0.0.0', debug=False):
         Thread.__init__(self)
         self.port = port
         self.listen = listen
         self.run_async = run_async
+        self.debug = debug
 
         self.app = Flask(__name__, static_url_path='/--do--not--ever--use--this--')
         self.app.config['UPLOAD_FOLDER'] = '/tmp/'
@@ -101,7 +102,7 @@ class WebServer(Thread):
 
     def run(self):
         try:
-            self.app.run(debug=False, port=self.port, host=self.listen)
+            self.app.run(debug=self.debug, use_reloader=False, port=self.port, host=self.listen)
         except RuntimeError as msg:
             if str(msg) == "Server shutdown":
                 pass  # or whatever you want to do when the server goes down

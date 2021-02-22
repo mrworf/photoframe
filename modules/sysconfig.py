@@ -20,7 +20,7 @@ import subprocess
 
 from .path import path
 import logging
-
+from . import debug
 
 class sysconfig:
     @staticmethod
@@ -189,7 +189,7 @@ class sysconfig:
 
             # also, run hostname with the new name
             with open(os.devnull, 'wb') as void:
-                subprocess.check_call(['/bin/hostname', name], stderr=void)
+                debug.subprocess_check_call(['/bin/hostname', name], stderr=void)
 
             # Final step, restart avahi (so it knows the correct hostname)
             try:

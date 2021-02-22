@@ -347,7 +347,7 @@ class helper:
 
     @staticmethod
     def timezoneList():
-        zones = subprocess.check_output(['/usr/bin/timedatectl', 'list-timezones']).split('\n')
+        zones = debug.subprocess_check_output(['/usr/bin/timedatectl', 'list-timezones']).split('\n')
         return [x for x in zones if x]
 
     @staticmethod
@@ -361,7 +361,7 @@ class helper:
         result = 1
         try:
             with open(os.devnull, 'wb') as void:
-                result = subprocess.check_call(['/usr/bin/timedatectl', 'set-timezone', zone], stderr=void)
+                result = debug.subprocess_check_call(['/usr/bin/timedatectl', 'set-timezone', zone], stderr=void)
         except Exception:
             logging.exception('Unable to change timezone')
             pass
@@ -401,7 +401,7 @@ class helper:
         parameters = ['', '-flip horizontal', '-rotate 180', '-flip vertical',
                       '-transpose', '-rotate 90', '-transverse', '-rotate 270']
         with open(os.devnull, 'wb') as void:
-            result = subprocess.check_output(['/usr/bin/jpegexiforient', ifile])  # , stderr=void)
+            result = debug.subprocess_check_output(['/usr/bin/jpegexiforient', ifile])  # , stderr=void)
         if result:
             orient = int(result)-1
             if orient < 0 or orient >= len(parameters):
@@ -411,7 +411,7 @@ class helper:
             cmd.extend(parameters[orient].split())
             cmd.extend(['-outfile', ofile, ifile])
             with open(os.devnull, 'wb') as void:
-                result = subprocess.check_call(cmd, stderr=void)
+                result = debug.subprocess_check_call(cmd, stderr=void)
             if result == 0:
                 os.unlink(ifile)
                 return ofile

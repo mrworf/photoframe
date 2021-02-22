@@ -60,7 +60,8 @@ class BaseRoute:
         pass
 
     def __call__(self, **kwargs):
-        return self.handle(self.app, **kwargs)
+        ret = self.handle(self.app, **kwargs)
+        return ret
 
     def handle(self, app, **kwargs):
         msg = '%s does not have an implementation' % self._URL

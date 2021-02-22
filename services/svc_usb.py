@@ -22,7 +22,7 @@ import json
 
 from modules.helper import helper
 from modules.network import RequestResult
-
+from modules import debug
 
 class USB_Photos(BaseService):
     SERVICE_NAME = 'USB-Photos'
@@ -203,7 +203,7 @@ class USB_Photos(BaseService):
         candidates = []
         for root, dirs, files in os.walk('/sys/block/'):
             for device in dirs:
-                result = subprocess.check_output(['udevadm', 'info', '--query=property', '/sys/block/' + device])
+                result = debug.subprocess_check_output(['udevadm', 'info', '--query=property', '/sys/block/' + device])
                 if result and 'ID_BUS=usb' in result:
                     values = {}
                     for line in result.split('\n'):
@@ -214,7 +214,7 @@ class USB_Photos(BaseService):
                         values[k] = v
                     if 'DEVNAME' in values:
                         # Now, locate the relevant partition
-                        result = subprocess.check_output(['lsblk', '-bOJ', values['DEVNAME']])
+                        result = debug.subprocess_check_output(['lsblk', '-bOJ', values['DEVNAME']])
                         if result is not None:
                             partitions = json.loads(result)['blockdevices'][0]['children']
                             for partition in partitions:
@@ -245,7 +245,7 @@ class USB_Photos(BaseService):
         if not os.path.exists(self.usbDir):
             cmd = ["mkdir", self.usbDir]
             try:
-                subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+                debug.subprocess_check_output(cmd, stderr=subprocess.STDOUT)
             except subprocess.CalledProcessError as e:
                 logging.exception('Unable to create directory: %s' % cmd[-1])
                 logging.error('Output: %s' % repr(e.output))
@@ -256,7 +256,7 @@ class USB_Photos(BaseService):
         for candidate in candidates:
             cmd = ['sudo', '-n', 'mount', candidate.device, self.usbDir]
             try:
-                subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+                debug.subprocess_check_output(cmd, stderr=subprocess.STDOUT)
                 logging.info("USB-device '%s' successfully mounted to '%s'!" % (cmd[-2], cmd[-1]))
                 if os.path.exists(self.baseDir):
                     self.device = candidate
@@ -273,7 +273,7 @@ class USB_Photos(BaseService):
     def unmountBaseDir(self):
         cmd = ['sudo', '-n', 'umount', self.usbDir]
         try:
-            subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+            debug.subprocess_check_output(cmd, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError:
             logging.debug("unable to UNMOUNT '%s'" % self.usbDir)
 

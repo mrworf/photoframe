@@ -73,6 +73,8 @@ class Photoframe:
         if not path().validate():
             sys.exit(255)
 
+        self.debugmode = cmdline.debug
+
         self.eventMgr = Events()
         self.eventMgr.add('Hello world')
 
@@ -133,7 +135,7 @@ class Photoframe:
         self.webServer.registerHandler(route)
 
     def setupWebserver(self, listen, port):
-        test = WebServer(port=port, listen=listen)
+        test = WebServer(port=port, listen=listen, debug=self.debugmode)
         self.webServer = test
 
         self._loadRoute('settings', 'RouteSettings', self.powerMgr, self.settingsMgr, self.driverMgr,
