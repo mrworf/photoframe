@@ -26,6 +26,7 @@ from modules.helper import helper
 class GooglePhotos(BaseService):
     SERVICE_NAME = 'GooglePhotos'
     SERVICE_ID = 2
+    MAX_ITEMS = 8000
 
     def __init__(self, configDir, id, name):
         BaseService.__init__(self, configDir, id, name, needConfig=False, needOAuth=True)
@@ -361,7 +362,7 @@ class GooglePhotos(BaseService):
                         .setError('Unable to get photos using keyword "%s"' % keyword)]
 
             url = 'https://photoslibrary.googleapis.com/v1/mediaItems:search'
-            maxItems = 1000  # Should be configurable
+            maxItems = GooglePhotos.MAX_ITEMS # Should be configurable
 
             while len(result) < maxItems:
                 data = self.requestUrl(url, data=params, usePost=True)
@@ -417,6 +418,8 @@ class GooglePhotos(BaseService):
         parsedImages = []
         for entry in data:
             try:
+                if entry['mimeType'] not in helper.getSupportedTypes():
+                    continue
                 item = BaseService.createImageHolder(self)
                 item.setId(entry['id'])
                 item.setSource(entry['productUrl']).setMimetype(entry['mimeType'])
