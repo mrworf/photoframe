@@ -60,7 +60,7 @@ def logfile(all=False):
     if all:
         title = 'Last 100 lines from the system log (/var/log/syslog)'
         cmd = 'tail -n 100 /var/log/syslog'
-    lines = subprocess.check_output(cmd, shell=True)
+    lines = subprocess.check_output(cmd, shell=True).decode("utf-8")
     if lines:
         lines = lines.splitlines()
     suffix = '(size of logfile %d bytes, created %s)' % (stats.st_size,
@@ -70,7 +70,7 @@ def logfile(all=False):
 
 def version():
     title = 'Running version'
-    lines = subprocess.check_output('git log HEAD~1..HEAD ; echo "" ; git status', shell=True)
+    lines = subprocess.check_output('git log HEAD~1..HEAD ; echo "" ; git status', shell=True).decode("utf-8")
     if lines:
         lines = lines.splitlines()
     return (title, lines, None)
