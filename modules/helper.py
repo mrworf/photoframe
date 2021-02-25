@@ -404,14 +404,13 @@ class helper:
             result = debug.subprocess_check_output(['/usr/bin/jpegexiforient', ifile])  # , stderr=void)
         if result:
             orient = int(result)-1
-            if orient < 0 or orient >= len(parameters):
-                logging.info('Orientation was %d, not transforming it', orient)
+            if not 0 < orient < len(parameters):
+                logging.debug('Orientation was %d, not transforming it', orient)
                 return ifile
             cmd = [helper.TOOL_ROTATE]
             cmd.extend(parameters[orient].split())
             cmd.extend(['-outfile', ofile, ifile])
-            with open(os.devnull, 'wb') as void:
-                result = debug.subprocess_check_call(cmd, stderr=void)
+            result = debug.subprocess_call(cmd, stderr=subprocess.STDOUT)
             if result == 0:
                 os.unlink(ifile)
                 return ofile
