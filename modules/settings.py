@@ -90,9 +90,9 @@ class settings:
                     # This is a little bit of a cheat
                     parts = self.settings['cfg']['tvservice'].split(' ')
                     if (
-                        len(parts) == 3
-                        and type(self.convertToNative(parts[1])) != int
-                        and type(self.convertToNative(parts[2])) == int
+                        len(parts) == 3 and
+                        type(self.convertToNative(parts[1])) != int and
+                        type(self.convertToNative(parts[2])) == int
                     ):
                         logging.debug('Reordering tvservice value due to old bug')
                         self.settings['cfg']['tvservice'] = "%s %s %s" % (parts[0], parts[2], parts[1])

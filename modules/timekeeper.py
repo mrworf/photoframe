@@ -101,12 +101,12 @@ class timekeeper(Thread):
         # Either source can turn off display but scheduleOff takes priority on power on
         # NOTE! Schedule and sensor can be overriden
         if (
-            not self.standby
-            and (
+            not self.standby and
+            (
                 (
                     not self.ignoreSchedule and self.scheduleOff
-                )
-                or (
+                ) or
+                (
                     not self.ignoreSensor and self.ambientOff
                 )
             )
@@ -114,11 +114,11 @@ class timekeeper(Thread):
             self.standby = True
             self.notifyListeners(False)
         elif (
-            self.standby
-            and (
+            self.standby and
+            (
                 self.ignoreSchedule or not self.scheduleOff
-            )
-            and (
+            ) and
+            (
                 self.ignoreSensor or not self.ambientOff
             )
         ):

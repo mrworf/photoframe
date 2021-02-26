@@ -55,6 +55,7 @@ class WebServer(Thread):
         self.auth = NoAuth()
         if self.user is not None:
             self.auth = HTTPBasicAuth()
+
             @self.auth.get_password
             def check_password(username):
                 if self.user['user'] == username:
