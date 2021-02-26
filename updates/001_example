@@ -1,0 +1,6 @@
+# This is simply an example of an update file.
+# It's run by source:ing it in a subshell, isolating it from the rest of the
+# update process. It goes without saying that these files should not be executable
+# by themselves.
+#
+echo "Proof of concept, does nothing really"
