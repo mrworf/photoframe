@@ -14,13 +14,13 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 import os
-import subprocess
 import logging
 
 from modules.helper import helper
 
 from .baseroute import BaseRoute
 from modules import debug
+
 
 class RouteDetails(BaseRoute):
     def setupex(self, displaymgr, drivermgr, colormatch, slideshow, servicemgr, settings):

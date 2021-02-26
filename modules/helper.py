@@ -416,3 +416,14 @@ class helper:
                 os.unlink(ifile)
                 return ofile
         return ifile
+
+    @staticmethod
+    def subprocess_call(cmds, **kwargs):
+        return subprocess.call(cmds, **kwargs)
+
+    @staticmethod
+    def subprocess_check_output(cmds, decodeData=True, **kwargs):
+        ret = subprocess.check_output(cmds, **kwargs)
+        if decodeData:
+            return ret.decode("utf-8")
+        return ret

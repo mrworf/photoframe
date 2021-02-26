@@ -362,7 +362,7 @@ class GooglePhotos(BaseService):
                         .setError('Unable to get photos using keyword "%s"' % keyword)]
 
             url = 'https://photoslibrary.googleapis.com/v1/mediaItems:search'
-            maxItems = GooglePhotos.MAX_ITEMS # Should be configurable
+            maxItems = GooglePhotos.MAX_ITEMS  # Should be configurable
 
             while len(result) < maxItems:
                 data = self.requestUrl(url, data=params, usePost=True)

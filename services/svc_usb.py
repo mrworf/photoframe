@@ -24,6 +24,7 @@ from modules.helper import helper
 from modules.network import RequestResult
 from modules import debug
 
+
 class USB_Photos(BaseService):
     SERVICE_NAME = 'USB-Photos'
     SERVICE_ID = 4

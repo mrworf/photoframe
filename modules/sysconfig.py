@@ -22,6 +22,7 @@ from .path import path
 import logging
 from . import debug
 
+
 class sysconfig:
     @staticmethod
     def _getConfigFileState(key):
