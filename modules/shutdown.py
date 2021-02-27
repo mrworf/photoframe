@@ -38,22 +38,22 @@ class shutdown(Thread):
         # Shutdown can be initated from GPIO26
         poller = select.poll()
         try:
-            with open('/sys/class/gpio/export', 'wb') as f:
+            with open('/sys/class/gpio/export', 'w') as f:
                 f.write('%d' % self.gpio)
         except Exception:
             # Usually it means we ran this before
             pass
         try:
-            with open('/sys/class/gpio/gpio%d/direction' % self.gpio, 'wb') as f:
+            with open('/sys/class/gpio/gpio%d/direction' % self.gpio, 'w') as f:
                 f.write('in')
         except Exception:
             logging.warn('Either no GPIO subsystem or no access')
             return
-        with open('/sys/class/gpio/gpio%d/edge' % self.gpio, 'wb') as f:
+        with open('/sys/class/gpio/gpio%d/edge' % self.gpio, 'w') as f:
             f.write('both')
-        with open('/sys/class/gpio/gpio%d/active_low' % self.gpio, 'wb') as f:
+        with open('/sys/class/gpio/gpio%d/active_low' % self.gpio, 'w') as f:
             f.write('1')
-        with open('/sys/class/gpio/gpio%d/value' % self.gpio, 'rb') as f:
+        with open('/sys/class/gpio/gpio%d/value' % self.gpio, 'r') as f:
             f.read()
             poller.register(f, select.POLLPRI)
             poller.register(self.server, select.POLLHUP)

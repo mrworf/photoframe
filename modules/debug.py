@@ -35,11 +35,13 @@ def _stringify(args):
 
 def subprocess_call(cmds, stderr=None, stdout=None):
     return subprocess.call(cmds, stderr=stderr, stdout=stdout)
-
+    # TODO  Relocate to helper?  Convert to subprocess.run?  Add exception to collect output
+    # in an error log.  Add debug logging option as well?  Add **kwargs
 
 def subprocess_check_output(cmds, stderr=None):
     return subprocess.check_output(cmds, stderr=stderr).decode("utf-8")
-
+    # TODO basically same treatment as suborocess_call.  Although, with using subprocess.run,
+    # check output or not is just another arg.  So, this might just set that arg and subprocess_call.
 
 def stacktrace():
     title = 'Stacktrace of all running threads'
@@ -60,7 +62,8 @@ def logfile(all=False):
     if all:
         title = 'Last 100 lines from the system log (/var/log/syslog)'
         cmd = 'tail -n 100 /var/log/syslog'
-    lines = subprocess.check_output(cmd, shell=True)
+    lines = subprocess.check_output(cmd, shell=True).decode("utf-8")
+    # TODO - convert this to use a common subprocess._check_output dunction
     if lines:
         lines = lines.splitlines()
     suffix = '(size of logfile %d bytes, created %s)' % (stats.st_size,
@@ -70,7 +73,8 @@ def logfile(all=False):
 
 def version():
     title = 'Running version'
-    lines = subprocess.check_output('git log HEAD~1..HEAD ; echo "" ; git status', shell=True)
+    lines = subprocess.check_output('git log HEAD~1..HEAD ; echo "" ; git status', shell=True).decode("utf-8")
+    # TODO - convert this to use a common subprocess_check_output function
     if lines:
         lines = lines.splitlines()
     return (title, lines, None)
