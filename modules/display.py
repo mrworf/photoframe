@@ -229,8 +229,6 @@ class display:
         args = [
             'convert',
             filename + '[0]',
-            '-resize',
-            '%dx%d' % (self.width, self.height),
             '-background',
             'black',
             '-gravity',
