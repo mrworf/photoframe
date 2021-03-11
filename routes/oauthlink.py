@@ -16,6 +16,7 @@
 
 import logging
 import json
+import codecs
 
 from .baseroute import BaseRoute
 
@@ -51,7 +52,8 @@ class RouteOAuthLink(BaseRoute):
                 logging.error('No file part')
                 return self.setAbort(405)
             file = self.getRequest().files['filename']
-            data = json.load(file)
+            reader = codecs.getreader('utf-8')
+            data = json.load(reader(file))
             if 'web' in data:
                 data = data['web']
             if 'redirect_uris' in data and 'https://photoframe.sensenet.nu' not in data['redirect_uris']:
