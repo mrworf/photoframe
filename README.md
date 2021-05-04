@@ -1,3 +1,15 @@
+# Philip Branch
+This is a special branch of photoframe customized for a specific photoframe.  This was done because 
+there are too many changes from the master branch.  Significant changes for this photoframe branch include:
+
+- Designed to be used with a manual installation on top of a Raspberry Pi OS Lite `Buster` release
+- Use of Python 3.  The Python 3 branch is the starting point for this one.
+- Support for HEIC photos.  This drove the need for the latest OS release.
+- ddcutil driven brightness and temperature changes.  This photoframe is based on an HP Z24i monitor,
+  which can be adjusted using ddc over HDMI, including brightness and temperature. 
+  Existing branches do not adjust the screen brightness.
+- Stretch Goal - to add an iCloud photo provider.
+
 # photoframe
 
 A Raspberry Pi (Zero, 1 or 3) software which automatically pulls photos from Google Photos and displays them
@@ -35,27 +47,105 @@ the images to meld better with the room where it's running.
 
 # installation
 
-On the release page, you'll find prepared raspbian image(s) for RaspberryPi 1, 3 or Zero
+This branch is not compatible with existing images available at mrworf/photoframe.
 
-To use these (and I really recommend that to doing the manual steps), here's how:
+Start by installing Raspberry Pi OS Lite from a Buster release.  Jan 2021 or later.
 
-1. Download the image from the release page
-2. Use your favorite tool to load image onto a SD card, I recommend https://etcher.io/ which works on Windows, OSX and Linux
-3. Open the new drive called `boot` and edit the file called `wifi-config.txt`
-   Change the two fields to point out your wifi and the password needed for it
-4. Save the file
-5. Place SDcard in your RPi3 which is connected to a monitor/TV
-6. Start the RPi
-7. Wait (takes up to a minute depending on card and the fact that it's expanding to use the entire SDcard ... slower still on non-RPi3)
-8. Follow instructions shown on the display
+Make a shell available either by attaching a keyboard, or by enabling ssh 
+
+   Note: to enable ssh add two files to the SSD /boot drive:
+   
+   ssh
+```   
+     (no contents)
+```
+   wpa_supplicant.conf 
+```
+# Use this file instead of wifi-config.txt
+# Should set country properly
+
+country=us
+update_config=1
+ctrl_interface=/var/run/wpa_supplicant
+
+network={
+scan_ssid=1
+ssid="YourSSID"
+psk="YourWiFiPassword"
+}
+```
+
+If a keyboard is attached you can user raspi-config to set up WiFi.
+
+use `sudo raspi-config` to set locale, time zone, overscan (black space around picture) and to enable I2C kernel module
+
+Bring the distro up to date:
+
+`sudo apt update && apt upgrade`
+
+Install additional dependencies:
+
+`apt install git python3-pip python3-requests python3-requests-oauthlib python3-flask`
+`apt install imagemagick python3-smbus bc ddcutil`
+`pip3 install requests requests-oauthlib flask flask-httpauth smbus`
+`pip3 install netifaces` 
+
+Next, let's tweak the boot so we don't get a bunch of output
+
+Edit the `/boot/cmdline.txt` and add the following to the end of the line:
+
+```
+console=tty3 loglevel=3 consoleblank=0 vt.global_cursor_default=0 logo.nologo
+```
+
+You also need to edit the `/boot/config.txt`  in two places
+
+Add the following before the first `# uncomment` section
+
+```
+disable_splash=1
+framebuffer_ignore_alpha=1
+```
+
+And add the following to the `dtparam` section
+
+```
+dtparam=i2c2_iknowwhatimdoing
+```
+
+We also want to disable the first console (since that's going to be our frame). This is done by
+issuing
+
+```
+systemctl disable getty@tty1.service
+```
+
+And also do
+
+```
+systemctl mask plymouth-start.service
+```
+
+or you might still see the boot messages.
+
+Finally, time to install photoframe, which means downloading the repo, install the service and reboot
+
+```
+cd /root
+git clone --branch Philip --single-branch https://github.com/dadr/photoframe.git
+cd photoframe
+cp frame.service /etc/systemd/system/
+systemctl enable /etc/systemd/system/frame.service
+reboot now
+```
+
+# Usage
+
+photoframe is managed using a browser on the same WiFi subnet.  The URL is shown when no configuration is present, 
+and shown for a few seconds on bootup for a photoframe that has a working configuration.
 
 The default username/password for the web page is `photoframe` and `password`. This can be changed by editing the file called `http-auth.json` on the `boot` drive
 
-## tl;dr
-
-Flash image to SDcard, edit `wifi-config.txt` and boot the RPi3 with the SDcard and follow instructions. Username and password is above this paragraph.
-
-Once inside the web interface, select `GooglePhotos` from dropdown list in bottom-left corner and press `Add photo service`.
 
 # color temperature?
 
