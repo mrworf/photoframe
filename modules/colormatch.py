@@ -149,8 +149,8 @@ class colormatch(Thread):
             logging.info('ColorSensor not available')
             return
         ver = bus.read_byte(0x29)
-        # version # should be 0x44
-        if ver == 0x44:
+        # version # should be 0x44 or 0x4D
+        if (ver == 0x44) or (ver == 0x4D):
             # Make sure we have the needed script
             if not os.path.exists(self.script):
                 logging.info(
