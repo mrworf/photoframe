@@ -11,13 +11,13 @@ there are too many changes from the master branch.  Significant changes for this
 - Support for TCS34727 color and lumen module e.g. https://www.ebay.com/itm/133600154256 
 - Stretch Goal - to add an iCloud photo provider.
 
-# photoframe
+# Photoframe
 
 A Raspberry Pi (Zero, 1 or 3) software which automatically pulls photos from Google Photos and displays them
 on the attached screen, just like a photoframe. No need to upload photos to 3rd party service
 or fiddle with local storage or SD card.
 
-## why use this as opposed to buying one?
+## Why use this as opposed to buying one?
 
 Unlike most other frames out there, this one will automatically refresh and grab content
 from your photo collection, making it super simple to have a nice photo frame. Also uses
@@ -27,7 +27,7 @@ your expense report.
 It also has more unique features like ambient color temperature adjustments which allows
 the images to meld better with the room where it's running.
 
-# features
+# Features
 
 - Simple web interface for configuration
 - Google Photo search integration for more interesting images
@@ -39,14 +39,15 @@ the images to meld better with the room where it's running.
 - Power control via GPIO (turn RPi on/off)
 - Non-HDMI displays (SPI, DPI, etc)
 
-# requirements
+# Requirements
 
-- Raspberry Pi 1, 3 or Zero
+- Any Raspberry Pi
 - Display of some sort (HDMI or SPI/DPI displays)
-- Google Photos account
-- Internet
+- Another device with a web browser to manage the photoframe
+- Internet photos from Google or from URLs require Internet access for the Raspberry Pi
+- Familiarity wih Raspberry Pi and Linux command line procedures
 
-# installation
+# Installation
 
 This branch is not compatible with existing images available at mrworf/photoframe.
 
@@ -76,13 +77,15 @@ psk="YourWiFiPassword"
 }
 ```
 
-If a keyboard is attached you can user raspi-config to set up WiFi.
+If a keyboard is attached, you can use raspi-config to set up WiFi.
 
-use `sudo raspi-config` to set locale, time zone, overscan (black space around picture) and to enable I2C kernel module
+use `sudo raspi-config` to set locale, time zone, WiFi and Country (if not done with the files above), and to enable I2C kernel module
 
 Bring the distro up to date:
 
 `sudo apt update && apt upgrade`
+
+From this point forward, it's recommended to `sudo bash` and then `cd` so that the commands are performed as root the /root directory
 
 Install additional dependencies:
 
@@ -93,13 +96,13 @@ Install additional dependencies:
 
 Next, let's tweak the boot so we don't get a bunch of output
 
-Edit the `/boot/cmdline.txt` and add the following to the end of the line:
+Edit the `/boot/cmdline.txt` and add replace the term `console=tty1` with all of the following:
 
 ```
 console=tty3 loglevel=3 consoleblank=0 vt.global_cursor_default=0 logo.nologo
 ```
 
-You also need to edit the `/boot/config.txt`  in two places
+You also need to edit the `/boot/config.txt`  in two places. 
 
 Add the following before the first `# uncomment` section
 
@@ -179,7 +182,7 @@ The sensor is automatically detected as long as it is a TCS34725 device and it's
 If you don't get this read-out, look at your logfile. There will be hints like sensor not found or sensor not being the expected one, etc.
 
 
-## Ambient powersave?
+## Ambient powersave
 
 Yes, using the same sensor, you can set a threshold and duration, if the ambient light is below said threshold for the duration, it will trigger
 powersave on the display. If the ambient brightness is above the threshold for same duration, it will wake up the display.
@@ -192,7 +195,7 @@ regardless of what the sensor says. The sensor is only used to extend the period
 Photoframe listens to GPIO 26 (default, can be changed) to power off (and also power on). If you connect a switch between pin 37 (GPIO 26) and pin 39 (GND), you'll be able
 to do a graceful shutdown as well as power on.
 
-# How come you contact photoframe.sensenet.nu ???
+# How come the Google service contacts photoframe.sensenet.nu ???
 
 Since Google doesn't approve of OAuth with dynamic redirect addresses,
 this project makes use of a lightweight service which allows registration
@@ -228,7 +231,7 @@ It's somewhat simplified, but shows the extra step taken to register your LAN ad
 If you want to see how it works and/or run your own, you'll find the code for this service under `extras` and requires
 php with memcached. Ideally you use a SSL endpoint as well.
 
-# faq
+# FAQs
 
 ## Can I avoid photoframe.sensenet.nu ?
 
@@ -250,7 +253,7 @@ By default, it logs very little and what it logs can be found under `/var/log/sy
 
 If you're having issues and you want more details, do the following as root:
 ```
-service frame stop
+systemctl stop frame
 /root/photoframe/frame.py --debug
 ```
 This will cause photoframe to run in the foreground and provide tons of debug information
