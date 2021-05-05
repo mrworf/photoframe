@@ -42,7 +42,9 @@ class helper:
         'image/png': 'png',
         'image/gif': 'gif',
         'image/bmp': 'bmp'
-        # HEIF to be added once I get ImageMagick running with support
+        'image/heic' : 'heic'
+        'image/heif' : 'heif'
+        # MIME types: heif-sequence, heic-sequence, avif, avif-sequence might also be added if needed
     }
 
     @staticmethod
@@ -205,7 +207,16 @@ class helper:
         border = None
         spacing = None
 
-        # Calculate actual size of image based on display
+        # HEIC files do not work properly with blur and border, but do convert to jpg just fine
+         mimetype = helper.getMimetype(filename)
+         if mimetype == 'image/heif' or mimetype == 'image/heic':
+             try:
+                 subprocess.call(['/usr/bin/convert', filename, 'jpg:'+filename], stderr=subprocess.STDOUT)
+             except subprocess.CalledProcessError as e:
+                 logging.exception('Unable to change image to jpg')
+                 logging.error('Error: Could not convert', mimetype, ' to jpg')
+
+ 		# Calculate actual size of image based on display
         oar = (float)(width) / (float)(height)
         dar = (float)(displayWidth) / (float)(displayHeight)
 
