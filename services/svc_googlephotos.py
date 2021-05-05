@@ -278,7 +278,7 @@ class GooglePhotos(BaseService):
             data = self.requestUrl(url, params=params)
             if not data.isSuccess():
                 return None
-            data = json.loads(data.content.encode('utf-8'))
+            data = json.loads(data.content.decode('utf-8'))
             for i in range(len(data['albums'])):
                 if 'title' in data['albums'][i]:
                     logging.debug('Album: %s' % data['albums'][i]['title'])
@@ -301,7 +301,7 @@ class GooglePhotos(BaseService):
                 data = self.requestUrl(url, params=params)
                 if not data.isSuccess():
                     return None
-                data = json.loads(data.content.encode('utf-8'))
+                data = json.loads(data.content.decode('utf-8'))
                 if 'sharedAlbums' not in data:
                     logging.debug('User has no shared albums')
                     break
@@ -362,7 +362,7 @@ class GooglePhotos(BaseService):
                         .setError('Unable to get photos using keyword "%s"' % keyword)]
 
             url = 'https://photoslibrary.googleapis.com/v1/mediaItems:search'
-            maxItems = GooglePhotos.MAX_ITEMS # Should be configurable
+            maxItems = GooglePhotos.MAX_ITEMS  # Should be configurable
 
             while len(result) < maxItems:
                 data = self.requestUrl(url, data=params, usePost=True)
@@ -371,7 +371,7 @@ class GooglePhotos(BaseService):
                     logging.warning('More details: ' + repr(data.content))
                     break
                 else:
-                    data = json.loads(data.content.encode('utf-8'))
+                    data = json.loads(data.content.decode('utf-8'))
                     if 'mediaItems' not in data:
                         break
                     logging.debug('Got %d entries, adding it to existing %d entries',
@@ -440,7 +440,7 @@ class GooglePhotos(BaseService):
             logging.error('%d,%d: Failed to get URL', data.httpcode, data.result)
             return None
 
-        data = json.loads(data.content.encode('utf-8'))
+        data = json.loads(data.content.decode('utf-8'))
         if 'baseUrl' not in data:
             logging.error('Data from Google didn\'t contain baseUrl, see original content:')
             logging.error(repr(data))
