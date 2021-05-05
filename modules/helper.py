@@ -207,15 +207,6 @@ class helper:
         border = None
         spacing = None
 
-        # HEIC files do not work properly with blur and border, but do convert to jpg just fine
-        mimetype = helper.getMimetype(filename)
-        if mimetype == 'image/heif' or mimetype == 'image/heic':
-            try:
-                subprocess.call(['/usr/bin/convert', filename, 'jpg:'+filename], stderr=subprocess.STDOUT)
-            except subprocess.CalledProcessError as e:
-                logging.exception('Unable to change image to jpg')
-                logging.error('Error: Could not convert', mimetype, ' to jpg')
-
  		# Calculate actual size of image based on display
         oar = (float)(width) / (float)(height)
         dar = (float)(displayWidth) / (float)(displayHeight)
@@ -398,6 +389,17 @@ class helper:
 
     @staticmethod
     def autoRotate(ifile):
+        
+        # HEIC files do not work properly with blur and border, but do convert to jpg just fine
+        mimetype = helper.getMimetype(ifile)
+        if mimetype == 'image/heif' or mimetype == 'image/heic':
+            try:
+                subprocess.call(['/usr/bin/convert', ifile, 'jpg:'+ifile], stderr=subprocess.STDOUT)
+            except subprocess.CalledProcessError as e:
+                logging.exception('Unable to change image to jpg')
+                logging.error('Error: Could not convert', mimetype, ' to jpg')
+                
+        # resume processing autorotate        
         if not os.path.exists('/usr/bin/jpegexiforient'):
             logging.warning(
                 'jpegexiforient is missing, no auto rotate available. '
