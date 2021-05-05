@@ -41,9 +41,9 @@ class helper:
         'image/jpeg': 'jpg',
         'image/png': 'png',
         'image/gif': 'gif',
-        'image/bmp': 'bmp'
-        'image/heic' : 'heic'
-        'image/heif' : 'heif'
+        'image/bmp': 'bmp',
+        'image/heic': 'heic',
+        'image/heif': 'heif'
         # MIME types: heif-sequence, heic-sequence, avif, avif-sequence might also be added if needed
     }
 
