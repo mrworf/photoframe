@@ -8,6 +8,7 @@ there are too many changes from the master branch.  Significant changes for this
 - ddcutil driven brightness and temperature changes.  This photoframe is based on an HP Z24i monitor,
   which can be adjusted using ddc over HDMI, including brightness and temperature. 
   Existing branches do not adjust the screen brightness.
+- Support for TCS34727 color and lumen module e.g. https://www.ebay.com/itm/133600154256 
 - Stretch Goal - to add an iCloud photo provider.
 
 # photoframe
@@ -147,19 +148,20 @@ and shown for a few seconds on bootup for a photoframe that has a working config
 The default username/password for the web page is `photoframe` and `password`. This can be changed by editing the file called `http-auth.json` on the `boot` drive
 
 
-# color temperature?
+# color temperature
 
-Yes, photoframe can actually adjust the temperature of the image to suit the light in the room. For this to work, you need to install a TCS34725,
-see https://www.adafruit.com/product/1334 . This should be hooked up to the I2C bus, using this:
+This branck of photoframe is intended to work with color temperature modules.   Yes, photoframe can actually adjust the temperature of the image to suit the light in the room. For this to work, you need to install a TCS34725 or TCS34727,
+see https://www.adafruit.com/product/1334  and https://www.ebay.com/itm/133600154256. These should be hooked up to the I2C bus like this:
 
 ```
 3.3V -> Pin 1 (3.3V)
 SDA -> Pin 3 (GPIO 0)
 SCL -> Pin 5 (GPIO 1)
 GND -> Pin 9 (GND)
+LED -> Pin 9 (GND)
 ```
 
-You also need to tell your RPi3 to enable the I2C bus, start the `raspi-config` and go to submenu 5 (interfaces) and select I2C and enable it.
+Instructions above include enabling the I2C bus by using `raspi-config` and going to submenu 5 (interfaces) and select I2C and enable it.
 
 Once all this is done, you have one more thing left to do before rebooting, you need to download the imagemagick script that will adjust the image,
 please visit http://www.fmwconcepts.com/imagemagick/colortemp/index.php and download and store it as `colortemp.sh` inside `/root/photoframe_config`.
@@ -176,9 +178,6 @@ The sensor is automatically detected as long as it is a TCS34725 device and it's
 
 If you don't get this read-out, look at your logfile. There will be hints like sensor not found or sensor not being the expected one, etc.
 
-## Annoyed with the LED showing on the TCS34725 board from Adafruit?
-
-Just ground the LED pin on the Adafruit board (for example by connecting it to Pin 9 on your RPi3)
 
 ## Ambient powersave?
 
