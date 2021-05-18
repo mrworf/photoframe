@@ -156,6 +156,8 @@ class colormatch(Thread):
         if temp < self.mon_min_temp
             temp = self.mon_min_temp
         tempset = int((temp - self.mon_min_temp)/self.mon_temp_inc)
+        if tempset > self.mon_max_inc:
+            tempset = self.mon_max_inc
         try debug.subprocess_call(['/usr/bin/ddcutil', 'setvcp', '0C', repr(tempset)]):
         except Exception:
             logging.debug('setMonTemp failed to set monitor to %s' % repr(temp))
