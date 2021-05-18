@@ -56,26 +56,30 @@ class colormatch(Thread):
             #    determine the monitor type.  At that point, it may be better to have a new module -
             #    similar to self.script - or a data file/structure can be created with the regex expressions for
             #    various monitors
-            try temp_str = debug.subprocess_check_output(['/usr/bin/ddcutil', 'getvcp', '0B']):
+            self.mon_adjust = True
+            try:
+                temp_str = debug.subprocess_check_output(['/usr/bin/ddcutil', 'getvcp', '0B'])
                 self.mon_temp_inc = int(re.search('([0-9]*) (degree)', temp_str).group(1))
                 logging.debug('Monitor temp increment is %i' % self.mon_temp_inc)
-            except Exception:
+            except:
                 logging.exception('ddcutil is present but not getting temp increment from monitor. ')
                 self.mon_adjust = False
-            try temp_str = debug.subprocess_check_output(['/usr/bin/ddcutil', 'getvcp', '0C']):
+            try:
+                temp_str = debug.subprocess_check_output(['/usr/bin/ddcutil', 'getvcp', '0C'])
                 self.mon_min_temp = int(re.search('([0-9]*) (\\+)', temp_str).group(1))
                 logging.debug('Monitor min temp is %i' % self.mon_min_temp)
-            except Exception:
+            except:
                 logging.exception('ddcutil is present but not getting min temp status from monitor. ')
                 self.mon_adjust = False
-            try temp_str = debug.subprocess_check_output(['/usr/bin/ddcutil', 'getvcp', '10']):
+            try:
+                temp_str = debug.subprocess_check_output(['/usr/bin/ddcutil', 'getvcp', '10'])
                 self.mon_max_bright = int(re.search('(max value \\= *) ([0-9]*)', temp_str).group(2))
                 logging.debug('Monitor max brightness is %i' % self.mon_max_bright)
-            except Exception:
+            except:
                 logging.exception('ddcutil is present but not getting brightness info from monitor')
                 self.mon_adjust = False
-            self.mon_adjust = True
-            logging.info('Monitor adjustments enabled')
+            if self.mon_adjust = True:
+                logging.info('Monitor adjustments enabled')
         else:
             logging.debug('/usr/bin/ddcutil or /dev/i2c-2 not found - cannot adjust monitor')
             self.mon_adjust = False
@@ -158,8 +162,9 @@ class colormatch(Thread):
         tempset = int((temp - self.mon_min_temp)/self.mon_temp_inc)
         if tempset > self.mon_max_inc:
             tempset = self.mon_max_inc
-        try debug.subprocess_call(['/usr/bin/ddcutil', 'setvcp', '0C', repr(tempset)]):
-        except Exception:
+        try:
+            debug.subprocess_call(['/usr/bin/ddcutil', 'setvcp', '0C', repr(tempset)])
+        except:
             logging.debug('setMonTemp failed to set monitor to %s' % repr(temp))
             return False
         return True
