@@ -171,15 +171,15 @@ class colormatch(Thread):
                 red = data[3] << 8 | data[2]
                 green = data[5] << 8 | data[4]
                 blue = data[7] << 8 | data[6]
-                if red > 0 and green > 0 and blue > 0 and clear > 0:
+                if (red == 0) and (green == 0) and (blue == 0) and (clear == 0):
+                    # All zero Happens when no light is available, so set temp to neutral
+                    self.temperature = 3350
+                    self.lux = 0
+                else:
                     temp, lux = self._temperature_and_lux((red, green, blue, clear))
                     self.temperature = temp
                     self.lux = lux
-                else:
-                    # All zero Happens when no light is available, so set temp to zero
-                    self.temperature = 0
-                    self.lux = 0
-
+                   
                 if self.listener:
                     self.listener(self.temperature, self.lux)
 
