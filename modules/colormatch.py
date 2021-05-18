@@ -17,8 +17,10 @@ from threading import Thread
 import smbus
 import time
 import os
+import re
 import subprocess
 import logging
+from . import debug
 
 
 class colormatch(Thread):
@@ -27,8 +29,17 @@ class colormatch(Thread):
         self.daemon = True
         self.sensor = False
         self.temperature = None
+        self.default_temp = 3350
         self.lux = None
+        self.lux_scale = 2  # ToDo - set this from Configuration - adjusts sensitivity of brightness detector
         self.script = script
+        self.mon_adjust = False
+        self.mon_min_bright = 0  # Can't get this through ddc - assume 0
+        self.mon_max_bright = 0
+        self.mon_min_temp = 0
+        self.mon_max_temp = 0
+        self.mon_temp_inc = 0
+        self.mon_max_inc = 126  # Can't get this through ddc - has to be set by hand for now
         self.void = open(os.devnull, 'wb')
         self.min = min
         self.max = max
@@ -38,6 +49,36 @@ class colormatch(Thread):
             self.hasScript = os.path.exists(self.script)
         else:
             self.hasScript = False
+        if os.path.exists("/usr/bin/ddcutil") and os.path.exists("/dev/i2c-2"):
+            # Logic to read monitor adjustment ranges and increments from ddc channel
+            # This is written assuming the monitor is a HP Z24i - If the regex strings differ for other
+            #    monitors, then this section may need to be replicated and "ddcutil detect" used to
+            #    determine the monitor type.  At that point, it may be better to have a new module -
+            #    similar to self.script - or a data file/structure can be created with the regex expressions for
+            #    various monitors
+            try temp_str = debug.subprocess_check_output(['/usr/bin/ddcutil', 'getvcp', '0B']):
+                self.mon_temp_inc = int(re.search('([0-9]*) (degree)', temp_str).group(1))
+                logging.debug('Monitor temp increment is %i' % self.mon_temp_inc)
+            except Exception:
+                logging.exception('ddcutil is present but not getting temp increment from monitor. ')
+                self.mon_adjust = False
+            try temp_str = debug.subprocess_check_output(['/usr/bin/ddcutil', 'getvcp', '0C']):
+                self.mon_min_temp = int(re.search('([0-9]*) (\\+)', temp_str).group(1))
+                logging.debug('Monitor min temp is %i' % self.mon_min_temp)
+            except Exception:
+                logging.exception('ddcutil is present but not getting min temp status from monitor. ')
+                self.mon_adjust = False
+            try temp_str = debug.subprocess_check_output(['/usr/bin/ddcutil', 'getvcp', '10']):
+                self.mon_max_bright = int(re.search('(max value \\= *) ([0-9]*)', temp_str).group(2))
+                logging.debug('Monitor max brightness is %i' % self.mon_max_bright)
+            except Exception:
+                logging.exception('ddcutil is present but not getting brightness info from monitor')
+                self.mon_adjust = False
+            self.mon_adjust = True
+            logging.info('Monitor adjustments enabled')
+        else:
+            logging.debug('/usr/bin/ddcutil or /dev/i2c-2 not found - cannot adjust monitor')
+            self.mon_adjust = False
 
         self.start()
 
@@ -64,7 +105,8 @@ class colormatch(Thread):
         self.listener = listener
 
     def adjust(self, filename, filenameTemp, temperature=None):
-        if not self.allowAdjust or not self.hasScript:
+        if not self.allowAdjust or not self.hasScript or self.mon_adjust:
+            # Turn off script if monitor has these features  (Might become a config option?)
             return False
 
         if self.temperature is None or self.sensor is None:
@@ -91,6 +133,35 @@ class colormatch(Thread):
         except Exception:
             logging.exception('Unable to run %s:', self.script)
             return False
+
+    def setMonBright(self, lux):
+        brightness = lux * self.lux_scale
+        if brightness > self.mon_max_bright:
+            brightness = self.mon_max_bright
+        if brightness < self.mon_min_bright:
+            brightness = self.mon_min_bright
+        try debug.subprocess_call(['/usr/bin/ddcutil', 'setvcp', '10', repr(int(brightness))]):
+        except Exception:
+            logging.debug('setMonBright failed to set monitor to %s' % repr(int(brightness)))
+            return False
+        return True
+            
+    def setMonTemp(self, temp):
+        if temp > self.max:
+            temp = self.max
+        if temp < self.min:
+            temp = self.min
+        if temp > self.mon_max_temp
+            temp = self.mon_max_temp
+        if temp < self.mon_min_temp
+            temp = self.mon_min_temp
+        tempset = int((temp - self.mon_min_temp)/self.mon_temp_inc)
+        try debug.subprocess_call(['/usr/bin/ddcutil', 'setvcp', '0C', repr(tempset)]):
+        except Exception:
+            logging.debug('setMonTemp failed to set monitor to %s' % repr(temp))
+            return False
+        return True
+
 
     # The following function (_temperature_and_lux) is lifted from the
     # https://github.com/adafruit/Adafruit_CircuitPython_TCS34725 project and
@@ -152,9 +223,9 @@ class colormatch(Thread):
         # version # should be 0x44 or 0x4D
         if (ver == 0x44) or (ver == 0x4D):
             # Make sure we have the needed script
-            if not os.path.exists(self.script):
+            if not (os.path.exists(self.script) or self.mon_adjust):
                 logging.info(
-                    'No color temperature script, download it from '
+                    'No color temperature script or adjustable monitor detected, download the script from '
                     'http://www.fmwconcepts.com/imagemagick/colortemp/index.php and save as "%s"' % self.script
                 )
                 self.allowAdjust = False
@@ -172,8 +243,8 @@ class colormatch(Thread):
                 green = data[5] << 8 | data[4]
                 blue = data[7] << 8 | data[6]
                 if (red == 0) and (green == 0) and (blue == 0) and (clear == 0):
-                    # All zero Happens when no light is available, so set temp to neutral
-                    self.temperature = 3350
+                    # All zero Happens when no light is available, so set temp to default
+                    self.temperature = self.default_temp
                     self.lux = 0
                 else:
                     temp, lux = self._temperature_and_lux((red, green, blue, clear))
@@ -182,8 +253,12 @@ class colormatch(Thread):
                    
                 if self.listener:
                     self.listener(self.temperature, self.lux)
+                    
+                if self.mon_adjust:
+                    self.setMonBright(self, lux)
+                    self.setMonTemp(self, temp)
 
-                time.sleep(1)
+                time.sleep(5)
         else:
             logging.info('No TCS34725 color sensor detected, will not compensate for ambient color temperature')
             self.sensor = False
