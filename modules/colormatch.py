@@ -156,9 +156,9 @@ class colormatch(Thread):
             temp = self.max
         if temp < self.min:
             temp = self.min
-        if temp > self.mon_max_temp
+        if temp > self.mon_max_temp:
             temp = self.mon_max_temp
-        if temp < self.mon_min_temp
+        if temp < self.mon_min_temp:
             temp = self.mon_min_temp
         tempset = int((temp - self.mon_min_temp)/self.mon_temp_inc)
         if tempset > self.mon_max_inc:
