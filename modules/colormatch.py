@@ -78,7 +78,7 @@ class colormatch(Thread):
             except:
                 logging.exception('ddcutil is present but not getting brightness info from monitor')
                 self.mon_adjust = False
-            if self.mon_adjust = True:
+            if self.mon_adjust == True:
                 logging.info('Monitor adjustments enabled')
         else:
             logging.debug('/usr/bin/ddcutil or /dev/i2c-2 not found - cannot adjust monitor')
@@ -144,8 +144,9 @@ class colormatch(Thread):
             brightness = self.mon_max_bright
         if brightness < self.mon_min_bright:
             brightness = self.mon_min_bright
-        try debug.subprocess_call(['/usr/bin/ddcutil', 'setvcp', '10', repr(int(brightness))]):
-        except Exception:
+        try:
+            debug.subprocess_call(['/usr/bin/ddcutil', 'setvcp', '10', repr(int(brightness))])
+        except:
             logging.debug('setMonBright failed to set monitor to %s' % repr(int(brightness)))
             return False
         return True
