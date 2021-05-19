@@ -9,7 +9,6 @@ there are too many changes from the master branch.  Significant changes for this
   which can be adjusted using ddc over HDMI, including brightness and temperature. 
   Existing branches do not adjust the screen brightness.
 - Support for TCS34727 color and lumen module e.g. https://www.ebay.com/itm/133600154256 
-- Stretch Goal - to add an iCloud photo provider.
 
 # Photoframe
 
