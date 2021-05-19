@@ -90,8 +90,11 @@ From this point forward, it's recommended to `sudo bash` and then `cd` so that t
 Install additional dependencies:
 
 `apt install git python3-pip python3-requests python3-requests-oauthlib python3-flask`
+
 `apt install imagemagick python3-smbus bc ddcutil`
+
 `pip3 install requests requests-oauthlib flask flask-httpauth smbus`
+
 `pip3 install netifaces` 
 
 Next, let's tweak the boot so we don't get a bunch of output
@@ -146,7 +149,7 @@ reboot now
 # Usage
 
 photoframe is managed using a browser on the same WiFi subnet.  The URL is shown when no configuration is present, 
-and shown for a few seconds on bootup for a photoframe that has a working configuration.
+and shown for a few seconds on bootup for a photoframe that has a working configuration.  Note that the URL goes to port `7777` by default.
 
 The default username/password for the web page is `photoframe` and `password`. This can be changed by editing the file called `http-auth.json` on the `boot` drive
 
