@@ -134,7 +134,7 @@ systemctl mask plymouth-start.service
 
 or you might still see the boot messages.
 
-Finally, time to install photoframe, which means downloading the repo, install the service and reboot
+Time to install photoframe, which means downloading the repo, install the service and reboot
 
 ```
 cd /root
@@ -143,6 +143,12 @@ cd photoframe
 cp frame.service /etc/systemd/system/
 systemctl enable /etc/systemd/system/frame.service
 reboot now
+```
+Finally, if you want the web interface to be login-password protected, then create the file `/boot/http-auth.json`  with the following edited to suite:
+
+```
+{"user":"photoframe","password":"password"}
+
 ```
 
 # Usage
