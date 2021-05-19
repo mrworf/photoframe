@@ -154,10 +154,12 @@ class colormatch(Thread):
             
     def setMonTemp(self):
         temp = self.temperature
-        if temp > float(self.max):
-            temp = float(self.max)
-        if temp < float(self.min):
-            temp = float(self.min)
+        if self.max:
+            if temp > self.max:
+                temp = self.max
+        if self.min:
+            if temp < self.min:
+                temp = self.min
         if temp > self.mon_max_temp:
             temp = self.mon_max_temp
         if temp < self.mon_min_temp:
