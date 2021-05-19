@@ -31,7 +31,7 @@ class colormatch(Thread):
         self.temperature = None
         self.default_temp = 3350.0
         self.lux = None
-        self.lux_scale = 2.0  # ToDo - set this from Configuration - adjusts sensitivity of brightness detector
+        self.lux_scale = 3.0  # ToDo - set this from Configuration - adjusts sensitivity of brightness detector
         self.script = script
         self.mon_adjust = False
         self.mon_min_bright = 0.0  # Can't get this through ddc - assume 0
@@ -273,7 +273,7 @@ class colormatch(Thread):
                     self.setMonBright()
                     self.setMonTemp()
 
-                time.sleep(5)
+                time.sleep(15)  # Not sure how often it's acceptable to change monitor settings
         else:
             logging.info('No TCS34725 color sensor detected, will not compensate for ambient color temperature')
             self.sensor = False
