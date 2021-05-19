@@ -63,23 +63,7 @@ if [ "$1" = "post" ]; then
 	####-vvv- ANYTHING HERE MUST HANDLE BEING RUN AGAIN AND AGAIN -vvv-####
 	#######################################################################
 
-	# Due to older version not enabling the necessary parts,
-	# we need to add i2c-dev to modules if not there
-	if ! grep "i2c-dev" /etc/modules-load.d/modules.conf >/dev/null ; then
-		echo "i2c-dev" >> /etc/modules-load.d/modules.conf
-		modprobe i2c-dev
-	fi
 
-	# Make sure all old files are moved into the new config folder
-	mkdir /root/photoframe_config >/dev/null 2>/dev/null
-	FILES="oauth.json settings.json http_auth.json colortemp.sh"
-	for FILE in ${FILES}; do
-		mv /root/${FILE} /root/photoframe_config/ >/dev/null 2>/dev/null
-	done
-
-	# We also have added more dependencies, so add more software
-	apt-get update
-	apt-get install -y libjpeg-turbo-progs python-netifaces
 
 	# Copy new service and reload systemd
 	cp frame.service /etc/systemd/system/

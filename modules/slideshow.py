@@ -208,7 +208,8 @@ class slideshow:
         return False
 
     def _colormatch(self, filenameProcessed):
-        if self.colormatch.hasSensor():
+        if self.colormatch.hasSensor() and not self.colormatch.adjustableMonitor():
+            # For Now: Only transform image if the monitor cannot be adjusted for temperature
             # For Now: Always process original image (no caching of colormatch-adjusted images)
             # 'colormatched_tmp.jpg' will be deleted after the image is displayed
             p, f = os.path.split(filenameProcessed)

@@ -109,10 +109,9 @@ class colormatch(Thread):
         self.listener = listener
 
     def adjust(self, filename, filenameTemp, temperature=None):
-        if not self.allowAdjust or not self.hasScript or self.mon_adjust:
-            # Turn off script if monitor has these features  (Might become a config option?)
+        if not self.allowAdjust or not self.hasScript:
             return False
-
+            
         if self.temperature is None or self.sensor is None:
             logging.debug('Temperature is %s and sensor is %s', repr(self.temperature), repr(self.sensor))
             return False
@@ -138,6 +137,9 @@ class colormatch(Thread):
             logging.exception('Unable to run %s:', self.script)
             return False
 
+    def adjustableMonitor(self):
+        return self.mon_adjust
+    
     def setMonBright(self):
         brightness = self.lux * self.lux_scale
         if brightness > self.mon_max_bright:
