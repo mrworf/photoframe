@@ -29,17 +29,17 @@ class colormatch(Thread):
         self.daemon = True
         self.sensor = False
         self.temperature = None
-        self.default_temp = 3350
+        self.default_temp = 3350.0
         self.lux = None
-        self.lux_scale = 2  # ToDo - set this from Configuration - adjusts sensitivity of brightness detector
+        self.lux_scale = 2.0  # ToDo - set this from Configuration - adjusts sensitivity of brightness detector
         self.script = script
         self.mon_adjust = False
-        self.mon_min_bright = 0  # Can't get this through ddc - assume 0
-        self.mon_max_bright = 0
-        self.mon_min_temp = 0
-        self.mon_max_temp = 0
-        self.mon_temp_inc = 0
-        self.mon_max_inc = 126  # Can't get this through ddc - has to be set by hand for now
+        self.mon_min_bright = 0.0  # Can't get this through ddc - assume 0
+        self.mon_max_bright = 0.0
+        self.mon_min_temp = 0.0
+        self.mon_max_temp = 0.0
+        self.mon_temp_inc = 0.0
+        self.mon_max_inc = 126.0  # Can't get this through ddc - has to be set by hand for now
         self.void = open(os.devnull, 'wb')
         self.min = min
         self.max = max
@@ -154,10 +154,10 @@ class colormatch(Thread):
             
     def setMonTemp(self):
         temp = self.temperature
-        if temp > self.max:
-            temp = self.max
-        if temp < self.min:
-            temp = self.min
+        if temp > float(self.max):
+            temp = float(self.max)
+        if temp < float(self.min):
+            temp = float(self.min)
         if temp > self.mon_max_temp:
             temp = self.mon_max_temp
         if temp < self.mon_min_temp:
