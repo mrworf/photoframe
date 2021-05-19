@@ -138,20 +138,22 @@ class colormatch(Thread):
             logging.exception('Unable to run %s:', self.script)
             return False
 
-    def setMonBright(self, lux):
-        brightness = lux * self.lux_scale
+    def setMonBright(self):
+        brightness = self.lux * self.lux_scale
         if brightness > self.mon_max_bright:
             brightness = self.mon_max_bright
         if brightness < self.mon_min_bright:
             brightness = self.mon_min_bright
         try:
             debug.subprocess_call(['/usr/bin/ddcutil', 'setvcp', '10', repr(int(brightness))])
+            logging.debug('setMonBright set monitor to %s percent' % repr(int(brightness)))
         except:
             logging.debug('setMonBright failed to set monitor to %s' % repr(int(brightness)))
             return False
         return True
             
-    def setMonTemp(self, temp):
+    def setMonTemp(self):
+        temp = self.temperature
         if temp > self.max:
             temp = self.max
         if temp < self.min:
@@ -165,6 +167,7 @@ class colormatch(Thread):
             tempset = self.mon_max_inc
         try:
             debug.subprocess_call(['/usr/bin/ddcutil', 'setvcp', '0C', repr(tempset)])
+            logging.debug('setMonTempt set monitor to %s temp' % repr(temp))
         except:
             logging.debug('setMonTemp failed to set monitor to %s' % repr(temp))
             return False
@@ -237,7 +240,8 @@ class colormatch(Thread):
                     'http://www.fmwconcepts.com/imagemagick/colortemp/index.php and save as "%s"' % self.script
                 )
                 self.allowAdjust = False
-            self.allowAdjust = True
+            else:
+                self.allowAdjust = True
 
             bus.write_byte(0x29, 0x80 | 0x00)  # 0x00 = ENABLE register
             bus.write_byte(0x29, 0x01 | 0x02)  # 0x01 = Power on, 0x02 RGB sensors enabled
@@ -263,8 +267,9 @@ class colormatch(Thread):
                     self.listener(self.temperature, self.lux)
                     
                 if self.mon_adjust:
-                    self.setMonBright(self, self.lux)
-                    self.setMonTemp(self, self.temperature)
+                    logging.debug('Adjusting monitor to %3.2f lux and %5.0fK temp' % (self.lux, self.temperature))
+                    self.setMonBright()
+                    self.setMonTemp()
 
                 time.sleep(5)
         else:
