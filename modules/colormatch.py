@@ -263,8 +263,8 @@ class colormatch(Thread):
                     self.listener(self.temperature, self.lux)
                     
                 if self.mon_adjust:
-                    self.setMonBright(self, lux)
-                    self.setMonTemp(self, temp)
+                    self.setMonBright(self, self.lux)
+                    self.setMonTemp(self, self.temperature)
 
                 time.sleep(5)
         else:
