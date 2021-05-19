@@ -156,7 +156,7 @@ The default username/password for the web page is `photoframe` and `password`. T
 
 # color temperature
 
-This branck of photoframe is intended to work with color temperature modules.   Yes, photoframe can actually adjust the temperature of the image to suit the light in the room. For this to work, you need to install a TCS34725 or TCS34727,
+This branch of photoframe is intended to work with color temperature modules.   Yes, photoframe can actually adjust the temperature of the image to suit the light in the room. For this to work, you need to install a TCS34725 or TCS34727,
 see https://www.adafruit.com/product/1334  and https://www.ebay.com/itm/133600154256. These should be hooked up to the I2C bus like this:
 
 ```
