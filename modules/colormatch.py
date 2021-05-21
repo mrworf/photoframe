@@ -270,7 +270,7 @@ class colormatch(Thread):
                 green = data[5] << 8 | data[4]
                 blue = data[7] << 8 | data[6]
                 
-                self.temperature, self.lux = self._temperature_and_lux((red, green, blue, clear, tms_gain, tms_atime))
+                self.temperature, self.lux = self._temperature_and_lux(red, green, blue, clear, tms_gain, tms_atime)
                                   
                 if self.listener:
                     self.listener(self.temperature, self.lux)
