@@ -31,7 +31,7 @@ class colormatch(Thread):
         self.temperature = None
         self.default_temp = 3350.0
         self.lux = None
-        self.lux_scale = 3.0  # ToDo - set this from Configuration - adjusts sensitivity of brightness detector
+        self.sensor_scale = 6.0  # ToDo - set this from Configuration - This is (GA) from AMS App note DN40
         self.script = script
         self.mon_adjust = False
         self.mon_min_bright = 0.0  # Can't get this through ddc - assume 0
@@ -177,49 +177,42 @@ class colormatch(Thread):
             return False
         return True
 
-
-    # The following function (_temperature_and_lux) is lifted from the
-    # https://github.com/adafruit/Adafruit_CircuitPython_TCS34725 project and
-    # is under MIT license, this license ONLY applies to said function and no
-    # other part of this project.
-    #
-    # The MIT License (MIT)
-    #
-    # Copyright (c) 2017 Tony DiCola for Adafruit Industries
-    #
-    # Permission is hereby granted, free of charge, to any person obtaining a copy
-    # of this software and associated documentation files (the "Software"), to deal
-    # in the Software without restriction, including without limitation the rights
-    # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    # copies of the Software, and to permit persons to whom the Software is
-    # furnished to do so, subject to the following conditions:
-    #
-    # The above copyright notice and this permission notice shall be included in
-    # all copies or substantial portions of the Software.
-    #
-    # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-    # THE SOFTWARE.
-    def _temperature_and_lux(self, data):
-        """Convert the 4-tuple of raw RGBC data to color temperature and lux values. Will return
-           2-tuple of color temperature and lux."""
-        r, g, b, _ = data
-        x = -0.14282 * r + 1.54924 * g + -0.95641 * b
-        y = -0.32466 * r + 1.57837 * g + -0.73191 * b
-        z = -0.68202 * r + 0.77073 * g + 0.56332 * b
-        divisor = x + y + z
-        n = (x / divisor - 0.3320) / (0.1858 - y / divisor)
-        cct = 449.0 * n**3 + 3525.0 * n**2 + 6823.3 * n + 5520.33
-        return cct, y
     ###################################################################################
-
-    # This function is mostly based of the example provided by Brad Berkland's blog:
-    # http://bradsrpi.blogspot.com/2013/05/tcs34725-rgb-color-sensor-raspberry-pi.html
+    # It seems that there is a widespread sharing of incorrect code to read the TCS3472.
     #
+    # The following is based on the equations and coefficients provided by the manufacturer
+    # (AMS) in their Application Note DN40-Rev 1.0 Appendix I
+    # While it's hard to test this without expensive equipment, I was able to get a temp reading
+    # very close to 2700K using LED lighting from a bulb with the same spec.
+    #
+    # Note, if a sensor other than a TCS3472 is used, these will no longer be correct.
+    # However this is correct for TCS34721, TCS34723, TCS34725 and TCS34727
+    #
+    # Finally, the vairable sensor_scale is used to compensate for light attenuation for sensors
+    # behind glass, or in some cases behind acrylic rods.
+    #
+    def _temperature_and_lux(self, r, g, b, c, tms_gain, tms_atime):
+        itime = (256 - tms_atime) * 2.4
+        gain_table = {0: 1, 1: 4, 2: 16, 3: 60}
+        gain = gain_table[tms_gain]
+        if (self.sensor_scale <= 0):
+            cpl = 1.0  # protect from bad settings
+        else:
+            cpl = (gain * itime) / (self.sensor_scale * 310)
+        ir = float(r + g + b - c)/2
+        rp = float(r) - ir
+        gp = float(g) - ir
+        bp = float(b) - ir
+        lux = ((.136 * rp) + gp - (.444 * bp))/cpl
+        if (lux < 0):
+            lux = 0
+        if (rp == 0):
+            temp = self.default_temp
+        else:
+            temp = (3810 * ( bp / rp )) + 1391
+        return temp, lux
+    
+    
     def run(self):
         try:
             bus = smbus.SMBus(1)
@@ -246,11 +239,29 @@ class colormatch(Thread):
                 self.allowAdjust = False
             else:
                 self.allowAdjust = True
-
+            self.sensor = True
+            
+            # Configure Sensor
+            # Todo - The app note suggests checking the clear value, and if it's less than 100,
+            # to change the gain to increase sensitivity.  That's not yet implemented here.
+            # Lok here for algorithm:
+            # https://ams.com/documents/20143/36005/AmbientLightSensors_AN000171_2-00.pdf/9d1f1cd6-4b2d-1de7-368f-8b372f3d8517
+            #
+            tms_gain = 0x1    # Must be 0, 1, 2, 3 which become 1x, 4x, 16x, and 60x gain
+            tms_atime = 0x0   # Must be 0xFF, 0xF6, 0xDB, 0xC0, 0x00 which become 2.4, 24, 101, 154, 700ms
+            tms_wtime = 0xFF  # Must be 0xFF, 0xAB, 0x00 which become 2.4, 204 614ms
+            
             bus.write_byte(0x29, 0x80 | 0x00)  # 0x00 = ENABLE register
             bus.write_byte(0x29, 0x01 | 0x02)  # 0x01 = Power on, 0x02 RGB sensors enabled
+            bus.write_byte(0x29, 0x80 | 0x01)  # 0x01 = ATIME (Integration time) register
+            bus.write_byte(0x29, tms_atime)
+            bus.write_byte(0x29, 0x80 | 0x03)  # 0x03 = WTIME (Wait) register
+            bus.write_byte(0x29, tms_wtime)
+            bus.write_byte(0x29, 0x80 | 0x0F)  # 0x0F = Control register
+            bus.write_byte(0x29, tms_gain)
+            
+            
             bus.write_byte(0x29, 0x80 | 0x14)  # Reading results start register 14, LSB then MSB
-            self.sensor = True
             logging.debug('TCS34725 detected, starting polling loop')
             while True:
                 data = bus.read_i2c_block_data(0x29, 0)
@@ -258,15 +269,9 @@ class colormatch(Thread):
                 red = data[3] << 8 | data[2]
                 green = data[5] << 8 | data[4]
                 blue = data[7] << 8 | data[6]
-                if (red == 0) and (green == 0) and (blue == 0) and (clear == 0):
-                    # All zero Happens when no light is available, so set temp to default
-                    self.temperature = self.default_temp
-                    self.lux = 0
-                else:
-                    temp, lux = self._temperature_and_lux((red, green, blue, clear))
-                    self.temperature = temp
-                    self.lux = lux
-                   
+                
+                self.temperature, self.lux = self._temperature_and_lux((red, green, blue, clear, tms_gain, tms_atime))
+                                  
                 if self.listener:
                     self.listener(self.temperature, self.lux)
                     
