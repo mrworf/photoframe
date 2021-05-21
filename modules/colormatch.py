@@ -32,6 +32,7 @@ class colormatch(Thread):
         self.default_temp = 3350.0
         self.lux = None
         self.sensor_scale = 6.0  # ToDo - set this from Configuration - This is (GA) from AMS App note DN40
+        self.lux_scale = 1.0  # ToDo - set this from Configuration - Monitor Brightness = lux * lux_scale
         self.script = script
         self.mon_adjust = False
         self.mon_min_bright = 0.0  # Can't get this through ddc - assume 0
