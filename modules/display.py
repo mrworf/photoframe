@@ -184,7 +184,7 @@ class display:
 
         url = 'caption:'
         if helper.getDeviceIp() is not None and showConfig:
-            url = 'caption:Configuration available at http://%s:7777' % helper.getDeviceIp()
+            url = 'caption:Configuration available at http://%s' % helper.getDeviceIp()
 
         args = [
             'convert',

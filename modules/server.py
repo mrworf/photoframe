@@ -75,6 +75,9 @@ class WebServer(Thread):
         self.app.after_request(self._nocache)
         self.app.before_request(self._logincheck)
 
+    def get_server_port(self):
+        return self.port
+    
     def _logincheck(self):
         if not request.endpoint:
             return
