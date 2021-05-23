@@ -279,10 +279,10 @@ class USB_Photos(BaseService):
 
     # All images directly inside '/photoframe' directory will be displayed without any keywords
     def getBaseDirImages(self):
-        return [x for x in os.listdir(self.baseDir) if os.path.isfile(os.path.join(self.baseDir, x))]
+        return [x for x in os.listdir(self.baseDir) if (not x.startswith(".") and os.path.isfile(os.path.join(self.baseDir, x)))]
 
     def getAllAlbumNames(self):
-        return [x for x in os.listdir(self.baseDir) if os.path.isdir(os.path.join(self.baseDir, x))]
+        return [x for x in os.listdir(self.baseDir) if (not x.startswith(".") and os.path.isdir(os.path.join(self.baseDir, x)))]
 
     def selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize):
         if self.device is None:
