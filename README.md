@@ -144,6 +144,13 @@ cp frame.service /etc/systemd/system/
 systemctl enable /etc/systemd/system/frame.service
 reboot now
 ```
+
+To get automatic updates, create a file `/etc/cron.d/photoframe`  with the following contents:
+```
+# Check once a week for updates to the photoframe software.
+15 3    * * *   root    /root/photoframe/update.sh
+```
+
 Finally, if you want the web interface to be login-password protected, then create the file `/boot/http-auth.json`  with the following edited to suite:
 
 ```
