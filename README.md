@@ -92,7 +92,7 @@ From this point forward, it's recommended to `sudo bash` and then `cd` so that t
 
 Install additional dependencies:
 
-`apt install git python3-pip python3-requests python3-requests-oauthlib python3-flask`
+`apt install git python3-pip python3-requests-oauthlib python3-flask`
 
 `apt install imagemagick python3-smbus bc ddcutil`
 
@@ -142,7 +142,7 @@ Time to install photoframe, which means downloading the repo, install the servic
 
 ```
 cd /root
-git clone --branch python3 --single-branch https://github.com/dadr/photoframe.git
+git clone --branch python3 --single-branch https://github.com/mrworf/photoframe.git
 cd photoframe
 cp frame.service /etc/systemd/system/
 systemctl enable /etc/systemd/system/frame.service
@@ -155,7 +155,7 @@ To get automatic updates, create a file `/etc/cron.d/photoframe`  with the follo
 15 3    * * *   root    /root/photoframe/update.sh
 ```
 
-Finally, if you want the web interface to be login-password protected, then create the file `/boot/http-auth.json`  with the following edited to suite:
+Finally, if you want the web interface to be login-password protected, then create the file `/boot/http-auth.json`  with the following edited to suit:
 
 ```
 {"user":"photoframe","password":"password"}

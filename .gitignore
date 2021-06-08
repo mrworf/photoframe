@@ -106,3 +106,4 @@ ENV/
 
 # from developer leogaube
 /useful_commands
+.DS_Store
