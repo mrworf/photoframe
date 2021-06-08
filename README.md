@@ -9,8 +9,8 @@ Significant changes for photoframe v2 include:
 - ddcutil driven brightness and temperature changes.  This feature works with monitors
   that can be adjusted using ddc over HDMI, including brightness and temperature. 
   Existing branches do not adjust the screen brightness.
-- Support for TCS34727 color and lumen module e.g. https://www.ebay.com/itm/133600154256 
-- Improved color and temperature calculations improving accuracy and sensitivity
+- Support for TCS3472* color and lumen module e.g. https://www.ebay.com/itm/133600154256 
+- Improved color and temperature calculations both for accuracy and sensitivity
 - Managed at port 80 - no need to add :7777 to the URL.
 
 # Photoframe
@@ -52,6 +52,7 @@ the images to meld better with the room where it's running.
 # Installation
 
 This branch is not compatible with existing SD card images available at mrworf/photoframe.
+Once a new SD card image is create for V2, then much of this goes into MANUAL.md
 
 Start by installing Raspberry Pi OS Lite from a Buster release.  Jan 2021 or later.
 
