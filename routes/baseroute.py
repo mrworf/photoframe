@@ -16,64 +16,66 @@
 import logging
 import flask
 
+
 class BaseRoute:
-  SIMPLE = False
+    SIMPLE = False
 
-  class Mapping:
-    def __init__(self, url):
-        self._URL = url.strip()
-        self._METHODS = ['GET']
-        self._DEFAULTS = {}
+    class Mapping:
+        def __init__(self, url):
+            self._URL = url.strip()
+            self._METHODS = ['GET']
+            self._DEFAULTS = {}
 
-    def addMethod(self, method):
-      self._METHODS.append(method.upper().strip())
-      return self
+        def addMethod(self, method):
+            self._METHODS.append(method.upper().strip())
+            return self
 
-    def clearMethods(self):
-      self._METHODS = []
-      return self
+        def clearMethods(self):
+            self._METHODS = []
+            return self
 
-    def addDefault(self, key, value):
-      self._DEFAULTS[key] = value
-      return self
+        def addDefault(self, key, value):
+            self._DEFAULTS[key] = value
+            return self
 
-    def clearDefaults(self):
-      self._DEFAULTS = {}
-      return self
+        def clearDefaults(self):
+            self._DEFAULTS = {}
+            return self
 
-  def __init__(self):
-    self._MAPPINGS = []
-    self.app = None
-    self.setup()
+    def __init__(self):
+        self._MAPPINGS = []
+        self.app = None
+        self.setup()
 
-  def _assignServer(self, server):
-    self.server = server
-    self.app = server.app
+    def _assignServer(self, server):
+        self.server = server
+        self.app = server.app
 
-  def addUrl(self, url):
-    mapping = self.Mapping(url)
-    self._MAPPINGS.append(mapping)
-    return mapping
+    def addUrl(self, url):
+        mapping = self.Mapping(url)
+        self._MAPPINGS.append(mapping)
+        return mapping
 
-  def setup(self):
-    pass
+    def setup(self):
+        pass
 
-  def __call__(self, **kwargs):
-    return self.handle(self.app, **kwargs)    
+    def __call__(self, **kwargs):
+        ret = self.handle(self.app, **kwargs)
+        return ret
 
-  def handle(self, app, **kwargs):
-    msg = '%s does not have an implementation' % self._URL
-    logging.error(msg)
-    return msg, 200
+    def handle(self, app, **kwargs):
+        msg = '%s does not have an implementation' % self._URL
+        logging.error(msg)
+        return msg, 200
 
-  def getRequest(self):
-    return flask.request
+    def getRequest(self):
+        return flask.request
 
-  def setAbort(self, code):
-    return flask.abort(code)
+    def setAbort(self, code):
+        return flask.abort(code)
 
-  def redirect(self, url):
-    return flask.redirect(url)
+    def redirect(self, url):
+        return flask.redirect(url)
 
-  def jsonify(self, data):
-    return flask.json.jsonify(data)
+    def jsonify(self, data):
+        return flask.json.jsonify(data)

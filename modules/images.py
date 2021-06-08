@@ -15,90 +15,93 @@
 #
 import hashlib
 
+
 class ImageHolder:
-  def __init__(self):
-    #  "id" : a unique - preferably not-changing - ID to identify the same image in future requests, e.g. hashString(imageUrl)
-    #  "mimetype" : the filetype you downloaded, for example "image/jpeg"
-    #  "error" : None or a human readable text string as to why you failed
-    #  "source" : Link to where the item came from or None if not provided
-    # "url":      Link to the actual image file
-    # "dimensions":     a key/value map containing "width" and "height" of the image
-    #             can be None, but the service won't be able to determine a recommendedImageSize for 'addUrlParams'
-    # "filename": the original filename of the image or None if unknown (only used for debugging purposes)
-    self.id = None
-    self.mimetype = None
-    self.error = None
-    self.source = None
-    self.url = None
-    self.filename = None
-    self.dimensions = None
-    self.cacheAllow = False
-    self.cacheUsed = False
+    def __init__(self):
+        # "id" : a unique - preferably not-changing - ID to identify the same image in future requests,
+        #        e.g. hashString(imageUrl)
+        # "mimetype" : the filetype you downloaded, for example "image/jpeg"
+        # "error" : None or a human readable text string as to why you failed
+        # "source" : Link to where the item came from or None if not provided
+        # "url": Link to the actual image file
+        # "dimensions": a key/value map containing "width" and "height" of the image
+        #               can be None, but the service won't be able to determine a recommendedImageSize
+        #               for 'addUrlParams'
+        # "filename": the original filename of the image or None if unknown (only used for debugging purposes)
+        self.id = None
+        self.mimetype = None
+        self.error = None
+        self.source = None
+        self.url = None
+        self.filename = None
+        self.dimensions = None
+        self.cacheAllow = False
+        self.cacheUsed = False
 
-    self.contentProvider = None
-    self.contentSource = None
+        self.contentProvider = None
+        self.contentSource = None
 
-  def setContentProvider(self, provider):
-    if provider is None:
-      raise Exception('setContentProvider cannot be None')
-    self.contentProvider = repr(provider)
-    return self
+    def setContentProvider(self, provider):
+        if provider is None:
+            raise Exception('setContentProvider cannot be None')
+        self.contentProvider = repr(provider)
+        return self
 
-  def setContentSource(self, source):
-    if source is None:
-      raise Exception('setContentSource cannot be None')
-    self.contentSource = repr(source)
-    return self
+    def setContentSource(self, source):
+        if source is None:
+            raise Exception('setContentSource cannot be None')
+        self.contentSource = repr(source)
+        return self
 
-  def setId(self, id):
-    self.id = id
-    return self
+    def setId(self, id):
+        self.id = id
+        return self
 
-  def setMimetype(self, mimetype):
-    self.mimetype = mimetype
-    return self
+    def setMimetype(self, mimetype):
+        self.mimetype = mimetype
+        return self
 
-  def setError(self, error):
-    self.error = error
-    return self
+    def setError(self, error):
+        self.error = error
+        return self
 
-  def setSource(self, source):
-    self.source = source
-    return self
+    def setSource(self, source):
+        self.source = source
+        return self
 
-  def setUrl(self, url):
-    self.url = url
-    return self
+    def setUrl(self, url):
+        self.url = url
+        return self
 
-  def setFilename(self, filename):
-    self.filename = filename
-    return self
+    def setFilename(self, filename):
+        self.filename = filename
+        return self
 
-  def setDimensions(self, width, height):
-    self.dimensions = {'width': int(width), 'height': int(height)}
-    return self
+    def setDimensions(self, width, height):
+        self.dimensions = {'width': int(width), 'height': int(height)}
+        return self
 
-  def allowCache(self, allow):
-    self.cacheAllow = allow
-    return self
+    def allowCache(self, allow):
+        self.cacheAllow = allow
+        return self
 
-  def getCacheId(self):
-    if self.id is None:
-      return None
-    return hashlib.sha1(self.id).hexdigest()
+    def getCacheId(self):
+        if self.id is None:
+            return None
+        return hashlib.sha1(self.id.encode('utf-8')).hexdigest()
 
-  def copy(self):
-    copy = ImageHolder()
-    copy.id = self.id
-    copy.mimetype = self.mimetype
-    copy.error = self.error
-    copy.source = self.source
-    copy.url = self.url
-    copy.filename = self.filename
-    copy.dimensions = self.dimensions
-    copy.cacheAllow = self.cacheAllow
-    copy.cacheUsed = self.cacheUsed
+    def copy(self):
+        copy = ImageHolder()
+        copy.id = self.id
+        copy.mimetype = self.mimetype
+        copy.error = self.error
+        copy.source = self.source
+        copy.url = self.url
+        copy.filename = self.filename
+        copy.dimensions = self.dimensions
+        copy.cacheAllow = self.cacheAllow
+        copy.cacheUsed = self.cacheUsed
 
-    copy.contentProvider = self.contentProvider
-    copy.contentSource = self.contentSource
-    return copy
+        copy.contentProvider = self.contentProvider
+        copy.contentSource = self.contentSource
+        return copy

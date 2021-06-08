@@ -17,7 +17,8 @@
 import os
 from flask import send_from_directory
 
-from baseroute import BaseRoute
+from .baseroute import BaseRoute
+
 
 class RoutePages(BaseRoute):
     SIMPLE = True
@@ -27,11 +28,11 @@ class RoutePages(BaseRoute):
         self.addUrl('/').addDefault('file', None)
 
     def handle(self, app, **kwargs):
-      file = kwargs['file']
-      if file is None:
-        file = 'index.html'
+        file = kwargs['file']
+        if file is None:
+            file = 'index.html'
 
-      root_dir = os.path.join(os.getcwd(), 'static')
-      if '..' in file:
-        return 'File not found', 404
-      return send_from_directory(root_dir, file)
+        root_dir = os.path.join(os.getcwd(), 'static')
+        if '..' in file:
+            return 'File not found', 404
+        return send_from_directory(root_dir, file)

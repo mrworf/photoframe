@@ -14,21 +14,22 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from baseroute import BaseRoute
+from .baseroute import BaseRoute
+
 
 class RouteEvents(BaseRoute):
-  def setupex(self, events):
-    self.events = events
+    def setupex(self, events):
+        self.events = events
 
-    self.addUrl('/events').addDefault('since', None).addDefault('id', None)
-    self.addUrl('/events/<int:since>').addDefault('id', None)
-    self.addUrl('/events/remove/<int:id>').addDefault('since', None)
+        self.addUrl('/events').addDefault('since', None).addDefault('id', None)
+        self.addUrl('/events/<int:since>').addDefault('id', None)
+        self.addUrl('/events/remove/<int:id>').addDefault('since', None)
 
-  def handle(self, app, since, id):
-    if since is not None:
-      return self.jsonify(self.events.getSince(since))
-    elif id is not None:
-      self.events.remove(id)
-      return 'ok'
-    else:
-      return self.jsonify(self.events.getAll())
+    def handle(self, app, since, id):
+        if since is not None:
+            return self.jsonify(self.events.getSince(since))
+        elif id is not None:
+            self.events.remove(id)
+            return 'ok'
+        else:
+            return self.jsonify(self.events.getAll())

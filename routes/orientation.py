@@ -15,22 +15,24 @@
 #
 
 from modules.sysconfig import sysconfig
-from baseroute import BaseRoute
+from .baseroute import BaseRoute
 
-#@auth.login_required
+# @auth.login_required
+
+
 class RouteOrientation(BaseRoute):
-  def setupex(self, cachemgr):
-    self.cachemgr = cachemgr
+    def setupex(self, cachemgr):
+        self.cachemgr = cachemgr
 
-    self.addUrl('/rotation').addDefault('orient', None)
-    self.addUrl('/rotation/<int:orient>').clearMethods().addMethod('PUT')
+        self.addUrl('/rotation').addDefault('orient', None)
+        self.addUrl('/rotation/<int:orient>').clearMethods().addMethod('PUT')
 
-  def handle(self, app, orient):
-    if orient is None:
-      return self.jsonify({'rotation' : sysconfig.getDisplayOrientation()})
-    else:
-      if orient >= 0 and orient < 360:
-        sysconfig.setDisplayOrientation(orient)
-        self.cachemgr.empty()
-        return self.jsonify({'rotation' : sysconfig.getDisplayOrientation()})
-    self.setAbort(500)
+    def handle(self, app, orient):
+        if orient is None:
+            return self.jsonify({'rotation': sysconfig.getDisplayOrientation()})
+        else:
+            if orient >= 0 and orient < 360:
+                sysconfig.setDisplayOrientation(orient)
+                self.cachemgr.empty()
+                return self.jsonify({'rotation': sysconfig.getDisplayOrientation()})
+        self.setAbort(500)

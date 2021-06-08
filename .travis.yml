@@ -3,5 +3,5 @@ dist: xenial
 before_install:
  - sudo apt-get update
 install:
-- sudo apt-get install pyflakes
+- sudo apt-get install flake8
 script: "./travis/validate.sh"

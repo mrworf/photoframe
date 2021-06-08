@@ -21,7 +21,7 @@ import shutil
 
 from modules.path import path as syspath
 
-### CONSTANTS ###
+# CONSTANTS
 
 MIN = 60
 HOUR = MIN * 60
@@ -32,167 +32,160 @@ YEAR = DAY * 365
 KB = 10**3
 MB = KB * 10**3
 GB = MB * 10**3
-#NOTE: all values are in Bytes!
+# NOTE: all values are in Bytes!
 
-##################
 
 class CacheManager:
-  STATE_HEAPS = 0
-  STATE_ENOUGH = 1
-  STATE_WORRISOME = 2
-  STATE_CRITICAL = 3
-  STATE_FULL = 4
+    STATE_HEAPS = 0
+    STATE_ENOUGH = 1
+    STATE_WORRISOME = 2
+    STATE_CRITICAL = 3
+    STATE_FULL = 4
 
-  def __init__(self):
-    self.enable = True
+    def __init__(self):
+        self.enable = True
 
-  def enableCache(self, enable):
-    self.enable = enable
-    logging.info('Cache is set to ' + repr(enable))
+    def enableCache(self, enable):
+        self.enable = enable
+        logging.info('Cache is set to ' + repr(enable))
 
-  def validate(self):
-    self.createDirs()
-    self.garbageCollect()
+    def validate(self):
+        self.createDirs()
+        self.garbageCollect()
 
-  def formatBytes(self, size):
-    if size > 0.1*GB:
-      return "%.1fGB" % (float(size)/GB)
-    elif size > 0.1*MB:
-      return "%.1fMB" % (float(size)/MB)
-    elif size > 0.1*KB:
-      return "%.1fKB" % (float(size)/KB)
-    return "%dB" % size
+    def formatBytes(self, size):
+        if size > 0.1*GB:
+            return "%.1fGB" % (float(size)/GB)
+        elif size > 0.1*MB:
+            return "%.1fMB" % (float(size)/MB)
+        elif size > 0.1*KB:
+            return "%.1fKB" % (float(size)/KB)
+        return "%dB" % size
 
-  def getCachedImage(self, cacheId, destination):
-    if not self.enable or cacheId is None:
-      return None
+    def getCachedImage(self, cacheId, destination):
+        if not self.enable or cacheId is None:
+            return None
 
-    filename = os.path.join(syspath.CACHEFOLDER, cacheId)
-    if os.path.isfile(filename):
-      try:
-        shutil.copy(filename, destination)
-        logging.debug('Cache hit, using %s as %s', cacheId, destination)
-        return destination
-      except:
-        logging.exception('Failed to copy cached image')
-    return None
-
-  def setCachedImage(self, filename, cacheId):
-    if not self.enable:
-      return None
-
-    # Will copy the file if possible, otherwise
-    # copy/delete it.
-    cacheFile = os.path.join(syspath.CACHEFOLDER, cacheId)
-    try:
-      if os.path.exists(cacheFile):
-        os.unlink(cacheFile)
-      shutil.copy(filename, cacheFile)
-      logging.debug('Cached %s as %s', filename, cacheId)
-      return filename
-    except:
-      logging.exception('Failed to ownership of file')
-      return None
-
-  def createDirs(self, subDirs=[]):
-    if not os.path.exists(syspath.CACHEFOLDER):
-      os.mkdir(syspath.CACHEFOLDER)
-    for subDir in[os.path.join(syspath.CACHEFOLDER, d) for d in subDirs]:
-      if not os.path.exists(subDir):
-        os.mkdir(subDir)
-
-  # delete all files but keep directory structure intact
-  def empty(self, directory = syspath.CACHEFOLDER):
-    freedUpSpace = 0
-    if not os.path.isdir(directory):
-      logging.exception('Failed to delete "%s". Directory does not exist!' % directory)
-      return freedUpSpace
-
-    for p, _dirs, files in os.walk(directory):
-      for filename in [os.path.join(p, f) for f in files]:
-        freedUpSpace += os.stat(filename).st_size
-        try:
-          os.unlink(filename)
-        except:
-          logging.exception('Failed to delete "%s"' % filename)
-    logging.info("'%s' has been emptied"%directory)
-    return freedUpSpace
-
-
-  # delete all files that were modified earlier than {minAge}
-  # return total freedUpSpace in bytes
-  def deleteOldFiles(self, topPath, minAge):
-    if topPath is None or topPath == '':
-      logging.error('deleteOldFiles() called with invalid path')
-      return 0
-    freedUpSpace = 0
-    now = time.time()
-    try:
-      for path, _dirs, files in os.walk(topPath):
-        for filename in [os.path.join(path, f) for f in files]:
-          stat = os.stat(filename)
-          if stat.st_mtime < now - minAge:
+        filename = os.path.join(syspath.CACHEFOLDER, cacheId)
+        if os.path.isfile(filename):
             try:
-              os.remove(filename)
-              logging.debug("old file '%s' deleted" % filename)
-              freedUpSpace += stat.st_size
-            except OSError as e:
-              logging.warning("unable to delete file '%s'!" % filename)
-              logging.exception("Output: "+e.strerror)
-    except:
-      logging.exception('Failed to clean "%s"', topPath)
-    return freedUpSpace
+                shutil.copy(filename, destination)
+                logging.debug('Cache hit, using %s as %s', cacheId, destination)
+                return destination
+            except Exception:
+                logging.exception('Failed to copy cached image')
+        return None
 
-  def getDirSize(self, path):
-    size = 0
-    for path, _dirs, files in os.walk(path):
-      for filename in [os.path.join(path, f) for f in files]:
-        size += os.stat(filename).st_size
-    return size
+    def setCachedImage(self, filename, cacheId):
+        if not self.enable:
+            return None
 
-  # classify disk space usage into five differnt states based on free/total ratio
-  def getDiskSpaceState(self, path):
-    # all values are in bytes!
-    #dirSize = float(self.getDirSize(path))
+        # Will copy the file if possible, otherwise
+        # copy/delete it.
+        cacheFile = os.path.join(syspath.CACHEFOLDER, cacheId)
+        try:
+            if os.path.exists(cacheFile):
+                os.unlink(cacheFile)
+            shutil.copy(filename, cacheFile)
+            logging.debug('Cached %s as %s', filename, cacheId)
+            return filename
+        except Exception:
+            logging.exception('Failed to ownership of file')
+            return None
 
-    stat = os.statvfs(path)
-    total = float(stat.f_blocks*stat.f_bsize)
-    free = float(stat.f_bfree*stat.f_bsize)
+    def createDirs(self, subDirs=[]):
+        if not os.path.exists(syspath.CACHEFOLDER):
+            os.mkdir(syspath.CACHEFOLDER)
+        for subDir in[os.path.join(syspath.CACHEFOLDER, d) for d in subDirs]:
+            if not os.path.exists(subDir):
+                os.mkdir(subDir)
 
-    #logging.debug("'%s' takes up %s" % (path, CacheManager.formatBytes(dirSize)))
-    #logging.debug("free space on partition: %s" % CacheManager.formatBytes(free))
-    #logging.debug("total space on partition: %s" % CacheManager.formatBytes(total))
+    # delete all files but keep directory structure intact
+    def empty(self, directory=syspath.CACHEFOLDER):
+        freedUpSpace = 0
+        if not os.path.isdir(directory):
+            logging.exception('Failed to delete "%s". Directory does not exist!' % directory)
+            return freedUpSpace
 
-    if free < 50*MB:
-      return CacheManager.STATE_FULL
-    elif free/total < 0.1:
-      return CacheManager.STATE_CRITICAL
-    elif free/total < 0.2:
-      return CacheManager.STATE_WORRISOME
-    elif free/total < 0.5:
-      return CacheManager.STATE_ENOUGH
-    else:
-      return CacheManager.STATE_HEAPS
+        for p, _dirs, files in os.walk(directory):
+            for filename in [os.path.join(p, f) for f in files]:
+                freedUpSpace += os.stat(filename).st_size
+                try:
+                    os.unlink(filename)
+                except Exception:
+                    logging.exception('Failed to delete "%s"' % filename)
+        logging.info("'%s' has been emptied" % directory)
+        return freedUpSpace
 
-  # Free up space of any tmp/cache folder
-  # Frequently calling this function will make sure, less important files are deleted before having to delete more important ones.
-  # Of course a manual cache reset is possible via the photoframe web interface
-  def garbageCollect(self, lessImportantDirs=[]):
-    #logging.debug("Garbage Collector started!")
-    state = self.getDiskSpaceState(syspath.CACHEFOLDER)
-    freedUpSpace = 0
-    if state == CacheManager.STATE_FULL:
-      freedUpSpace = self.empty(syspath.CACHEFOLDER)
-    elif state == CacheManager.STATE_CRITICAL:
-      for subDir in [os.path.join(syspath.CACHEFOLDER, d) for d in lessImportantDirs]:
-        freedUpSpace += self.empty(subDir)
-    elif state == CacheManager.STATE_WORRISOME:
-      freedUpSpace = self.deleteOldFiles(syspath.CACHEFOLDER, 7*DAY)
-    elif state == CacheManager.STATE_ENOUGH:
-      freedUpSpace = self.deleteOldFiles(syspath.CACHEFOLDER, MONTH)
-    else:
-      freedUpSpace = self.deleteOldFiles(syspath.CACHEFOLDER, 6*MONTH)
-    '''
+    # delete all files that were modified earlier than {minAge}
+    # return total freedUpSpace in bytes
+
+    def deleteOldFiles(self, topPath, minAge):
+        if topPath is None or topPath == '':
+            logging.error('deleteOldFiles() called with invalid path')
+            return 0
+        freedUpSpace = 0
+        now = time.time()
+        try:
+            for path, _dirs, files in os.walk(topPath):
+                for filename in [os.path.join(path, f) for f in files]:
+                    stat = os.stat(filename)
+                    if stat.st_mtime < now - minAge:
+                        try:
+                            os.remove(filename)
+                            logging.debug("old file '%s' deleted" % filename)
+                            freedUpSpace += stat.st_size
+                        except OSError as e:
+                            logging.warning("unable to delete file '%s'!" % filename)
+                            logging.exception("Output: "+e.strerror)
+        except Exception:
+            logging.exception('Failed to clean "%s"', topPath)
+        return freedUpSpace
+
+    def getDirSize(self, path):
+        size = 0
+        for path, _dirs, files in os.walk(path):
+            for filename in [os.path.join(path, f) for f in files]:
+                size += os.stat(filename).st_size
+        return size
+
+    # classify disk space usage into five differnt states based on free/total ratio
+    def getDiskSpaceState(self, path):
+        # all values are in bytes!
+        stat = os.statvfs(path)
+        total = float(stat.f_blocks*stat.f_bsize)
+        free = float(stat.f_bfree*stat.f_bsize)
+
+        if free < 50*MB:
+            return CacheManager.STATE_FULL
+        elif free/total < 0.1:
+            return CacheManager.STATE_CRITICAL
+        elif free/total < 0.2:
+            return CacheManager.STATE_WORRISOME
+        elif free/total < 0.5:
+            return CacheManager.STATE_ENOUGH
+        else:
+            return CacheManager.STATE_HEAPS
+
+    # Free up space of any tmp/cache folder
+    # Frequently calling this function will make sure, less important files
+    # are deleted before having to delete more important ones.
+    # Of course a manual cache reset is possible via the photoframe web interface
+    def garbageCollect(self, lessImportantDirs=[]):
+        state = self.getDiskSpaceState(syspath.CACHEFOLDER)
+        freedUpSpace = 0
+        if state == CacheManager.STATE_FULL:
+            freedUpSpace = self.empty(syspath.CACHEFOLDER)
+        elif state == CacheManager.STATE_CRITICAL:
+            for subDir in [os.path.join(syspath.CACHEFOLDER, d) for d in lessImportantDirs]:
+                freedUpSpace += self.empty(subDir)
+        elif state == CacheManager.STATE_WORRISOME:
+            freedUpSpace = self.deleteOldFiles(syspath.CACHEFOLDER, 7*DAY)
+        elif state == CacheManager.STATE_ENOUGH:
+            freedUpSpace = self.deleteOldFiles(syspath.CACHEFOLDER, MONTH)
+        else:
+            freedUpSpace = self.deleteOldFiles(syspath.CACHEFOLDER, 6*MONTH)
+        '''
     if freedUpSpace:
       logging.info("Garbage Collector was able to free up %s of disk space!" % CacheManager.formatBytes(freedUpSpace))
     else:

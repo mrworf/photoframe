@@ -20,56 +20,59 @@ import shutil
 
 from modules.path import path as syspath
 
+
 class ImageHistory:
-  MAX_HISTORY = 20
-  def __init__(self, settings):
-    self._HISTORY = []
-    self.settings = settings
+    MAX_HISTORY = 20
 
-    # Also, make sure folder exists AND clear any existing content
-    if not os.path.exists(syspath.HISTORYFOLDER):
-      os.mkdir(syspath.HISTORYFOLDER)
+    def __init__(self, settings):
+        self._HISTORY = []
+        self.settings = settings
 
-    # Clear it
-    for p, _dirs, files in os.walk(syspath.HISTORYFOLDER):
-      for filename in [os.path.join(p, f) for f in files]:
-        try:
-          os.unlink(filename)
-        except:
-          logging.exception('Failed to delete "%s"' % filename)
+        # Also, make sure folder exists AND clear any existing content
+        if not os.path.exists(syspath.HISTORYFOLDER):
+            os.mkdir(syspath.HISTORYFOLDER)
 
-  def _find(self, file):
-    return next((entry for entry in self._HISTORY if entry.filename == file), None)
+        # Clear it
+        for p, _dirs, files in os.walk(syspath.HISTORYFOLDER):
+            for filename in [os.path.join(p, f) for f in files]:
+                try:
+                    os.unlink(filename)
+                except Exception:
+                    logging.exception('Failed to delete "%s"' % filename)
 
-  def add(self, image):
-    if image is None or image.error is not None:
-      return
-    historyFile = os.path.join(syspath.HISTORYFOLDER, image.getCacheId())
-    if not self._find(historyFile):
-      shutil.copy(image.filename, historyFile)
-    h = image.copy()
-    h.setFilename(historyFile)
-    h.allowCache(False)
+    def _find(self, file):
+        return next((entry for entry in self._HISTORY if entry.filename == file), None)
 
-    self._HISTORY.insert(0, h)
-    self._obeyLimits()
+    def add(self, image):
+        if image is None or image.error is not None:
+            return
+        historyFile = os.path.join(syspath.HISTORYFOLDER, image.getCacheId())
+        if not self._find(historyFile):
+            shutil.copy(image.filename, historyFile)
+        h = image.copy()
+        h.setFilename(historyFile)
+        h.allowCache(False)
 
-  def _obeyLimits(self):
-    # Make sure history isn't too big
-    while len(self._HISTORY) > ImageHistory.MAX_HISTORY:
-      entry = self._HISTORY.pop()
-      if not self._find(entry.filename):
-        os.unlink(entry.filename)
+        self._HISTORY.insert(0, h)
+        self._obeyLimits()
 
-  def getAvailable(self):
-    return len(self._HISTORY)
+    def _obeyLimits(self):
+        # Make sure history isn't too big
+        while len(self._HISTORY) > ImageHistory.MAX_HISTORY:
+            entry = self._HISTORY.pop()
+            if not self._find(entry.filename):
+                os.unlink(entry.filename)
 
-  def getByIndex(self, index):
-    if index < 0 or index >= len(self._HISTORY):
-      logging.warning('History index requested is out of bounds (%d wanted, have 0-%d)', index, len(self._HISTORY)-1)
-      return None
-    entry = self._HISTORY[index]
-    # We need to make a copy which is safe to delete!
-    f = os.path.join(self.settings.get('tempfolder'), 'history')
-    shutil.copy(entry.filename, f)
-    return entry.copy().setFilename(f)
+    def getAvailable(self):
+        return len(self._HISTORY)
+
+    def getByIndex(self, index):
+        if index < 0 or index >= len(self._HISTORY):
+            logging.warning('History index requested is out of bounds (%d wanted, have 0-%d)',
+                            index, len(self._HISTORY)-1)
+            return None
+        entry = self._HISTORY[index]
+        # We need to make a copy which is safe to delete!
+        f = os.path.join(self.settings.get('tempfolder'), 'history')
+        shutil.copy(entry.filename, f)
+        return entry.copy().setFilename(f)

@@ -1,10 +1,25 @@
-# photoframe
+# Photoframe V2 Branch
+This is a development branch of photoframe targeting the next version of the software.  
+
+Significant changes for photoframe v2 include:
+
+- Designed to be used with a manual installation on top of a Raspberry Pi OS Lite `Buster` release
+- Use of Python 3.  
+- Support for HEIC photos.  This drove the need for the latest OS release.
+- ddcutil driven brightness and temperature changes.  This feature works with monitors
+  that can be adjusted using ddc over HDMI, including brightness and temperature. 
+  Existing branches do not adjust the screen brightness.
+- Support for TCS3472* color and lumen module e.g. https://www.ebay.com/itm/133600154256 
+- Improved color and temperature calculations both for accuracy and sensitivity
+- Managed at port 80 - no need to add :7777 to the URL.
+
+# Photoframe
 
 A Raspberry Pi (Zero, 1 or 3) software which automatically pulls photos from Google Photos and displays them
 on the attached screen, just like a photoframe. No need to upload photos to 3rd party service
 or fiddle with local storage or SD card.
 
-## why use this as opposed to buying one?
+## Why use this as opposed to buying one?
 
 Unlike most other frames out there, this one will automatically refresh and grab content
 from your photo collection, making it super simple to have a nice photo frame. Also uses
@@ -14,7 +29,7 @@ your expense report.
 It also has more unique features like ambient color temperature adjustments which allows
 the images to meld better with the room where it's running.
 
-# features
+# Features
 
 - Simple web interface for configuration
 - Google Photo search integration for more interesting images
@@ -26,50 +41,149 @@ the images to meld better with the room where it's running.
 - Power control via GPIO (turn RPi on/off)
 - Non-HDMI displays (SPI, DPI, etc)
 
-# requirements
+# Requirements
 
-- Raspberry Pi 1, 3 or Zero
+- Any Raspberry Pi
 - Display of some sort (HDMI or SPI/DPI displays)
-- Google Photos account
-- Internet
+- Another device with a web browser to manage the photoframe
+- Internet photos from Google or from URLs require Internet access for the Raspberry Pi
+- Familiarity wih Raspberry Pi and Linux command line procedures
 
-# installation
+# Installation
 
-On the release page, you'll find prepared raspbian image(s) for RaspberryPi 1, 3 or Zero
+This branch is not compatible with existing SD card images available at mrworf/photoframe.
+Once a new SD card image is create for V2, then much of this goes into MANUAL.md
 
-To use these (and I really recommend that to doing the manual steps), here's how:
+Start by installing Raspberry Pi OS Lite from a Buster release.  Jan 2021 or later.
 
-1. Download the image from the release page
-2. Use your favorite tool to load image onto a SD card, I recommend https://etcher.io/ which works on Windows, OSX and Linux
-3. Open the new drive called `boot` and edit the file called `wifi-config.txt`
-   Change the two fields to point out your wifi and the password needed for it
-4. Save the file
-5. Place SDcard in your RPi3 which is connected to a monitor/TV
-6. Start the RPi
-7. Wait (takes up to a minute depending on card and the fact that it's expanding to use the entire SDcard ... slower still on non-RPi3)
-8. Follow instructions shown on the display
+Make a shell available either by attaching a keyboard, or by enabling ssh 
+
+   Note: to enable ssh add two files to the SSD /boot drive:
+   
+   ssh
+```   
+     (no contents)
+```
+   wpa_supplicant.conf 
+```
+# Use this file instead of wifi-config.txt
+# Should set country properly
+
+country=us
+update_config=1
+ctrl_interface=/var/run/wpa_supplicant
+
+network={
+scan_ssid=1
+ssid="YourSSID"
+psk="YourWiFiPassword"
+}
+```
+
+If a keyboard is attached, you can use raspi-config to set up WiFi.
+
+use `sudo raspi-config` to set locale, time zone, WiFi and Country (if not done with the files above), and to enable I2C kernel module
+
+Bring the distro up to date:
+
+`sudo apt update && apt upgrade`
+
+From this point forward, it's recommended to `sudo bash` and then `cd` so that the commands are performed as root the /root directory
+
+Install additional dependencies:
+
+`apt install git python3-pip python3-requests python3-requests-oauthlib python3-flask`
+
+`apt install imagemagick python3-smbus bc ddcutil`
+
+`pip3 install requests requests-oauthlib flask flask-httpauth smbus`
+
+`pip3 install netifaces` 
+
+Next, let's tweak the boot so we don't get a bunch of output
+
+Edit the `/boot/cmdline.txt` and add replace the term `console=tty1` with all of the following:
+
+```
+console=tty3 loglevel=3 consoleblank=0 vt.global_cursor_default=0 logo.nologo
+```
+
+You also need to edit the `/boot/config.txt`  in two places. 
+
+Add the following before the first `# uncomment` section
+
+```
+disable_splash=1
+framebuffer_ignore_alpha=1
+```
+
+And add the following to the `dtparam` section
+
+```
+dtparam=i2c2_iknowwhatimdoing
+```
+
+We also want to disable the first console (since that's going to be our frame). This is done by
+issuing
+
+```
+systemctl disable getty@tty1.service
+```
+
+And also do
+
+```
+systemctl mask plymouth-start.service
+```
+
+or you might still see the boot messages.
+
+Time to install photoframe, which means downloading the repo, install the service and reboot
+
+```
+cd /root
+git clone --branch python3 --single-branch https://github.com/dadr/photoframe.git
+cd photoframe
+cp frame.service /etc/systemd/system/
+systemctl enable /etc/systemd/system/frame.service
+reboot now
+```
+
+To get automatic updates, create a file `/etc/cron.d/photoframe`  with the following contents:
+```
+# Check once a week for updates to the photoframe software.
+15 3    * * *   root    /root/photoframe/update.sh
+```
+
+Finally, if you want the web interface to be login-password protected, then create the file `/boot/http-auth.json`  with the following edited to suite:
+
+```
+{"user":"photoframe","password":"password"}
+
+```
+
+# Usage
+
+photoframe is managed using a browser on the same WiFi subnet.  The URL is shown when no configuration is present, 
+and shown for a few seconds on bootup for a photoframe that has a working configuration.
 
 The default username/password for the web page is `photoframe` and `password`. This can be changed by editing the file called `http-auth.json` on the `boot` drive
 
-## tl;dr
 
-Flash image to SDcard, edit `wifi-config.txt` and boot the RPi3 with the SDcard and follow instructions. Username and password is above this paragraph.
+# color temperature
 
-Once inside the web interface, select `GooglePhotos` from dropdown list in bottom-left corner and press `Add photo service`.
-
-# color temperature?
-
-Yes, photoframe can actually adjust the temperature of the image to suit the light in the room. For this to work, you need to install a TCS34725,
-see https://www.adafruit.com/product/1334 . This should be hooked up to the I2C bus, using this:
+This branch of photoframe is intended to work with color temperature modules.   Yes, photoframe can actually adjust the temperature of the image to suit the light in the room. For this to work, you need to install a TCS3472*,
+see https://www.adafruit.com/product/1334  and https://www.ebay.com/itm/133600154256. These should be hooked up to the I2C bus like this:
 
 ```
 3.3V -> Pin 1 (3.3V)
 SDA -> Pin 3 (GPIO 0)
 SCL -> Pin 5 (GPIO 1)
 GND -> Pin 9 (GND)
+LED -> Pin 9 (GND)
 ```
 
-You also need to tell your RPi3 to enable the I2C bus, start the `raspi-config` and go to submenu 5 (interfaces) and select I2C and enable it.
+Instructions above include enabling the I2C bus by using `raspi-config` and going to submenu 5 (interfaces) and select I2C and enable it.
 
 Once all this is done, you have one more thing left to do before rebooting, you need to download the imagemagick script that will adjust the image,
 please visit http://www.fmwconcepts.com/imagemagick/colortemp/index.php and download and store it as `colortemp.sh` inside `/root/photoframe_config`.
@@ -82,15 +196,12 @@ If photoframe is unable to use the sensor, it "usually" gives you helpful hints.
 
 *Note*
 
-The sensor is automatically detected as long as it is a TCS34725 device and it's connected correctly to the I2C bus of the raspberry pi. Once detected you'll get a new read-out in the web interface which details both white balance (kelvin) and light (lux).
+The sensor is automatically detected as long as it is a TCS3472* device and it's connected correctly to the I2C bus of the raspberry pi. Once detected you'll get a new read-out in the web interface which details both white balance (kelvin) and light (lux).
 
 If you don't get this read-out, look at your logfile. There will be hints like sensor not found or sensor not being the expected one, etc.
 
-## Annoyed with the LED showing on the TCS34725 board from Adafruit?
 
-Just ground the LED pin on the Adafruit board (for example by connecting it to Pin 9 on your RPi3)
-
-## Ambient powersave?
+## Ambient powersave
 
 Yes, using the same sensor, you can set a threshold and duration, if the ambient light is below said threshold for the duration, it will trigger
 powersave on the display. If the ambient brightness is above the threshold for same duration, it will wake up the display.
@@ -103,7 +214,7 @@ regardless of what the sensor says. The sensor is only used to extend the period
 Photoframe listens to GPIO 26 (default, can be changed) to power off (and also power on). If you connect a switch between pin 37 (GPIO 26) and pin 39 (GND), you'll be able
 to do a graceful shutdown as well as power on.
 
-# How come you contact photoframe.sensenet.nu ???
+# How come the Google service contacts photoframe.sensenet.nu ???
 
 Since Google doesn't approve of OAuth with dynamic redirect addresses,
 this project makes use of a lightweight service which allows registration
@@ -139,7 +250,7 @@ It's somewhat simplified, but shows the extra step taken to register your LAN ad
 If you want to see how it works and/or run your own, you'll find the code for this service under `extras` and requires
 php with memcached. Ideally you use a SSL endpoint as well.
 
-# faq
+# FAQs
 
 ## Can I avoid photoframe.sensenet.nu ?
 
@@ -161,7 +272,7 @@ By default, it logs very little and what it logs can be found under `/var/log/sy
 
 If you're having issues and you want more details, do the following as root:
 ```
-service frame stop
+systemctl stop frame
 /root/photoframe/frame.py --debug
 ```
 This will cause photoframe to run in the foreground and provide tons of debug information

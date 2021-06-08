@@ -13,146 +13,149 @@
 # You should have received a copy of the GNU General Public License
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
-from base import BaseService
+from .base import BaseService
 import random
 import os
 import json
 import logging
 
+
 class PicasaWeb(BaseService):
-  SERVICE_NAME = 'PicasaWeb'
-  SERVICE_ID = 1
-  SERVICE_DEPRECATED = True
+    SERVICE_NAME = 'PicasaWeb'
+    SERVICE_ID = 1
+    SERVICE_DEPRECATED = True
 
-  def __init__(self, configDir, id, name):
-    BaseService.__init__(self, configDir, id, name, needConfig=False, needOAuth=True)
+    def __init__(self, configDir, id, name):
+        BaseService.__init__(self, configDir, id, name, needConfig=False, needOAuth=True)
 
-  def getOAuthScope(self):
-    return ['https://www.googleapis.com/auth/photos']
+    def getOAuthScope(self):
+        return ['https://www.googleapis.com/auth/photos']
 
-  def helpOAuthConfig(self):
-    return 'Please upload client.json from the Google API Console'
+    def helpOAuthConfig(self):
+        return 'Please upload client.json from the Google API Console'
 
-  def helpKeywords(self):
-    return 'Name of people, location, colors, depiction, pretty much anything that Google Photo search accepts'
+    def helpKeywords(self):
+        return 'Name of people, location, colors, depiction, pretty much anything that Google Photo search accepts'
 
-  def getMessages(self):
-    msgs = BaseService.getMessages(self)
-    msgs.append(
-      {
-        'level': 'ERROR',
-        'message' : 'This provider is no longer supported by Google. Please use GooglePhotos. For more details, see photoframe wiki',
-        'link': 'https://github.com/mrworf/photoframe/wiki/PicasaWeb-API-ceases-to-work-January-1st,-2019'
-      }
-    )
-    return msgs
+    def getMessages(self):
+        msgs = BaseService.getMessages(self)
+        msgs.append(
+            {
+                'level': 'ERROR',
+                'message': 'This provider is no longer supported by Google. Please use GooglePhotos. '
+                           'For more details, see photoframe wiki',
+                'link': 'https://github.com/mrworf/photoframe/wiki/PicasaWeb-API-ceases-to-work-January-1st,-2019'
+            }
+        )
+        return msgs
 
-  def hasKeywordSourceUrl(self):
-    return True
+    def hasKeywordSourceUrl(self):
+        return True
 
-  def getKeywordSourceUrl(self, index):
-    keys = self.getKeywords()
-    if index < 0 or index >= len(keys):
-      return 'Out of range, index = %d' % index
-    keywords = keys[index]
-    return 'https://photos.google.com/search/' + keywords
+    def getKeywordSourceUrl(self, index):
+        keys = self.getKeywords()
+        if index < 0 or index >= len(keys):
+            return 'Out of range, index = %d' % index
+        keywords = keys[index]
+        return 'https://photos.google.com/search/' + keywords
 
-  def prepareNextItem(self, destinationFile, supportedMimeTypes, displaySize):
-    result = self.fetchImage(destinationFile, supportedMimeTypes, displaySize)
-    if result['error'] is not None:
-      # If we end up here, two things can have happened
-      # 1. All images have been shown
-      # 2. No image or data was able to download
-      # Try forgetting all data and do another run
-      self.memoryForget()
-      for file in os.listdir(self.getStoragePath()):
-        os.unlink(os.path.join(self.getStoragePath(), file))
-      result = self.fetchImage(destinationFile, supportedMimeTypes, displaySize)
-    return result
+    def prepareNextItem(self, destinationFile, supportedMimeTypes, displaySize):
+        result = self.fetchImage(destinationFile, supportedMimeTypes, displaySize)
+        if result['error'] is not None:
+            # If we end up here, two things can have happened
+            # 1. All images have been shown
+            # 2. No image or data was able to download
+            # Try forgetting all data and do another run
+            self.memoryForget()
+            for file in os.listdir(self.getStoragePath()):
+                os.unlink(os.path.join(self.getStoragePath(), file))
+            result = self.fetchImage(destinationFile, supportedMimeTypes, displaySize)
+        return result
 
-  def fetchImage(self, destinationFile, supportedMimeTypes, displaySize):
-    # First, pick which keyword to use
-    keywordList = list(self.getKeywords())
-    offset = 0
+    def fetchImage(self, destinationFile, supportedMimeTypes, displaySize):
+        # First, pick which keyword to use
+        keywordList = list(self.getKeywords())
+        offset = 0
 
-    # Make sure we always have a default
-    if len(keywordList) == 0:
-      keywordList.append('')
-    else:
-      offset = self.getRandomKeywordIndex()
+        # Make sure we always have a default
+        if len(keywordList) == 0:
+            keywordList.append('')
+        else:
+            offset = self.getRandomKeywordIndex()
 
-    total = len(keywordList)
-    for i in range(0, total):
-      index = (i + offset) % total
-      keyword = keywordList[index]
-      images = self.getImagesFor(keyword)
-      if images is None:
-        continue
+        total = len(keywordList)
+        for i in range(0, total):
+            index = (i + offset) % total
+            keyword = keywordList[index]
+            images = self.getImagesFor(keyword)
+            if images is None:
+                continue
 
-      mimeType, imageUrl = self.getUrlFromImages(supportedMimeTypes, displaySize['width'], images, displaySize)
-      if imageUrl is None:
-        continue
-      result = self.requestUrl(imageUrl, destination=destinationFile)
-      if result['status'] == 200:
-        return {'mimetype' : mimeType, 'error' : None, 'source':None}
-    return {'mimetype' : None, 'error' : 'Could not download images from Google Photos', 'source':None}
+            mimeType, imageUrl = self.getUrlFromImages(supportedMimeTypes, displaySize['width'], images, displaySize)
+            if imageUrl is None:
+                continue
+            result = self.requestUrl(imageUrl, destination=destinationFile)
+            if result['status'] == 200:
+                return {'mimetype': mimeType, 'error': None, 'source': None}
+        return {'mimetype': None, 'error': 'Could not download images from Google Photos', 'source': None}
 
-  def getUrlFromImages(self, types, width, images, displaySize):
-    # Next, pick an image
-    count = len(images['feed']['entry'])
-    offset = random.SystemRandom().randint(0,count-1)
-    for i in range(0, count):
-      index = (i + offset) % count
-      proposed = images['feed']['entry'][index]['content']['src']
-      if self.memorySeen(proposed):
-        continue
-      self.memoryRemember(proposed)
+    def getUrlFromImages(self, types, width, images, displaySize):
+        # Next, pick an image
+        count = len(images['feed']['entry'])
+        offset = random.SystemRandom().randint(0, count-1)
+        for i in range(0, count):
+            index = (i + offset) % count
+            proposed = images['feed']['entry'][index]['content']['src']
+            if self.memorySeen(proposed):
+                continue
+            self.memoryRemember(proposed)
 
-      if not self.isCorrectOrientation(images[index]['mediaMetadata'], displaySize):
-        logging.debug("Skipping image '%s' due to wrong orientation!" % images[index]['filename'])
-        continue
+            if not self.isCorrectOrientation(images[index]['mediaMetadata'], displaySize):
+                logging.debug("Skipping image '%s' due to wrong orientation!" % images[index]['filename'])
+                continue
 
-      entry = images['feed']['entry'][index]
-      # Make sure we don't get a video, unsupported for now (gif is usually bad too)
-      if entry['content']['type'] in types and 'gphoto$videostatus' not in entry:
-        return entry['content']['type'], entry['content']['src'].replace('/s1600/', '/s%d/' % width, 1)
-      elif 'gphoto$videostatus' in entry:
-        logging.debug('Image is thumbnail for videofile')
-      else:
-        logging.warning('Unsupported media: %s (video = %s)' % (entry['content']['type'], repr('gphoto$videostatus' in entry)))
-      entry = None
-    return None, None
+            entry = images['feed']['entry'][index]
+            # Make sure we don't get a video, unsupported for now (gif is usually bad too)
+            if entry['content']['type'] in types and 'gphoto$videostatus' not in entry:
+                return entry['content']['type'], entry['content']['src'].replace('/s1600/', '/s%d/' % width, 1)
+            elif 'gphoto$videostatus' in entry:
+                logging.debug('Image is thumbnail for videofile')
+            else:
+                logging.warning('Unsupported media: %s (video = %s)' %
+                                (entry['content']['type'], repr('gphoto$videostatus' in entry)))
+            entry = None
+        return None, None
 
-  def getImagesFor(self, keyword):
-    return None
+    def getImagesFor(self, keyword):
+        return None
 
-    images = None
-    filename = os.path.join(self.getStoragePath(), self.hashString(keyword) + '.json')
-    if not os.path.exists(filename):
-      # Request albums
-      # Picasa limits all results to the first 1000, so get them
-      params = {
-        'kind' : 'photo',
-        'start-index' : 1,
-        'max-results' : 1000,
-        'alt' : 'json',
-        'access' : 'all',
-        'imgmax' : '1600u', # We will replace this with width of framebuffer in pick_image
-        # This is where we get cute, we pick from a list of keywords
-        'fields' : 'entry(title,content,gphoto:timestamp,gphoto:videostatus)', # No unnecessary stuff
-        'q' : keyword
-      }
-      url = 'https://picasaweb.google.com/data/feed/api/user/default'
-      data = self.requestUrl(url, params=params)
-      if not data.isSuccess():
-        logging.warning('Requesting photo failed with status code %d', data.httpcode)
-      else:
-        with open(filename, 'w') as f:
-          f.write(data.content)
+        images = None
+        filename = os.path.join(self.getStoragePath(), self.hashString(keyword) + '.json')
+        if not os.path.exists(filename):
+            # Request albums
+            # Picasa limits all results to the first 1000, so get them
+            params = {
+                'kind': 'photo',
+                'start-index': 1,
+                'max-results': 1000,
+                'alt': 'json',
+                'access': 'all',
+                'imgmax': '1600u',  # We will replace this with width of framebuffer in pick_image
+                # This is where we get cute, we pick from a list of keywords
+                'fields': 'entry(title,content,gphoto:timestamp,gphoto:videostatus)',  # No unnecessary stuff
+                'q': keyword
+            }
+            url = 'https://picasaweb.google.com/data/feed/api/user/default'
+            data = self.requestUrl(url, params=params)
+            if not data.isSuccess():
+                logging.warning('Requesting photo failed with status code %d', data.httpcode)
+            else:
+                with open(filename, 'w') as f:
+                    f.write(data.content)
 
-    # Now try loading
-    if os.path.exists(filename):
-      with open(filename, 'r') as f:
-        images = json.load(f)
-    print(repr(images))
-    return images
+        # Now try loading
+        if os.path.exists(filename):
+            with open(filename, 'r') as f:
+                images = json.load(f)
+        print((repr(images)))
+        return images

@@ -15,20 +15,22 @@
 #
 
 from modules.sysconfig import sysconfig
-from baseroute import BaseRoute
+from .baseroute import BaseRoute
 
-#@auth.login_required
+# @auth.login_required
+
+
 class RouteOverscan(BaseRoute):
-  def setupex(self, cachemgr):
-    self.cachemgr = cachemgr
+    def setupex(self, cachemgr):
+        self.cachemgr = cachemgr
 
-    self.addUrl('/overscan').addDefault('overscan', None)
-    self.addUrl('/overscan/<overscan>').clearMethods().addMethod('PUT')
+        self.addUrl('/overscan').addDefault('overscan', None)
+        self.addUrl('/overscan/<overscan>').clearMethods().addMethod('PUT')
 
-  def handle(self, app, overscan):
-    if overscan is None:
-      return self.jsonify({'overscan' : sysconfig.isDisplayOverscan()})
-    else:
-      sysconfig.setDisplayOverscan(overscan == 'true')
-      return self.jsonify({'overscan' : sysconfig.isDisplayOverscan()})
-    self.setAbort(500)
+    def handle(self, app, overscan):
+        if overscan is None:
+            return self.jsonify({'overscan': sysconfig.isDisplayOverscan()})
+        else:
+            sysconfig.setDisplayOverscan(overscan == 'true')
+            return self.jsonify({'overscan': sysconfig.isDisplayOverscan()})
+        self.setAbort(500)

@@ -14,15 +14,15 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from baseroute import BaseRoute
+from .baseroute import BaseRoute
+
 
 class RouteControl(BaseRoute):
-  def setupex(self, slideshow):
-    self.slideshow = slideshow
+    def setupex(self, slideshow):
+        self.slideshow = slideshow
 
-    self.addUrl('/control/<cmd>')
+        self.addUrl('/control/<cmd>')
 
-  def handle(self, app, cmd):
-    self.slideshow.createEvent(cmd)
-    return self.jsonify({'control': True})
-
+    def handle(self, app, cmd):
+        self.slideshow.createEvent(cmd)
+        return self.jsonify({'control': True})

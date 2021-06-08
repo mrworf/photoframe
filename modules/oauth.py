@@ -25,127 +25,129 @@ from modules.network import RequestNoNetwork
 from modules.network import RequestInvalidToken
 from modules.network import RequestExpiredToken
 
+
 class OAuth:
-	def __init__(self, setToken, getToken, scope, extras=''):
-		self.ip = helper.getDeviceIp()
-		self.scope = scope
-		self.oauth = None
-		self.cbGetToken = getToken
-		self.cbSetToken = setToken
-		self.ridURI = 'https://photoframe.sensenet.nu'
-		self.state = None
-		self.extras = extras
+    def __init__(self, setToken, getToken, scope, extras=''):
+        self.ip = helper.getDeviceIp()
+        self.scope = scope
+        self.oauth = None
+        self.cbGetToken = getToken
+        self.cbSetToken = setToken
+        self.ridURI = 'https://photoframe.sensenet.nu'
+        self.state = None
+        self.extras = extras
 
-	def setOAuth(self, oauth):
-		self.oauth = oauth
+    def setOAuth(self, oauth):
+        self.oauth = oauth
 
-	def hasOAuth(self):
-		return self.oauth != None
+    def hasOAuth(self):
+        return self.oauth is not None
 
-	def getSession(self, refresh=False):
-		if not refresh:
-			auth = OAuth2Session(self.oauth['client_id'], token=self.cbGetToken())
-		else:
-			auth = OAuth2Session(self.oauth['client_id'],
-		                         token=self.cbGetToken(),
-		                         auto_refresh_kwargs={'client_id' : self.oauth['client_id'], 'client_secret' : self.oauth['client_secret']},
-		                         auto_refresh_url=self.oauth['token_uri'],
-		                         token_updater=self.cbSetToken)
-		return auth
+    def getSession(self, refresh=False):
+        if not refresh:
+            auth = OAuth2Session(self.oauth['client_id'], token=self.cbGetToken())
+        else:
+            auth = OAuth2Session(self.oauth['client_id'],
+                                 token=self.cbGetToken(),
+                                 auto_refresh_kwargs={
+                                     'client_id': self.oauth['client_id'],
+                                     'client_secret': self.oauth['client_secret']},
+                                 auto_refresh_url=self.oauth['token_uri'],
+                                 token_updater=self.cbSetToken)
+        return auth
 
-	def request(self, uri, destination=None, params=None, data=None, usePost=False):
-		ret = RequestResult()
-		result = None
-		stream = destination != None
-		tries = 0
+    def request(self, uri, destination=None, params=None, data=None, usePost=False):
+        ret = RequestResult()
+        result = None
+        stream = destination is not None
+        tries = 0
 
-		while tries < 5:
-			try:
-				try:
-					auth = self.getSession()
-					if auth is None:
-						logging.error('Unable to get OAuth session, probably expired')
-						raise RequestExpiredToken
-					if usePost:
-						result = auth.post(uri, stream=stream, params=params, json=data, timeout=180)
-					else:
-						result = auth.get(uri, stream=stream, params=params, timeout=180)
-					if result is not None:
-						break
-				except TokenExpiredError:
-					auth = self.getSession(True)
-					if auth is None:
-						logging.error('Unable to get OAuth session, probably expired')
-						raise RequestExpiredToken
+        while tries < 5:
+            try:
+                try:
+                    auth = self.getSession()
+                    if auth is None:
+                        logging.error('Unable to get OAuth session, probably expired')
+                        raise RequestExpiredToken
+                    if usePost:
+                        result = auth.post(uri, stream=stream, params=params, json=data, timeout=180)
+                    else:
+                        result = auth.get(uri, stream=stream, params=params, timeout=180)
+                    if result is not None:
+                        break
+                except TokenExpiredError:
+                    auth = self.getSession(True)
+                    if auth is None:
+                        logging.error('Unable to get OAuth session, probably expired')
+                        raise RequestExpiredToken
 
-					if usePost:
-						result = auth.post(uri, stream=stream, params=params, json=data, timeout=180)
-					else:
-						result = auth.get(uri, stream=stream, params=params, timeout=180)
-					if result is not None:
-						break
-			except InvalidGrantError:
-				logging.error('Token is no longer valid, need to re-authenticate')
-				raise RequestInvalidToken
-			except:
-				logging.exception('Issues downloading')
-			time.sleep(tries / 10) # Back off 10, 20, ... depending on tries
-			tries += 1
-			logging.warning('Retrying again, attempt #%d', tries)
+                    if usePost:
+                        result = auth.post(uri, stream=stream, params=params, json=data, timeout=180)
+                    else:
+                        result = auth.get(uri, stream=stream, params=params, timeout=180)
+                    if result is not None:
+                        break
+            except InvalidGrantError:
+                logging.error('Token is no longer valid, need to re-authenticate')
+                raise RequestInvalidToken
+            except Exception:
+                logging.exception('Issues downloading')
+            time.sleep(tries / 10)  # Back off 10, 20, ... depending on tries
+            tries += 1
+            logging.warning('Retrying again, attempt #%d', tries)
 
-		if tries == 5:
-			logging.error('Failed to download due to network issues')
-			raise RequestNoNetwork
+        if tries == 5:
+            logging.error('Failed to download due to network issues')
+            raise RequestNoNetwork
 
-		if destination is not None:
-			try:
-				with open(destination, 'wb') as handle:
-					for chunk in result.iter_content(chunk_size=512):
-						if chunk:  # filter out keep-alive new chunks
-							handle.write(chunk)
-				ret.setResult(RequestResult.SUCCESS).setHTTPCode(result.status_code)
-				ret.setHeaders(result.headers)
-			except:
-				logging.exception('Failed to download %s' % uri)
-				ret.setResult(RequestResult.FAILED_SAVING)
-		else:
-			ret.setResult(RequestResult.SUCCESS).setHTTPCode(result.status_code)
-			ret.setHeaders(result.headers)
-			ret.setContent(result.content)
-		return ret
+        if destination is not None:
+            try:
+                with open(destination, 'wb') as handle:
+                    for chunk in result.iter_content(chunk_size=512):
+                        if chunk:  # filter out keep-alive new chunks
+                            handle.write(chunk)
+                ret.setResult(RequestResult.SUCCESS).setHTTPCode(result.status_code)
+                ret.setHeaders(result.headers)
+            except Exception:
+                logging.exception('Failed to download %s' % uri)
+                ret.setResult(RequestResult.FAILED_SAVING)
+        else:
+            ret.setResult(RequestResult.SUCCESS).setHTTPCode(result.status_code)
+            ret.setHeaders(result.headers)
+            ret.setContent(result.content)
+        return ret
 
-	def getRedirectId(self):
-		r = requests.get('%s/?register' % self.ridURI)
-		return r.content
+    def getRedirectId(self):
+        r = requests.get('%s/?register' % self.ridURI)
+        return r.content.decode('utf-8')
 
-	def initiate(self):
-		self.rid = self.getRedirectId()
+    def initiate(self):
+        self.rid = self.getRedirectId()
 
-		auth = OAuth2Session(self.oauth['client_id'],
-							scope=self.scope, # ['https://www.googleapis.com/auth/photos'],
-							redirect_uri=self.ridURI,
-							state='%s-%s-%s' % (self.rid, self.ip, self.extras))
-		authorization_url, state = auth.authorization_url(self.oauth['auth_uri'],
-		                                                  access_type="offline",
-		                                                  prompt="consent")
+        auth = OAuth2Session(self.oauth['client_id'],
+                             scope=self.scope,  # ['https://www.googleapis.com/auth/photos'],
+                             redirect_uri=self.ridURI,
+                             state='%s-%s-%s' % (self.rid, self.ip, self.extras))
+        authorization_url, state = auth.authorization_url(self.oauth['auth_uri'],
+                                                          access_type="offline",
+                                                          prompt="consent")
 
-		self.state = state
-		return authorization_url
+        self.state = state
+        return authorization_url
 
-	def complete(self, url):
-		try:
-			auth = OAuth2Session(self.oauth['client_id'],
-			                     scope=self.scope, # ['https://www.googleapis.com/auth/photos'],
-			                     redirect_uri=self.ridURI,
-			                     state='%s-%s-%s' % (self.rid, self.ip, self.extras))
+    def complete(self, url):
+        try:
+            auth = OAuth2Session(self.oauth['client_id'],
+                                 scope=self.scope,  # ['https://www.googleapis.com/auth/photos'],
+                                 redirect_uri=self.ridURI,
+                                 state='%s-%s-%s' % (self.rid, self.ip, self.extras))
 
-			token = auth.fetch_token(self.oauth['token_uri'],
-			                         client_secret=self.oauth['client_secret'],
-			                         authorization_response=url)
+            token = auth.fetch_token(self.oauth['token_uri'],
+                                     client_secret=self.oauth['client_secret'],
+                                     authorization_response=url)
 
-			self.cbSetToken(token)
-			return True
-		except:
-			logging.exception('Failed to complete OAuth')
-		return False
-
+            self.cbSetToken(token)
+            return True
+        except Exception:
+            logging.exception('Failed to complete OAuth')
+        return False

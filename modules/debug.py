@@ -14,60 +14,67 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 import subprocess
-import logging
 import os
 import datetime
 import sys
 import traceback
 
-def _stringify(args):
-  result = ''
-  if len(args) > 0:
-    for arg in args:
-      if ' ' in arg:
-        result += '"' + arg + '" '
-      else:
-        result += arg + ' '
-    result = result[0:-1]
 
-  return result.replace('\n', '\\n')
+def _stringify(args):
+    result = ''
+    if len(args) > 0:
+        for arg in args:
+            if ' ' in arg:
+                result += '"' + arg + '" '
+            else:
+                result += arg + ' '
+        result = result[0:-1]
+
+    return result.replace('\n', '\\n')
+
 
 def subprocess_call(cmds, stderr=None, stdout=None):
-  #logging.debug('subprocess.call(%s)', _stringify(cmds))
-  return subprocess.call(cmds, stderr=stderr, stdout=stdout)
+    return subprocess.call(cmds, stderr=stderr, stdout=stdout)
+    # TODO  Relocate to helper?  Convert to subprocess.run?  Add exception to collect output
+    # in an error log.  Add debug logging option as well?  Add **kwargs
 
 def subprocess_check_output(cmds, stderr=None):
-  #logging.debug('subprocess.check_output(%s)', _stringify(cmds))
-  return subprocess.check_output(cmds, stderr=stderr)
+    return subprocess.check_output(cmds, stderr=stderr).decode("utf-8")
+    # TODO basically same treatment as suborocess_call.  Although, with using subprocess.run,
+    # check output or not is just another arg.  So, this might just set that arg and subprocess_call.
 
 def stacktrace():
-  title = 'Stacktrace of all running threads'
-  lines = []
-  for threadId, stack in sys._current_frames().items():
-      lines.append("\n# ThreadID: %s" % threadId)
-      for filename, lineno, name, line in traceback.extract_stack(stack):
-          lines.append('File: "%s", line %d, in %s' % (filename, lineno, name))
-          if line:
-              lines.append("  %s" % (line.strip()))
-  return (title, lines, None)
+    title = 'Stacktrace of all running threads'
+    lines = []
+    for threadId, stack in list(sys._current_frames().items()):
+        lines.append("\n# ThreadID: %s" % threadId)
+        for filename, lineno, name, line in traceback.extract_stack(stack):
+            lines.append('File: "%s", line %d, in %s' % (filename, lineno, name))
+            if line:
+                lines.append("  %s" % (line.strip()))
+    return (title, lines, None)
+
 
 def logfile(all=False):
-  stats = os.stat('/var/log/syslog')
-  cmd = 'grep -a "photoframe\[" /var/log/syslog | tail -n 100'
-  title = 'Last 100 lines from the photoframe log'
-  if all:
-    title = 'Last 100 lines from the system log (/var/log/syslog)'
-    cmd = 'tail -n 100 /var/log/syslog'
-  lines = subprocess.check_output(cmd, shell=True)
-  if lines:
-    lines = lines.splitlines()
-  suffix = '(size of logfile %d bytes, created %s)' % (stats.st_size, datetime.datetime.fromtimestamp(stats.st_ctime).strftime('%c'))
-  return (title, lines, suffix)
+    stats = os.stat('/var/log/syslog')
+    cmd = 'grep -a "photoframe\\[" /var/log/syslog | tail -n 100'
+    title = 'Last 100 lines from the photoframe log'
+    if all:
+        title = 'Last 100 lines from the system log (/var/log/syslog)'
+        cmd = 'tail -n 100 /var/log/syslog'
+    lines = subprocess.check_output(cmd, shell=True).decode("utf-8")
+    # TODO - convert this to use a common subprocess._check_output dunction
+    if lines:
+        lines = lines.splitlines()
+    suffix = '(size of logfile %d bytes, created %s)' % (stats.st_size,
+                                                         datetime.datetime.fromtimestamp(stats.st_ctime).strftime('%c'))
+    return (title, lines, suffix)
 
 
 def version():
-  title = 'Running version'
-  lines = subprocess.check_output('git log HEAD~1..HEAD ; echo "" ; git status', shell=True)
-  if lines:
-    lines = lines.splitlines()
-  return (title, lines, None)
+    title = 'Running version'
+    lines = subprocess.check_output('git log HEAD~1..HEAD ; echo "" ; git status', shell=True).decode("utf-8")
+    # TODO - convert this to use a common subprocess_check_output function
+    if lines:
+        lines = lines.splitlines()
+    return (title, lines, None)

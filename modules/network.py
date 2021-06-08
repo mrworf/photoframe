@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
+
+
 class RequestResult:
     SUCCESS = 0
     UNKNOWN = -1
@@ -66,11 +68,14 @@ class RequestResult:
     def isNoNetwork(self):
         return self.result == RequestResult.NO_NETWORK
 
+
 class RequestNoNetwork(Exception):
     pass
 
+
 class RequestInvalidToken(Exception):
     pass
+
 
 class RequestExpiredToken(Exception):
     pass
