@@ -1,14 +1,17 @@
-# Philip Branch
-This is a special branch of photoframe customized for a specific photoframe.  This was done because 
-there are too many changes from the master branch.  Significant changes for this photoframe branch include:
+# Photoframe V2 Branch
+This is a development branch of photoframe targeting the next version of the software.  
+
+Significant changes for photoframe v2 include:
 
 - Designed to be used with a manual installation on top of a Raspberry Pi OS Lite `Buster` release
-- Use of Python 3.  The Python 3 branch is the starting point for this one.
+- Use of Python 3.  
 - Support for HEIC photos.  This drove the need for the latest OS release.
-- ddcutil driven brightness and temperature changes.  This photoframe is based on an HP Z24i monitor,
-  which can be adjusted using ddc over HDMI, including brightness and temperature. 
+- ddcutil driven brightness and temperature changes.  This feature works with monitors
+  that can be adjusted using ddc over HDMI, including brightness and temperature. 
   Existing branches do not adjust the screen brightness.
 - Support for TCS34727 color and lumen module e.g. https://www.ebay.com/itm/133600154256 
+- Improved color and temperature calculations improving accuracy and sensitivity
+- Managed at port 80 - no need to add :7777 to the URL.
 
 # Photoframe
 
@@ -48,7 +51,7 @@ the images to meld better with the room where it's running.
 
 # Installation
 
-This branch is not compatible with existing images available at mrworf/photoframe.
+This branch is not compatible with existing SD card images available at mrworf/photoframe.
 
 Start by installing Raspberry Pi OS Lite from a Buster release.  Jan 2021 or later.
 
@@ -161,7 +164,7 @@ Finally, if you want the web interface to be login-password protected, then crea
 # Usage
 
 photoframe is managed using a browser on the same WiFi subnet.  The URL is shown when no configuration is present, 
-and shown for a few seconds on bootup for a photoframe that has a working configuration.  Note that the URL goes to port `7777` by default.
+and shown for a few seconds on bootup for a photoframe that has a working configuration.
 
 The default username/password for the web page is `photoframe` and `password`. This can be changed by editing the file called `http-auth.json` on the `boot` drive
 
@@ -192,7 +195,7 @@ If photoframe is unable to use the sensor, it "usually" gives you helpful hints.
 
 *Note*
 
-The sensor is automatically detected as long as it is a TCS34725 device and it's connected correctly to the I2C bus of the raspberry pi. Once detected you'll get a new read-out in the web interface which details both white balance (kelvin) and light (lux).
+The sensor is automatically detected as long as it is a TCS3472* device and it's connected correctly to the I2C bus of the raspberry pi. Once detected you'll get a new read-out in the web interface which details both white balance (kelvin) and light (lux).
 
 If you don't get this read-out, look at your logfile. There will be hints like sensor not found or sensor not being the expected one, etc.
 
