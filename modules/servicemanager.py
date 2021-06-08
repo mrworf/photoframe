@@ -139,7 +139,7 @@ class ServiceManager:
                 self._SERVICES[svc.getId()] = {'service': svc, 'id': svc.getId(), 'name': svc.getName()}
 
     def _hash(self, text):
-        return hashlib.sha1(text).hexdigest()
+        return hashlib.sha1(text.encode('utf-8')).hexdigest()
 
     def _configChanged(self):
         self.configChanges += 1

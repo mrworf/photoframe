@@ -119,7 +119,7 @@ class OAuth:
 
     def getRedirectId(self):
         r = requests.get('%s/?register' % self.ridURI)
-        return r.content
+        return r.content.decode('utf-8')
 
     def initiate(self):
         self.rid = self.getRedirectId()
