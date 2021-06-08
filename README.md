@@ -142,7 +142,7 @@ Time to install photoframe, which means downloading the repo, install the servic
 
 ```
 cd /root
-git clone --branch Philip --single-branch https://github.com/dadr/photoframe.git
+git clone --branch python3 --single-branch https://github.com/dadr/photoframe.git
 cd photoframe
 cp frame.service /etc/systemd/system/
 systemctl enable /etc/systemd/system/frame.service
@@ -172,7 +172,7 @@ The default username/password for the web page is `photoframe` and `password`. T
 
 # color temperature
 
-This branch of photoframe is intended to work with color temperature modules.   Yes, photoframe can actually adjust the temperature of the image to suit the light in the room. For this to work, you need to install a TCS34725 or TCS34727,
+This branch of photoframe is intended to work with color temperature modules.   Yes, photoframe can actually adjust the temperature of the image to suit the light in the room. For this to work, you need to install a TCS3472*,
 see https://www.adafruit.com/product/1334  and https://www.ebay.com/itm/133600154256. These should be hooked up to the I2C bus like this:
 
 ```
