@@ -42,7 +42,7 @@ class NoAuth:
 
 
 class WebServer(Thread):
-    def __init__(self, run_async=False, port=7777, listen='0.0.0.0', debug=False):
+    def __init__(self, run_async=False, port=80, listen='0.0.0.0', debug=False):
         Thread.__init__(self)
         self.port = port
         self.listen = listen
@@ -75,6 +75,9 @@ class WebServer(Thread):
         self.app.after_request(self._nocache)
         self.app.before_request(self._logincheck)
 
+    def get_server_port(self):
+        return self.port
+    
     def _logincheck(self):
         if not request.endpoint:
             return
