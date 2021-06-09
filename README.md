@@ -12,6 +12,7 @@ Significant changes for photoframe v2 include:
 - Support for TCS3472* color and lumen module e.g. https://www.ebay.com/itm/133600154256 
 - Improved color and temperature calculations both for accuracy and sensitivity
 - Managed at port 80 - no need to add :7777 to the URL.
+- Ability to integrate with home automation for screen standby (sleep)
 
 # Photoframe
 
@@ -203,16 +204,27 @@ If you don't get this read-out, look at your logfile. There will be hints like s
 
 ## Ambient powersave
 
-Yes, using the same sensor, you can set a threshold and duration, if the ambient light is below said threshold for the duration, it will trigger
-powersave on the display. If the ambient brightness is above the threshold for same duration, it will wake up the display.
+Yes, using the same sensor, you can set a threshold and duration, if the ambient light is below said threshold for the duration, 
+it will trigger powersave on the display. If the ambient brightness is above the threshold for same duration, it will wake up the display.
 
 However, if you're combining this with the scheduler, the scheduler takes priority and will keep the display in powersave during the scheduled hours,
 regardless of what the sensor says. The sensor is only used to extend the periods, it cannot power on the display during the off hours.
 
 # Power on/off?
 
-Photoframe listens to GPIO 26 (default, can be changed) to power off (and also power on). If you connect a switch between pin 37 (GPIO 26) and pin 39 (GND), you'll be able
-to do a graceful shutdown as well as power on.
+Photoframe listens to GPIO 26 (default, can be changed) to power off (and also power on). 
+If you connect a switch between pin 37 (GPIO 26) and pin 39 (GND), you'll be able
+to do a graceful shutdown as well as power on. 
+
+photoframe also supports 3 web/URL commands to allow controlling the screen through home automation:
+
+http://photoframeip/maintenance/standby   will put the screen to sleep
+http://photoframeip/maintenance/resume   will wake the screen up again
+http://photoframeip/maintenance/get_standby   will return the current state of this feature
+
+each of these commands will return (in json) a standby : T/F keyword/state pair.
+NOTE: this state is not remembered across reboots or updates. This is intentional to allow recovery to a working system. 
+
 
 # How come the Google service contacts photoframe.sensenet.nu ???
 
