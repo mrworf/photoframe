@@ -217,11 +217,11 @@ If you connect a switch between pin 37 (GPIO 26) and pin 39 (GND), you'll be abl
 to do a graceful shutdown as well as power on. 
 
 photoframe also supports 3 web/URL commands to allow controlling the screen through home automation:
-
+```
 http://photoframeip/maintenance/standby   will put the screen to sleep
 http://photoframeip/maintenance/resume   will wake the screen up again
 http://photoframeip/maintenance/get_standby   will return the current state of this feature
-
+````
 each of these commands will return (in json) a standby : T/F keyword/state pair.
 NOTE: this state is not remembered across reboots or updates. This is intentional to allow recovery to a working system. 
 
