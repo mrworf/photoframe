@@ -88,6 +88,12 @@ class RouteMaintenance(BaseRoute):
             subprocess.call(['tar', '-czf', '/boot/settings.tar.gz', '/root/photoframe_config'], stderr=self.void)
             return self.jsonify({'backup': True})
         elif cmd == 'restore':
-            subprocess.call(['tar', '-xzf', '/boot/settings.tar.gz', '-C', '/'], stderr=self.void)
-            subprocess.call(['systemctl', 'restart', 'frame'], stderr=self.void)
-            return self.jsonify({'restore': True})
+            if os.path.isfile("/boot/settings.tar.gz"):
+                try:
+                    subprocess.call(['tar', '-xzf', '/boot/settings.tar.gz', '-C', '/'], stderr=self.void)
+                    return self.jsonify({'restore': True})
+                    subprocess.call(['systemctl', 'restart', 'frame'], stderr=self.void)
+                except:
+                    return self.jsonify({'restore': False})
+            else:
+                return self.jsonify({'restore': False})
