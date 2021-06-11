@@ -84,3 +84,10 @@ class RouteMaintenance(BaseRoute):
         elif cmd == 'ssh':
             subprocess.call(['systemctl', 'restart', 'ssh'], stderr=self.void)
             return self.jsonify({'ssh': True})
+        elif cmd == 'backup':
+            subprocess.call(['tar', '-czf', '/boot/settings.tar.gz', '/root/photoframe_config'], stderr=self.void)
+            return self.jsonify({'backup': True})
+        elif cmd == 'restore':
+            subprocess.call(['tar', '-xzf', '/boot/settings.tar.gz', '-C', '/'], stderr=self.void)
+            subprocess.call(['systemctl', 'restart', 'frame'], stderr=self.void)
+            return self.jsonify({'restore': True})
