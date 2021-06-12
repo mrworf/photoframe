@@ -340,8 +340,9 @@ $("#restore").click(function() {
   if (confirm("Restore saved settings from /boot/settings.tar.gz ?")) {
     $.ajax({
       url:"/maintenance/restore"
+    }).done(function(){
+      rebootWatch();
     });
-    rebootWatchCheck();
   }
 });
 
