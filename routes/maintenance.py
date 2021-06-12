@@ -90,7 +90,7 @@ class RouteMaintenance(BaseRoute):
         elif cmd == 'restore':
             if os.path.isfile("/boot/settings.tar.gz"):
                 subprocess.call(['tar', '-xzf', '/boot/settings.tar.gz', '-C', '/'], stderr=self.void)
-                subprocess.call(['systemctl', 'restart', 'frame'], stderr=self.void)
+                subprocess.Popen('systemctl restart frame', shell=True)
                 return 'Restore settings complete', 200
             else:
                 return 'No retore file found', 404
