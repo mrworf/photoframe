@@ -90,7 +90,6 @@ class RouteMaintenance(BaseRoute):
         elif cmd == 'restore':
             if os.path.isfile("/boot/settings.tar.gz"):
                 subprocess.call(['tar', '-xzf', '/boot/settings.tar.gz', '-C', '/'], stderr=self.void)
-                return self.jsonify({'restore': True})
                 subprocess.call(['systemctl', 'restart', 'frame'], stderr=self.void)
             else:
                 return self.jsonify({'restore': False})
