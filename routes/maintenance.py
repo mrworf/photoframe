@@ -93,4 +93,4 @@ class RouteMaintenance(BaseRoute):
                 subprocess.Popen('systemctl restart frame', shell=True)
                 return 'Restore settings complete', 200
             else:
-                return 'No retore file found', 404
+                return 'No restore file found', 404
