@@ -1,23 +1,24 @@
-# Photoframe V2 Branch
+# Photoframe V2
 This is a development branch of photoframe targeting the next version of the software.  
 
 Significant changes for photoframe v2 include:
 
 - Designed to be used with a manual installation on top of a Raspberry Pi OS Lite `Buster` release
-- Use of Python 3.  
+- Use of Python 3.  (The previous photoframe was based on Python 2, which reached end-of-life in 2020)
 - Support for HEIC photos.  This drove the need for the latest OS release.
-- ddcutil driven brightness and temperature changes.  This feature works with monitors
-  that can be adjusted using ddc over HDMI, including brightness and temperature. 
-  Existing branches do not adjust the screen brightness.
-- Support for TCS3472* color and lumen module e.g. https://www.ebay.com/itm/133600154256 
+- For monitors that support DDC, photoframe will adjust brightness and temperature. 
+- Support for a larger set of TCS3472* color and lumen modules e.g. https://www.ebay.com/itm/133600154256 
 - Improved color and temperature calculations both for accuracy and sensitivity
 - Managed at port 80 - no need to add :7777 to the URL.
+- Ability to integrate with home automation for screen standby (sleep)
+- An improved update mechanism to make updates more streamlined and robust
 
-# Photoframe
+photoframe is still software to allow a Raspberry Pi to display photos in a "slideshow" format on an attached screen.  
+One of the more attractive features is that it can automatically pull photos from Google Photos and display them based on 
+keywords that match albums and other metadata.  However, it can also show photos from an attached USB "thumb drive" 
+or from an arbitrary URL.   
 
-A Raspberry Pi (Zero, 1 or 3) software which automatically pulls photos from Google Photos and displays them
-on the attached screen, just like a photoframe. No need to upload photos to 3rd party service
-or fiddle with local storage or SD card.
+photoframe remains extensible, with well-defined service modules to make it easy to add additional photo sources to the system.
 
 ## Why use this as opposed to buying one?
 
@@ -58,31 +59,35 @@ Start by installing Raspberry Pi OS Lite from a Buster release.  Jan 2021 or lat
 
 Make a shell available either by attaching a keyboard, or by enabling ssh 
 
-   Note: to enable ssh add two files to the SSD /boot drive:
+If you choose to attach a keyboard, use `sudo raspi-config` to set up WiFi - including country.
+
+If you choose to use ssh, then you need to enable ssh by adding two files to the SSD in the /boot drive on your computer 
+that you used to image the SD card.  Those files are:
    
-   ssh
+   /boot/ssh
 ```   
      (no contents)
 ```
-   wpa_supplicant.conf 
+   /boot/wpa_supplicant.conf 
 ```
 # Use this file instead of wifi-config.txt
 # Should set country properly
+# ssid and password should be in double-quotes
 
-country=us
-update_config=1
 ctrl_interface=/var/run/wpa_supplicant
+update_config=1
+country=us
 
 network={
-scan_ssid=1
-ssid="YourSSID"
-psk="YourWiFiPassword"
+    scan_ssid=1
+    ssid="YourSSID"
+    psk="YourWiFiPassword"
 }
 ```
 
-If a keyboard is attached, you can use raspi-config to set up WiFi.
 
-use `sudo raspi-config` to set locale, time zone, WiFi and Country (if not done with the files above), and to enable I2C kernel module
+use `sudo raspi-config` to set locale, time zone, and to enable I2C kernel module.  If you are using a keyboard and want the option to
+access the raspberry pi later using ssh, you also need to enable it in raspi-config.
 
 Bring the distro up to date:
 
@@ -96,9 +101,7 @@ Install additional dependencies:
 
 `apt install imagemagick python3-smbus bc ddcutil libjpeg-turbo-progs`
 
-`pip3 install requests requests-oauthlib flask flask-httpauth smbus`
-
-`pip3 install netifaces` 
+`pip3 install requests requests-oauthlib flask flask-httpauth smbus netifaces`
 
 Next, let's tweak the boot so we don't get a bunch of output
 
@@ -108,23 +111,22 @@ Edit the `/boot/cmdline.txt` and add replace the term `console=tty1` with all of
 console=tty3 loglevel=3 consoleblank=0 vt.global_cursor_default=0 logo.nologo
 ```
 
-You also need to edit the `/boot/config.txt`  in two places. 
+Then edit the `/boot/config.txt`  file in two places. 
 
-Add the following before the first `# uncomment` section
+1) Add the following before the first `# uncomment` section
 
 ```
 disable_splash=1
 framebuffer_ignore_alpha=1
 ```
 
-And add the following to the `dtparam` section
+2) And, if you have or intend to use a monitor with DDC control, add the following to the `dtparam` section
 
 ```
 dtparam=i2c2_iknowwhatimdoing
 ```
 
-We also want to disable the first console (since that's going to be our frame). This is done by
-issuing
+Disable the first console (since that's going to be our frame). This is done by issuing:
 
 ```
 systemctl disable getty@tty1.service
@@ -138,7 +140,19 @@ systemctl mask plymouth-start.service
 
 or you might still see the boot messages.
 
-Time to install photoframe, which means downloading the repo, install the service and reboot
+To get automatic updates, create a file `/etc/cron.d/photoframe`  with the following contents:
+```
+# Check once a week for updates to the photoframe software.
+15 3    * * *   root    /root/photoframe/update.sh
+```
+
+If you want the web interface to be login-password protected, then create the file `/boot/http-auth.json`  with the following edited to suit:
+
+```
+{"user":"photoframe","password":"password"}
+
+```
+Finally, install photoframe, which means downloading the repo, installing the service and then rebooting the system
 
 ```
 cd /root
@@ -149,36 +163,32 @@ systemctl enable /etc/systemd/system/frame.service
 reboot now
 ```
 
-To get automatic updates, create a file `/etc/cron.d/photoframe`  with the following contents:
-```
-# Check once a week for updates to the photoframe software.
-15 3    * * *   root    /root/photoframe/update.sh
-```
-
-Finally, if you want the web interface to be login-password protected, then create the file `/boot/http-auth.json`  with the following edited to suit:
-
-```
-{"user":"photoframe","password":"password"}
-
-```
 
 # Usage
 
-photoframe is managed using a browser on the same WiFi subnet.  The URL is shown when no configuration is present, 
+photoframe is managed using a browser on the same WiFi subnet.  The URL and current IP address is shown when no configuration is present, 
 and shown for a few seconds on bootup for a photoframe that has a working configuration.
+For many users it's also possible to use the name of your photoframe like this:
+`http://photoframe.local`
+
 
 The default username/password for the web page is `photoframe` and `password`. This can be changed by editing the file called `http-auth.json` on the `boot` drive
 
 
-# color temperature
+# Color temperature and monitor brightness
 
-This branch of photoframe is intended to work with color temperature modules.   Yes, photoframe can actually adjust the temperature of the image to suit the light in the room. For this to work, you need to install a TCS3472*,
-see https://www.adafruit.com/product/1334  and https://www.ebay.com/itm/133600154256. These should be hooked up to the I2C bus like this:
+Photoframe works with color temperature modules.   Yes, photoframe can actually adjust the temperature of the image to suit the light in the room. For this to work, 
+you need to install a TCS3472*,  see https://www.adafruit.com/product/1334  and https://www.ebay.com/itm/133600154256. 
+
+Additionally, if your photoframe is based on a monitor that supports DDC management of brightness and temperature, then adding a temperature molule lets you have 
+those controls adjusted automatically based on ambient light brightness and color.
+
+These should be hooked up to the I2C bus like this:
 
 ```
 3.3V -> Pin 1 (3.3V)
-SDA -> Pin 3 (GPIO 0)
-SCL -> Pin 5 (GPIO 1)
+SDA -> Pin 3 (GPIO 2)
+SCL -> Pin 5 (GPIO 3)
 GND -> Pin 9 (GND)
 LED -> Pin 9 (GND)
 ```
@@ -196,23 +206,48 @@ If photoframe is unable to use the sensor, it "usually" gives you helpful hints.
 
 *Note*
 
-The sensor is automatically detected as long as it is a TCS3472* device and it's connected correctly to the I2C bus of the raspberry pi. Once detected you'll get a new read-out in the web interface which details both white balance (kelvin) and light (lux).
+The sensor is automatically detected as long as it is a TCS3472* device and it's connected correctly to the I2C bus of the raspberry pi. 
+Once detected you'll get a new read-out in the web interface which details both white balance (kelvin) and light (lux).
 
 If you don't get this read-out, look at your logfile. There will be hints like sensor not found or sensor not being the expected one, etc.
 
 
-## Ambient powersave
+## Power saving features
 
-Yes, using the same sensor, you can set a threshold and duration, if the ambient light is below said threshold for the duration, it will trigger
-powersave on the display. If the ambient brightness is above the threshold for same duration, it will wake up the display.
+Using the same sensor just described, you can set a threshold and duration, if the ambient light is below said threshold for the duration, 
+it will trigger powersave on the display. If the ambient brightness is above the threshold for same duration, it will wake up the display.
 
-However, if you're combining this with the scheduler, the scheduler takes priority and will keep the display in powersave during the scheduled hours,
-regardless of what the sensor says. The sensor is only used to extend the periods, it cannot power on the display during the off hours.
+It's also possible to set the hour at which the photoframe should sleep and wake in the management screen
+
+Finally, photoframe also supports 3 web/URL commands to allow controlling the screen through home automation:
+```
+http://photoframeip/maintenance/standby   will put the screen to sleep
+http://photoframeip/maintenance/resume   will wake the screen up again
+http://photoframeip/maintenance/get_standby   will return the current state of this feature
+````
+each of these commands will return (in json) a standby : T/F keyword/state pair.
+NOTE: this state is not remembered across reboots or updates. This is intentional to allow recovery to a working system. 
+
+One example of curl command to script this function would be:
+`curl -u 'photoframe:password' http://photoframe.local/maintenance/standby`
+
+Note:  If you combine these power save features the power save state is a logical OR among their inputs.   
+That means if any of these inputs ask the frame to go into standy, it will.  But for the frame to wake up again *all* of the inputs must must be "on".
 
 # Power on/off?
 
-Photoframe listens to GPIO 26 (default, can be changed) to power off (and also power on). If you connect a switch between pin 37 (GPIO 26) and pin 39 (GND), you'll be able
-to do a graceful shutdown as well as power on.
+Photoframe listens to GPIO 3 (default, can be changed) to power off (and also power on if using GPIO3). 
+If you connect a (normally open, momentary contact) pushbutton switch between pin 5 (GPIO 3) and pin 6 (GND), you'll be able to do a graceful 
+shutdown as well as power on. 
+
+*Note:*  If you install a color temperature module, you cannot use GPIO3 for this feature.   It's still possible to install a button 
+to power-down the photoframe gracefully, but restarting will require a power-cycle.
+
+To make use of a shutdown button, connect the switch between pin 37 (GPIO 26) and pin 39 (GND), and set the GPIO to monitor to 26 in 
+the photoframe configuration screen.  Now you'll be able  to do a graceful shutdown. 
+
+
+
 
 # How come the Google service contacts photoframe.sensenet.nu ???
 
@@ -252,9 +287,20 @@ php with memcached. Ideally you use a SSL endpoint as well.
 
 # FAQs
 
+See more FAQs at https://github.com/mrworf/photoframe/wiki/Frequently-Asked-Questions 
+
+## Why didn't my existing photoframe update to this version?
+
+photoframe V2 is based on Raspberry Pi OS "Buster," whereas the previous versions were based on "Stretch."
+While is is possible to upgrade a raspberry pi from Stretch to Buster, it is a fragile process that typically requires expert intervention.
+That's why the Raspberry Pi organization recommends doing a fresh install of the OS.
+
+Additionally, the new Buster OS provides some key advantages that have been taken in photoframe v2.   The most obvious is support to work
+with HEIC photos, like are typically made by iPhones.  It also has a more robust networking stack, and better system management tools.
+
 ## Can I avoid photoframe.sensenet.nu ?
 
-You could run the same service yourself (see `extras/`). It requires a DNS name which doesn't change and HTTPS support. You'll also need to change the relevant parts of this guide and the `frame.py` file so all references are correct. You might also be able to use server tokens instead, but that would require you to do more invasive changes. I don't have any support for this at this time.
+You could run the same service yourself (see `extras/`). It requires a DNS name which doesn't change and HTTPS support. You'll also need to change the relevant parts of this guide and the `frame.py` file so all references are correct. You might also be able to use server tokens instead, but that would require you to do more invasive changes. There is no support for this at this time.
 
 ## I want to build my own ready-made image of this
 
@@ -306,15 +352,39 @@ After this, you should be able to use exFAT
 By default, most photo providers will fetch a list of available photos for a given keyword. This list isn't refreshed until one of the following events happen:
 
 - No more photos are available from ANY photo provider in your frame
-- User presses "Forget Memory" in web UI
+- User presses "Forget Memory" in the web UI
 - The age of the downloaded index exceeds the hours specified by "Refresh keywords" option
 
 To disable the last item on that list, set the "Refresh keywords" to 0 (zero). This effectively disables this and now the frame will only refresh if no more photos are available or if user presses the forget memory item.
 
 ## Why isn't it showing all my photos?
 
-Given you haven't set any options to limit based on orientation or a refresh which is too short to show them all, it should walk through the provided list from your provider.
+If you haven't set any options that limit, ( e.g. orientation or a refresh which is too short to show them all)  photoframe should walk through the whole list from your provider.
 
 *however*
 
 Not all content is supported. To help troubleshoot why some content is missing, you can press "Details" for any keyword (given that the provider supports it) and the frame will let you know what content it has found. It should also give you an indication if there's a lot of content which is currently unsupported.
+
+## What if I need to be able to access more than one WiFi?
+
+Sometimes you might want to ship a photoframe to a relative, or you might have more than one SSID in your home with variable signal strength.
+To set up more than one possible SSID edit `/etc/wpa_supplicant.conf` and add an additional network section:
+```
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+country=US
+
+network={
+    ssid="YourWifi"
+    psk="YourPassword"
+    priority=1
+}
+
+network={
+    ssid="YourInLawsWifi"
+    psk="TheirPassword"
+    priority=2
+}
+```
+The `priority` statements are optional, but when included they set the priority of selection if both SSIDs are available to connect to.
+The network that is selected is the highest priority that's available.   So if both of these networks were available `YourInLawsWiFi` would be selected.
