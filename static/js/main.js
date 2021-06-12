@@ -327,6 +327,24 @@ $("#reboot").click(function() {
   }
 });
 
+$("#backup").click(function() {
+  if (confirm("Backup current settings to /boot/settings.tar.gz ?")) {
+    $.ajax({
+      url:"/maintenance/backup"
+    }).done(function () {
+    });
+  }
+});
+
+$("#restore").click(function() {
+  if (confirm("Restore saved settings from /boot/settings.tar.gz ?")) {
+    $.ajax({
+      url:"/maintenance/restore"
+    });
+    rebootWatchCheck();
+  }
+});
+
 $("#shutdown").click(function() {
   if (confirm("Are you sure you want to POWER OFF the frame?")) {
     $.ajax({
