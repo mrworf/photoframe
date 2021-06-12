@@ -86,10 +86,11 @@ class RouteMaintenance(BaseRoute):
             return self.jsonify({'ssh': True})
         elif cmd == 'backup':
             subprocess.call(['tar', '-czf', '/boot/settings.tar.gz', '/root/photoframe_config'], stderr=self.void)
-            return self.jsonify({'backup': True})
+            return 'Backup Successful', 200
         elif cmd == 'restore':
             if os.path.isfile("/boot/settings.tar.gz"):
                 subprocess.call(['tar', '-xzf', '/boot/settings.tar.gz', '-C', '/'], stderr=self.void)
                 subprocess.call(['systemctl', 'restart', 'frame'], stderr=self.void)
+                return 'Restore settings complete', 200
             else:
-                return self.jsonify({'restore': False})
+                return 'No retore file found', 404

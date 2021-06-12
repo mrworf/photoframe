@@ -341,7 +341,7 @@ $("#restore").click(function() {
     $.ajax({
       url:"/maintenance/restore"
     }).done(function(){
-      location.reload();
+      rebootWatch();
     });
   }
 });
