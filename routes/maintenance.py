@@ -22,10 +22,11 @@ from modules.path import path
 
 
 class RouteMaintenance(BaseRoute):
-    def setupex(self, emulator, drivermgr, slideshow):
+    def setupex(self, emulator, drivermgr, slideshow, timekeeper):
         self.drivermgr = drivermgr
         self.emulator = emulator
         self.slideshow = slideshow
+        self.timekeeper = timekeeper
         self.void = open(os.devnull, 'wb')
 
         self.addUrl('/maintenance/<cmd>')
@@ -84,3 +85,11 @@ class RouteMaintenance(BaseRoute):
         elif cmd == 'ssh':
             subprocess.call(['systemctl', 'restart', 'ssh'], stderr=self.void)
             return self.jsonify({'ssh': True})
+        elif cmd == 'standby':
+            self.timekeeper.setExternalStandby(True)
+            return self.jsonify({'standby': self.timekeeper.getExternalStandby()})
+        elif cmd == 'resume':
+            self.timekeeper.setExternalStandby(False)
+            return self.jsonify({'standby': self.timekeeper.getExternalStandby()})
+        elif cmd == 'get_standby':
+            return self.jsonify({'standby': self.timekeeper.getExternalStandby()})

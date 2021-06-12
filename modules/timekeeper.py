@@ -27,6 +27,7 @@ class timekeeper(Thread):
         self.scheduleOff = False
         self.ambientOff = False
         self.standby = False
+        self.external_standby = False
         self.ignoreSensor = True
         self.ignoreSchedule = True
 
@@ -77,6 +78,13 @@ class timekeeper(Thread):
 
     def getDisplayOn(self):
         return not self.standby
+        
+    def setExternalStandby(self, sb_request):
+        self.external_standby = sb_request
+        self.evaluatePower()
+        
+    def getExternalStandby(self):
+        return self.external_standby
 
     def sensorListener(self, temperature, lux):
         if self.luxLimit is None or self.luxTimeout is None:
@@ -99,6 +107,7 @@ class timekeeper(Thread):
 
     def evaluatePower(self):
         # Either source can turn off display but scheduleOff takes priority on power on
+        # external_standby takes priority over both sensor and timer. (but resets when photoframe restarts)
         # NOTE! Schedule and sensor can be overriden
         if (
             not self.standby
@@ -109,6 +118,7 @@ class timekeeper(Thread):
                 or (
                     not self.ignoreSensor and self.ambientOff
                 )
+                or self.external_standby
             )
         ):
             self.standby = True
@@ -121,6 +131,7 @@ class timekeeper(Thread):
             and (
                 self.ignoreSensor or not self.ambientOff
             )
+            and not self.external_standby
         ):
             self.standby = False
             self.notifyListeners(True)
