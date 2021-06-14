@@ -1,7 +1,14 @@
 # Photoframe V2
 This is a development branch of photoframe targeting the next version of the software.  
 
-Significant changes for photoframe v2 include:
+photoframe is software to allow a Raspberry Pi to display photos in a "slideshow" format on an attached screen.  
+One of the more attractive features is that it can automatically pull photos from Google Photos and display them based on 
+keywords that match albums and other metadata.  However, it can also show photos from an attached USB "thumb drive" 
+or from an arbitrary URL.   
+
+photoframe remains extensible, with well-defined service modules to make it easy to add additional photo sources to the system.
+
+Significant new features and changes for photoframe v2 include:
 
 - Designed to be used with a manual installation on top of a Raspberry Pi OS Lite `Buster` release
 - Use of Python 3.  (The previous photoframe was based on Python 2, which reached end-of-life in 2020)
@@ -12,13 +19,19 @@ Significant changes for photoframe v2 include:
 - Managed at port 80 - no need to add :7777 to the URL.
 - Ability to integrate with home automation for screen standby (sleep)
 - An improved update mechanism to make updates more streamlined and robust
-
-photoframe is still software to allow a Raspberry Pi to display photos in a "slideshow" format on an attached screen.  
-One of the more attractive features is that it can automatically pull photos from Google Photos and display them based on 
-keywords that match albums and other metadata.  However, it can also show photos from an attached USB "thumb drive" 
-or from an arbitrary URL.   
-
-photoframe remains extensible, with well-defined service modules to make it easy to add additional photo sources to the system.
+- Support for Raspberry Pi 4
+These are in addition to the original features:
+- Simple web interface for configuration
+- Google Photo search integration for more interesting images
+- Blanking of screen (ie, off hours)
+- Simple OAuth2.0 even though behind firewall (see further down)
+- Shows error messages on screen
+- Supports ambient room color temperature adjustments
+- Uses ambient sensor to improve powersave
+- Power control via GPIO (turn RPi on/off)
+- Non-HDMI displays (SPI, DPI, etc)
+- Display photos from USB attached media
+- Display photos available using simple URLs 
 
 ## Why use this as opposed to buying one?
 
@@ -30,17 +43,6 @@ your expense report.
 It also has more unique features like ambient color temperature adjustments which allows
 the images to meld better with the room where it's running.
 
-# Features
-
-- Simple web interface for configuration
-- Google Photo search integration for more interesting images
-- Blanking of screen (ie, off hours)
-- Simple OAuth2.0 even though behind firewall (see further down)
-- Shows error messages on screen
-- Supports ambient room color temperature adjustments
-- Uses ambient sensor to improve powersave
-- Power control via GPIO (turn RPi on/off)
-- Non-HDMI displays (SPI, DPI, etc)
 
 # Requirements
 
@@ -120,11 +122,19 @@ disable_splash=1
 framebuffer_ignore_alpha=1
 ```
 
-2) And, if you have or intend to use a monitor with DDC control, add the following to the `dtparam` section
+2) And, if you have or intend to use a monitor with DDC control, add the following to the `dtparam` section if you have 
+a Raspberry Pi Zero, 1, 2, or 3.
 
 ```
 dtparam=i2c2_iknowwhatimdoing
 ```
+If you have the DDC monitor and a Raspberry Pi 4, then replace `dtoverlay=vc4-fkms-v3d` in the `[Pi4]` section with :
+```
+dtoverlay=vc4-kms-v3d
+```
+
+Once again, for the Pi4 and a DDC monitor, add `i2c_dev` in `/etc/modules`
+
 
 Disable the first console (since that's going to be our frame). This is done by issuing:
 
@@ -171,7 +181,6 @@ and shown for a few seconds on bootup for a photoframe that has a working config
 For many users it's also possible to use the name of your photoframe like this:
 `http://photoframe.local`
 
-
 The default username/password for the web page is `photoframe` and `password`. This can be changed by editing the file called `http-auth.json` on the `boot` drive
 
 
@@ -200,24 +209,20 @@ please visit http://www.fmwconcepts.com/imagemagick/colortemp/index.php and down
 
 Don't forget to make it executable by `chmod +x /root/photoframe_config/colortemp.sh` or it will still not work.
 
-You're done! Reboot your RPi3 (So I2C gets enabled) and from now on, all images will get adjusted to match the ambient color temperature.
-
-If photoframe is unable to use the sensor, it "usually" gives you helpful hints. Check the `/var/log/syslog` file for `frame.py` entries.
-
-*Note*
+You're done! Reboot your Pi (So I2C gets enabled) and from now on, all images will get adjusted to match the ambient color temperature.
 
 The sensor is automatically detected as long as it is a TCS3472* device and it's connected correctly to the I2C bus of the raspberry pi. 
-Once detected you'll get a new read-out in the web interface which details both white balance (kelvin) and light (lux).
+Once detected you'll get a new read-out in the web interface which details both ambient light (lux) and color temperature (kelvin).
 
-If you don't get this read-out, look at your logfile. There will be hints like sensor not found or sensor not being the expected one, etc.
-
+If photoframe is unable to use the sensor, it "usually" gives you helpful hints. Check the photoframe log using  the `Log report` button in the configuration page, 
+or you can log in and  look through the `/var/log/syslog` file for `frame.py` entries.
 
 ## Power saving features
 
-Using the same sensor just described, you can set a threshold and duration, if the ambient light is below said threshold for the duration, 
-it will trigger powersave on the display. If the ambient brightness is above the threshold for same duration, it will wake up the display.
+Using the same sensor just described, you can set an Auto off lux threshold and duration, if the ambient light is below said threshold for the duration, 
+it will trigger powersave on the display. If the ambient light goes back above the threshold for same duration, it will wake up the display.
 
-It's also possible to set the hour at which the photoframe should sleep and wake in the management screen
+It's also possible to set the hours at which the photoframe should sleep and wake in the configuration page.
 
 Finally, photoframe also supports 3 web/URL commands to allow controlling the screen through home automation:
 ```
@@ -228,7 +233,7 @@ http://photoframeip/maintenance/get_standby   will return the current state of t
 each of these commands will return (in json) a standby : T/F keyword/state pair.
 NOTE: this state is not remembered across reboots or updates. This is intentional to allow recovery to a working system. 
 
-One example of curl command to script this function would be:
+One example using the curl command to script this function would be:
 `curl -u 'photoframe:password' http://photoframe.local/maintenance/standby`
 
 Note:  If you combine these power save features the power save state is a logical OR among their inputs.   
@@ -243,10 +248,8 @@ shutdown as well as power on.
 *Note:*  If you install a color temperature module, you cannot use GPIO3 for this feature.   It's still possible to install a button 
 to power-down the photoframe gracefully, but restarting will require a power-cycle.
 
-To make use of a shutdown button, connect the switch between pin 37 (GPIO 26) and pin 39 (GND), and set the GPIO to monitor to 26 in 
-the photoframe configuration screen.  Now you'll be able  to do a graceful shutdown. 
-
-
+To use of a shutdown button with a color temperature module, connect the switch between pin 37 (GPIO 26) and pin 39 (GND), and set the GPIO to monitor `26` in 
+the photoframe configuration page.  Now you'll be able  to do a graceful shutdown. 
 
 
 # How come the Google service contacts photoframe.sensenet.nu ???
@@ -312,7 +315,7 @@ Place a file called `ssh` on the boot drive and the ssh daemon will be enabled. 
 
 ## Are there any logs?
 
-By default, it logs very little and what it logs can be found under `/var/log/syslog`, just look for frame entries
+Yes, check logs by using the `Log report` button.  If you want to look farther back in the logs, they can be found under `/var/log/syslog`, just look for frame entries.
 
 ## What if I want more logs?
 
