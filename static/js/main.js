@@ -346,6 +346,45 @@ $("#restore").click(function() {
   }
 });
 
+function downloadFile(file) {
+  // Create a link and set the URL using `createObjectURL`
+  const link = document.createElement("a");
+  link.style.display = "none";
+  link.href = URL.createObjectURL(file);
+  link.download = file.name;
+
+  // It needs to be added to the DOM so it can be clicked
+  document.body.appendChild(link);
+  link.click();
+
+  // To make this work on Firefox we need to wait
+  // a little while before removing it.
+  setTimeout(() => {
+    URL.revokeObjectURL(link.href);
+    link.parentNode.removeChild(link);
+  }, 0);
+}
+
+$("#dnldcfg").click(function() {
+  if (confirm("Download current settings?")) {
+    $.ajax({
+      url:"/maintenance/dnldcfg"
+    }).done(function (){
+      downloadFile("/tmp/settings.tar.gz")
+    });
+  }
+});
+
+$("#upldcfg").click(function() {
+  if (confirm("Upload settings.tar.gz from this device?")) {
+    $.ajax({
+      url:"/upload/config"
+    }).done(function(){
+      rebootWatch();
+    });
+  }
+});
+
 $("#shutdown").click(function() {
   if (confirm("Are you sure you want to POWER OFF the frame?")) {
     $.ajax({

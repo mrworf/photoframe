@@ -95,6 +95,9 @@ class RouteMaintenance(BaseRoute):
                 return 'Restore settings complete', 200
             else:
                 return 'No restore file found', 404
+        elif cmd == 'dnldcfg':
+            subprocess.call(['tar', '-czf', '/tmp/settings.tar.gz', '/root/photoframe_config'], stderr=self.void)
+            return 
         elif cmd == 'standby':
             self.timekeeper.setExternalStandby(True)
             return self.jsonify({'standby': self.timekeeper.getExternalStandby()})

@@ -18,7 +18,7 @@
 
 </div>
 <div class="settings">
-	<div>
+	<div style="text-align: center">
 		Options
 	</div>
 	<div>
@@ -159,18 +159,30 @@
 	</div>
 	<div>
 		<input type="button" id="update" value="Check for update">
-		<div style="display: inline-block; width: 25px"></div>
+		<div style="display: inline-block; width: 50px"></div>
 		<input type="button" id="reboot" value="Reboot">
 		<input type="button" id="shutdown" value="Power off">
-		<div style="display: inline-block; width: 25px"></div>
+		<div style="display: inline-block; width: 50px"></div>
 		<input type="button" id="forgetMemory" title="Show images that have already been displayed" value="Forget Memory">
 		<input type="button" id="clearCache" title="In case you have recently cropped or edited your photos" value="Clear Cache">
-		<input type="button" id="reset" value="Factory Reset">
-        <input type="button" id="backup" value="Backup Settings">
-        <input type="button" id="restore" value="Restore Settings">
-        <div style="display: inline-block; width: 25px"></div>
+		<div style="display: inline-block; width: 50px"></div>
 		<input type="button" id="debug" value="Log report">
 	</div>
+</div>
+<br>
+<div class="settings">
+    <div style="text-align: center">
+        Backup & Restore
+    </div>
+    <div>
+        <input type="button" id="reset" value="Factory Reset">
+        <div style="display: inline-block; width: 50px"></div>
+        <input type="button" id="backup" value="Backup Settings">
+        <input type="button" id="restore" value="Restore Settings">
+        <div style="display: inline-block; width: 50px"></div>
+        <input type="button" id="dnldcfg" value="Download Config">
+        <input type="file" data-url="upload/config" id="config" name="filename"><button id="upldcfg">Upload Config</button>
+    </div>
 </div>
 <br>
 {{#if service-defined}}
