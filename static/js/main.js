@@ -350,16 +350,6 @@ $("#dnldcfg").click(function() {
   window.location.assign("/maintenance/dnldcfg")
 });
 
-$("#upldcfg").click(function() {
-  if (confirm("Upload settings.tar.gz from this device?")) {
-    $.ajax({
-      url:"/upload/config"
-    }).done(function(){
-      rebootWatch();
-    });
-  }
-});
-
 $('#config').fileupload({
   add: function (e, data) {
     $('#config-button').prop('disabled', 'disabled');
