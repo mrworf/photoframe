@@ -77,14 +77,14 @@ class RouteUpload(BaseRoute):
                 subprocess.call(['tar', '-xzf', filename, '-C', '/'], stderr=self.void)
                 retval['return'] = {'reboot': True}
             except Exception:
-                logging.error(Failed to install config from %s, filename)
+                logging.error("Failed to install config from %s", filename)
                 retval['return'] = {'reboot': False}
                 retval['status'] = 500
 
         try:
             os.remove(filename)
         except Exception:
-            logging.error('Failed to clean up %s at the end of upload.py', filename)
+            logging.error("Failed to clean up %s at the end of upload.py", filename)
         if retval['status'] == 200:
             return self.jsonify(retval['return'])
         self.setAbort(retval['status'])
