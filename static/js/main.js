@@ -346,6 +346,40 @@ $("#restore").click(function() {
   }
 });
 
+$("#dnldcfg").click(function() {
+  window.location.assign("/maintenance/dnldcfg")
+});
+
+$('#config').fileupload({
+  add: function (e, data) {
+    $('#config-button').prop('disabled', 'disabled');
+    data.submit();
+  },
+  done: function (e, data) {
+    console.log(data);
+    if (data.result['restart']) {
+      $.ajax({
+        url:"/maintenance/restart"
+      }).done(function(){
+        rebootWatch();
+      });
+    } else {
+      alert("Failed to install configuration - is the file OK?");
+      location.reload();
+    }
+  },
+  fail: function (e, data) {
+    alert('Failed to upload configuration');
+  },
+  always: function(e, data) {
+    $('#driver-button').prop('disabled', '');
+  }
+});
+
+$("#config-button").click(function() {
+  $('#config').trigger('click');
+});
+
 $("#shutdown").click(function() {
   if (confirm("Are you sure you want to POWER OFF the frame?")) {
     $.ajax({

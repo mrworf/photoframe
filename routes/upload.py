@@ -16,6 +16,7 @@
 
 import logging
 import os
+import subprocess
 
 from werkzeug.utils import secure_filename
 from .baseroute import BaseRoute
@@ -32,7 +33,7 @@ class RouteUpload(BaseRoute):
         retval = {'status': 200, 'return': {}}
         # check if the post request has the file part
         if 'filename' not in self.getRequest().files:
-            logging.error('No file part')
+            logging.error('No file part in upload request')
             self.setAbort(405)
             return
 
@@ -41,12 +42,20 @@ class RouteUpload(BaseRoute):
             # if user does not select file, browser also
             # submit an empty part without filename
             if file.filename == '' or not file.filename.lower().endswith('.zip'):
-                logging.error('No filename or invalid filename')
+                logging.error('No driver filename or invalid filename')
+                self.setAbort(405)
+                return
+        elif item == 'config':
+            # if user does not select file, browser also
+            # submit an empty part without filename
+            if file.filename == '' or not file.filename.lower().endswith('.tar.gz'):
+                logging.error('No configuration filename or does not end in .tar.gz')
                 self.setAbort(405)
                 return
 
         filename = os.path.join('/tmp/', secure_filename(file.filename))
         file.save(filename)
+        logging.debug('Upload.py saved %s', filename)
 
         if item == 'driver':
             result = self.drivermgr.install(filename)
@@ -63,12 +72,21 @@ class RouteUpload(BaseRoute):
                         self.settingsmgr.setUser('display-special', special)
                         retval['return'] = {'reboot': True}
                 else:
-                    retval['return'] = {'reboot': False}
+                    retval['return'] = {'reboot': False, 'restart': False}
+
+        elif item == 'config':
+            try:
+                subprocess.call(['tar', '-xzf', filename, '-C', '/'])
+                retval['return'] = {'reboot': False, 'restart': True}
+            except Exception:
+                logging.error("Failed to install config from %s", filename)
+                retval['return'] = {'reboot': False}
+                retval['status'] = 500
 
         try:
             os.remove(filename)
         except Exception:
-            pass
+            logging.error("Failed to clean up %s at the end of upload.py", filename)
         if retval['status'] == 200:
             return self.jsonify(retval['return'])
         self.setAbort(retval['status'])

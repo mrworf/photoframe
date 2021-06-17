@@ -16,6 +16,7 @@
 import os
 import subprocess
 import shutil
+import flask
 
 from .baseroute import BaseRoute
 from modules.path import path
@@ -86,7 +87,7 @@ class RouteMaintenance(BaseRoute):
             subprocess.call(['systemctl', 'restart', 'ssh'], stderr=self.void)
             return self.jsonify({'ssh': True})
         elif cmd == 'backup':
-            subprocess.call(['tar', '-czf', '/boot/settings.tar.gz', '/root/photoframe_config'], stderr=self.void)
+            subprocess.call(['tar', '-czf', '/boot/settings.tar.gz', '/root/photoframe_config'])
             return 'Backup Successful', 200
         elif cmd == 'restore':
             if os.path.isfile("/boot/settings.tar.gz"):
@@ -95,6 +96,12 @@ class RouteMaintenance(BaseRoute):
                 return 'Restore settings complete', 200
             else:
                 return 'No restore file found', 404
+        elif cmd == 'dnldcfg':
+            subprocess.call(['tar', '-czf', '/tmp/settings.tar.gz', '/root/photoframe_config'], stderr=self.void)
+            return flask.send_from_directory("/tmp", "settings.tar.gz", as_attachment=True)
+        elif cmd == 'restart':
+            subprocess.Popen('systemctl restart frame', shell=True)
+            return 'Restarting photoframe', 200
         elif cmd == 'standby':
             self.timekeeper.setExternalStandby(True)
             return self.jsonify({'standby': self.timekeeper.getExternalStandby()})
