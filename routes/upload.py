@@ -44,7 +44,7 @@ class RouteUpload(BaseRoute):
                 logging.error('No driver filename or invalid filename')
                 self.setAbort(405)
                 return
-        if item == 'config':
+        elif item == 'config':
             # if user does not select file, browser also
             # submit an empty part without filename
             if file.filename == '' or not file.filename.lower().endswith('.tar.gz'):
@@ -54,6 +54,7 @@ class RouteUpload(BaseRoute):
 
         filename = os.path.join('/tmp/', secure_filename(file.filename))
         file.save(filename)
+        logging.debug('Upload.py saved %s', filename)
 
         if item == 'driver':
             result = self.drivermgr.install(filename)
@@ -72,7 +73,7 @@ class RouteUpload(BaseRoute):
                 else:
                     retval['return'] = {'reboot': False}
 
-        if item == 'config':
+        elif item == 'config':
             try:
                 subprocess.call(['tar', '-xzf', filename, '-C', '/'], stderr=self.void)
                 retval['return'] = {'reboot': True}
