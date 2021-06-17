@@ -352,7 +352,6 @@ $("#dnldcfg").click(function() {
 
 $('#config').fileupload({
   add: function (e, data) {
-    $('#config-button').prop('disabled', 'disabled');
     data.submit();
   },
   done: function (e, data) {
@@ -371,9 +370,6 @@ $('#config').fileupload({
   fail: function (e, data) {
     alert('Failed to upload configuration');
   },
-  always: function(e, data) {
-    $('#driver-button').prop('disabled', '');
-  }
 });
 
 $("#config-button").click(function() {
