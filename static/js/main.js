@@ -370,7 +370,7 @@ $("#dnldcfg").click(function() {
     $.ajax({
       url:"/maintenance/dnldcfg"
     }).done(function (){
-      downloadFile("/tmp/settings.tar.gz")
+      downloadFile("/tmp/settings.tar.gz");
     });
   }
 });
