@@ -16,6 +16,7 @@
 
 import logging
 import os
+import subprocess
 
 from werkzeug.utils import secure_filename
 from .baseroute import BaseRoute
@@ -75,7 +76,7 @@ class RouteUpload(BaseRoute):
 
         elif item == 'config':
             try:
-                subprocess.call(['tar', '-xzf', filename, '-C', '/'], stderr=self.void)
+                subprocess.call(['tar', '-xzf', filename, '-C', '/'])
                 retval['return'] = {'reboot': True}
             except Exception:
                 logging.error("Failed to install config from %s", filename)
