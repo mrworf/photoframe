@@ -72,12 +72,12 @@ class RouteUpload(BaseRoute):
                         self.settingsmgr.setUser('display-special', special)
                         retval['return'] = {'reboot': True}
                 else:
-                    retval['return'] = {'reboot': False}
+                    retval['return'] = {'reboot': False, 'restart': False}
 
         elif item == 'config':
             try:
                 subprocess.call(['tar', '-xzf', filename, '-C', '/'])
-                retval['return'] = {'reboot': True}
+                retval['return'] = {'reboot': False, 'restart': True}
             except Exception:
                 logging.error("Failed to install config from %s", filename)
                 retval['return'] = {'reboot': False}

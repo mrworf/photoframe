@@ -357,9 +357,11 @@ $('#config').fileupload({
   },
   done: function (e, data) {
     console.log(data);
-    if (data.result['reboot']) {
+    if (data.result['restart']) {
       $.ajax({
-        url:"/maintenance/reboot"
+        url:"/maintenance/restart"
+      }).done(function(){
+        rebootWatch();
       });
     } else {
       alert("Failed to install configuration - is the file OK?");
