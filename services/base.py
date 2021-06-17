@@ -696,7 +696,7 @@ class BaseService:
           break
         except:
           logging.exception('Issues downloading')
-        time.sleep(tries / 10) # Back off 10, 20, ... depending on tries
+        time.sleep(tries * 10) # Back off 10, 20, ... depending on tries
         tries += 1
         logging.warning('Retrying again, attempt #%d', tries)
 
