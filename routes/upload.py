@@ -76,7 +76,7 @@ class RouteUpload(BaseRoute):
 
         elif item == 'config':
             try:
-                subprocess.call(['tar', '-xzf', filename, '-C', '/'])
+                subprocess.check_output(['tar', '-xzf', filename, '-C', '/'])
                 retval['return'] = {'reboot': False, 'restart': True}
             except Exception:
                 logging.error("Failed to install config from %s", filename)
