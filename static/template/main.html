@@ -18,7 +18,7 @@
 
 </div>
 <div class="settings">
-	<div style="text-align: center">
+	<div style="text-align: left">
 		Display
 	</div>
 	<div>
@@ -75,7 +75,7 @@
 </div>
 <br>
 <div class="settings">
-    <div style="text-align: center">
+    <div style="text-align: left">
         Slideshow
     </div>
     <div>
@@ -129,11 +129,14 @@
             <option value="0">no, never cache images</option>
             {{/select}}
         </select>
+        <br>
+        <input type="button" id="forgetMemory" title="Show images that have already been displayed" value="Forget Memory">
+        <input type="button" id="clearCache" title="In case you have recently cropped or edited your photos" value="Clear Cache">
     </div>
 </div>
 <br>
 <div class="settings">
-    <div style="text-align: center">
+    <div style="text-align: left">
         Options
     </div>
     <div>
@@ -158,7 +161,7 @@
 		<input value="{{settings.autooff-time}}" type="text" class="small" name="autooff-time" data-validate="minutes"> minutes
 		<br>
 		Current ambient environment <span id="lux">-.--</span> lux and <span id="colortemp">----</span>K color temperature.
-		<br>
+        <br>
 		{{/if}}
 		Power saving measures should
 		<select name="powersave">
@@ -174,30 +177,20 @@
 <br>
 
 <div class="settings">
-	<div style="text-align: center">
+	<div style="text-align: left">
 		System
 	</div>
 	<div>
+        Network name for this frame
+        <input type="text" name="hostname" value="{{hostname.hostname}}">
+        <br>
 		<input type="button" id="update" value="Check for update">
 		<div style="display: inline-block; width: 50px"></div>
 		<input type="button" id="reboot" value="Reboot">
 		<input type="button" id="shutdown" value="Power off">
 		<div style="display: inline-block; width: 50px"></div>
-		<input type="button" id="forgetMemory" title="Show images that have already been displayed" value="Forget Memory">
-		<input type="button" id="clearCache" title="In case you have recently cropped or edited your photos" value="Clear Cache">
-		<div style="display: inline-block; width: 50px"></div>
 		<input type="button" id="debug" value="Log report">
         <br>
-        Name this frame
-        <input type="text" name="hostname" value="{{hostname.hostname}}">
-	</div>
-</div>
-<br>
-<div class="settings">
-    <div style="text-align: center">
-        Backup & Restore
-    </div>
-    <div>
         <input type="button" id="reset" value="Factory Reset">
         <div style="display: inline-block; width: 50px"></div>
         <input type="button" id="backup" value="Backup Settings">
@@ -211,9 +204,9 @@
 {{#if service-defined}}
 {{#each service-defined}}
 <div  class="settings">
-	<div style="text-align: center">
+	<div style="text-align: left">
 		{{name}}<br>
-		<input type="button" data-service="{{id}}" class="service-delete" value="Delete" style="width: 100%">
+		<input type="button" data-service="{{id}}" class="service-delete" value="Delete" style="width: 75%">
 	</div>
 	<div>
 		{{#each messages}}
