@@ -12,11 +12,12 @@
 <div class="controls">
 	<button class="slideshowControl" id="prevAlbum">Prev Group</button>
 	<button class="slideshowControl" id="nextAlbum">Next Group</button>
-	&nbsp;
+	<div style="display: inline-block; width: 25px"></div>
 	<button class="slideshowControl" id="prevImage">Prev Image</button>
 	<button class="slideshowControl" id="nextImage">Next Image</button>
 
 </div>
+<div>
 <div class="settings">
 	<div style="text-align: left">
 		Display
@@ -63,14 +64,6 @@
 	  {{/select}}
 	</select>
   	(overscan will add a black border to the image)
-	<br>
-	Only show images that match display orientation
-	<select name="force_orientation">
-		{{#select settings.force_orientation}}
-		<option value="0">no</option>
-		<option value="1">yes</option>
-		{{/select}}
-	</select>
     </div>
 </div>
 <br>
@@ -134,6 +127,7 @@
         <input type="button" id="clearCache" title="In case you have recently cropped or edited your photos" value="Clear Cache">
     </div>
 </div>
+</div>
 <br>
 <div class="settings">
     <div style="text-align: left">
@@ -145,15 +139,6 @@
 		<br>
 		Turn on display at hour <input value="{{settings.display-on}}" type="text" class="small aright" name="display-on" data-validate="time">
 		and off at hour <input value="{{settings.display-off}}" type="text" class="small aright" name="display-off" data-validate="time"> (24h time)
-		<br>
-		Time zone
-		<select name="timezone">
-			{{#select settings.timezone}}
-			{{#each timezones}}
-				<option value="{{this}}">{{this}}</option>
-			{{/each}}
-			{{/select}}
-		</select>
 		<br>
 		{{#if sensor.sensor}}
 		Auto off if ambient lux is below
@@ -184,6 +169,15 @@
         Network name for this frame
         <input type="text" name="hostname" value="{{hostname.hostname}}">
         <br>
+        Time zone
+        <select name="timezone">
+            {{#select settings.timezone}}
+            {{#each timezones}}
+                <option value="{{this}}">{{this}}</option>
+            {{/each}}
+            {{/select}}
+        </select>
+        <br>
 		<input type="button" id="update" value="Check for update">
 		<div style="display: inline-block; width: 50px"></div>
 		<input type="button" id="reboot" value="Reboot">
@@ -200,6 +194,7 @@
         <input style="position:absolute; top: -100px" type="file" data-url="upload/config" id="config" name="filename"><button id="config-button">Upload Settings</button>
     </div>
 </div>
+<h2>PhotoFrame Services</h2>
 <br>
 {{#if service-defined}}
 {{#each service-defined}}

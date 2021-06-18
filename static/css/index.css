@@ -95,7 +95,7 @@ div.settings div:nth-child(2) {
 }
 
 img.thumbnail {
-  max-width:25%;
+  max-width:95%;
   height:auto;
   float:right;
   border: 5px inset;
