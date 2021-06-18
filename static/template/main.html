@@ -12,14 +12,14 @@
 <div class="controls">
 	<button class="slideshowControl" id="prevAlbum">Prev Group</button>
 	<button class="slideshowControl" id="nextAlbum">Next Group</button>
-	&nbsp;
+	<div style="display: inline-block; width: 25px"></div>
 	<button class="slideshowControl" id="prevImage">Prev Image</button>
 	<button class="slideshowControl" id="nextImage">Next Image</button>
 
 </div>
 <div class="settings">
-	<div style="text-align: center">
-		Options
+	<div style="text-align: left">
+		Display
 	</div>
 	<div>
 		{{#if resolution.resolution}}
@@ -63,29 +63,80 @@
 	  {{/select}}
 	</select>
   	(overscan will add a black border to the image)
-	<br>
-	Only show images that match display orientation
-	<select name="force_orientation">
-		{{#select settings.force_orientation}}
-		<option value="0">no</option>
-		<option value="1">yes</option>
-		{{/select}}
-	</select>
-		<hr>
+    </div>
+</div>
+<br>
+<div class="settings">
+    <div style="text-align: left">
+        Slideshow
+    </div>
+    <div>
+        Change every <input value="{{settings.interval}}" type="text" class="small" name="interval" data-validate="interval"> seconds
+        <br>
+        Only show images that match display orientation
+        <select name="force_orientation">
+            {{#select settings.force_orientation}}
+            <option value="0">no</option>
+            <option value="1">yes</option>
+            {{/select}}
+        </select>
+        <br>
+        Refresh keywords after <input value="{{settings.refresh}}" type="text" class="small" name="refresh" data-validate="refresh"> hours <button onclick="alert('Will refresh list from server after this many hours. If all photos are shown, refresh will always happen. Set to zero if you only want to refresh once all images have been shown');">Explain</button>
+        <br>
+        How to handle images which don't fill the screen
+        <select name="imagesizing">
+            {{#select settings.imagesizing}}
+            <option value="none">Do nothing</option>
+            <option value="blur">Blur</option>
+            <option value="zoom">Fill</option>
+            <option value="auto">Auto</option>
+            {{/select}}
+        </select>
+        <button id='explain_imagesizing'>Explain</button>
+        <br>
+        Randomize image order
+        <select name="randomize_images">
+            {{#select settings.randomize_images}}
+            <option value="0">no</option>
+            <option value="1">yes</option>
+            {{/select}}
+        </select>
+        <br>
+        When internet and/or network is lost
+        <select name="offline-behavior">
+            {{#select settings.offline-behavior}}
+            <option value="wait">wait for network</option>
+            <option value="ignore">ignore and continue</option>
+            {{/select}}
+        </select>
+        {{#if network.network}}
+        {{else}}
+        <span class="nointernet">[No internet connection detected]</span>
+        {{/if}}
+        <br>
+        Use image cache to minimize network traffic
+        <select name="enable-cache">
+            {{#select settings.enable-cache}}
+            <option value="1">yes</option>
+            <option value="0">no, never cache images</option>
+            {{/select}}
+        </select>
+        <br>
+        <input type="button" id="forgetMemory" title="Show images that have already been displayed" value="Forget Memory">
+        <input type="button" id="clearCache" title="In case you have recently cropped or edited your photos" value="Clear Cache">
+    </div>
+</div>
+<br>
+<div class="settings">
+    <div style="text-align: left">
+        Options
+    </div>
+    <div>
 		GPIO to monitor for shutdown interrupts
 		<input value="{{settings.shutdown-pin}}" type="text" class="small" name="shutdown-pin" data-validate="gpio" data-confirm="gpio">
 		<br>
 		Turn on display at hour <input value="{{settings.display-on}}" type="text" class="small aright" name="display-on" data-validate="time">
 		and off at hour <input value="{{settings.display-off}}" type="text" class="small aright" name="display-off" data-validate="time"> (24h time)
-		<br>
-		Time zone
-		<select name="timezone">
-			{{#select settings.timezone}}
-			{{#each timezones}}
-				<option value="{{this}}">{{this}}</option>
-			{{/each}}
-			{{/select}}
-		</select>
 		<br>
 		{{#if sensor.sensor}}
 		Auto off if ambient lux is below
@@ -93,7 +144,7 @@
 		<input value="{{settings.autooff-time}}" type="text" class="small" name="autooff-time" data-validate="minutes"> minutes
 		<br>
 		Current ambient environment <span id="lux">-.--</span> lux and <span id="colortemp">----</span>K color temperature.
-		<br>
+        <br>
 		{{/if}}
 		Power saving measures should
 		<select name="powersave">
@@ -104,77 +155,34 @@
 			<option value="sensor+schedule">use schedule and environment {{#if sensor.sensor}}{{else}}(no sensor){{/if}}</option>
 			{{/select}}
 		</select>
-		<hr>
-		Change every <input value="{{settings.interval}}" type="text" class="small" name="interval" data-validate="interval"> seconds
-		<br>
-		Refresh keywords after <input value="{{settings.refresh}}" type="text" class="small" name="refresh" data-validate="refresh"> hours <button onclick="alert('Will refresh list from server after this many hours. If all photos are shown, refresh will always happen. Set to zero if you only want to refresh once all images have been shown');">Explain</button>
-		<br>
-		How to handle images which don't fill the screen
-		<select name="imagesizing">
-			{{#select settings.imagesizing}}
-			<option value="none">Do nothing</option>
-			<option value="blur">Blur</option>
-			<option value="zoom">Fill</option>
-			<option value="auto">Auto</option>
-			{{/select}}
-		</select>
-		<button id='explain_imagesizing'>Explain</button>
-		<br>
-		Randomize image order
-		<select name="randomize_images">
-			{{#select settings.randomize_images}}
-			<option value="0">no</option>
-			<option value="1">yes</option>
-			{{/select}}
-		</select>
-		<br>
-		When internet and/or network is lost
-		<select name="offline-behavior">
-			{{#select settings.offline-behavior}}
-			<option value="wait">wait for network</option>
-			<option value="ignore">ignore and continue</option>
-			{{/select}}
-		</select>
-		{{#if network.network}}
-		{{else}}
-		<span class="nointernet">[No internet connection detected]</span>
-		{{/if}}
-		<br>
-		Use image cache to minimize network traffic
-		<select name="enable-cache">
-			{{#select settings.enable-cache}}
-			<option value="1">yes</option>
-			<option value="0">no, never cache images</option>
-			{{/select}}
-		</select>
-		<br>
-		Name this frame
-		<input type="text" name="hostname" value="{{hostname.hostname}}">
-	</div>
+    </div>
 </div>
 <br>
+
 <div class="settings">
-	<div style="text-align: center">
+	<div style="text-align: left">
 		System
 	</div>
 	<div>
-		<input type="button" id="update" value="Check for update">
+        Network name
+        <input type="text" name="hostname" value="{{hostname.hostname}}">
+        <br>
+        Time zone
+        <select name="timezone">
+            {{#select settings.timezone}}
+            {{#each timezones}}
+                <option value="{{this}}">{{this}}</option>
+            {{/each}}
+            {{/select}}
+        </select>
+        <br>
+		<input type="button" id="update" value="Check for Update">
 		<div style="display: inline-block; width: 50px"></div>
 		<input type="button" id="reboot" value="Reboot">
 		<input type="button" id="shutdown" value="Power off">
 		<div style="display: inline-block; width: 50px"></div>
-		<input type="button" id="forgetMemory" title="Show images that have already been displayed" value="Forget Memory">
-		<input type="button" id="clearCache" title="In case you have recently cropped or edited your photos" value="Clear Cache">
-		<div style="display: inline-block; width: 50px"></div>
-		<input type="button" id="debug" value="Log report">
-	</div>
-</div>
-<br>
-<div class="settings">
-    <div style="text-align: center">
-        Backup & Restore
-    </div>
-    <div>
+		<input type="button" id="debug" value="Log Report">
+        <br>
         <input type="button" id="reset" value="Factory Reset">
         <div style="display: inline-block; width: 50px"></div>
         <input type="button" id="backup" value="Backup Settings">
@@ -184,11 +192,11 @@
         <input style="position:absolute; top: -100px" type="file" data-url="upload/config" id="config" name="filename"><button id="config-button">Upload Settings</button>
     </div>
 </div>
-<br>
+<h2>PhotoFrame Photo Providers</h2>
 {{#if service-defined}}
 {{#each service-defined}}
 <div  class="settings">
-	<div style="text-align: center">
+	<div style="text-align: left">
 		{{name}}<br>
 		<input type="button" data-service="{{id}}" class="service-delete" value="Delete" style="width: 100%">
 	</div>
@@ -232,11 +240,11 @@
 		{{/ifany}}
 	</div>
 </div>
-{{/each}}
 <br>
+{{/each}}
 {{/if}}
 <div>
-	<input type="button" id="new-service" value="Add photo provider">
+	<input type="button" id="new-service" value="Add Photo Provider">
 	<select id="new-service-type">
 		{{#each service-available}}
 			{{#if this.deprecated}}
