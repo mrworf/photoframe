@@ -164,7 +164,7 @@
 		System
 	</div>
 	<div>
-        Network name for this frame
+        Network name
         <input type="text" name="hostname" value="{{hostname.hostname}}">
         <br>
         Time zone
@@ -176,12 +176,12 @@
             {{/select}}
         </select>
         <br>
-		<input type="button" id="update" value="Check for update">
+		<input type="button" id="update" value="Check for Update">
 		<div style="display: inline-block; width: 50px"></div>
 		<input type="button" id="reboot" value="Reboot">
 		<input type="button" id="shutdown" value="Power off">
 		<div style="display: inline-block; width: 50px"></div>
-		<input type="button" id="debug" value="Log report">
+		<input type="button" id="debug" value="Log Report">
         <br>
         <input type="button" id="reset" value="Factory Reset">
         <div style="display: inline-block; width: 50px"></div>
@@ -192,8 +192,7 @@
         <input style="position:absolute; top: -100px" type="file" data-url="upload/config" id="config" name="filename"><button id="config-button">Upload Settings</button>
     </div>
 </div>
-<h2>PhotoFrame Services</h2>
-<br>
+<h2>PhotoFrame Photo Providers</h2>
 {{#if service-defined}}
 {{#each service-defined}}
 <div  class="settings">
@@ -245,7 +244,7 @@
 {{/each}}
 {{/if}}
 <div>
-	<input type="button" id="new-service" value="Add photo provider">
+	<input type="button" id="new-service" value="Add Photo Provider">
 	<select id="new-service-type">
 		{{#each service-available}}
 			{{#if this.deprecated}}
