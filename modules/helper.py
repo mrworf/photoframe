@@ -33,6 +33,7 @@ VALID_URL_REGEX = re.compile(
 
 class helper:
 	TOOL_ROTATE = '/usr/bin/jpegtran'
+	NETWORK_CHECK = None
 
 	MIMETYPES = {
 		'image/jpeg' : 'jpg',
@@ -73,19 +74,25 @@ class helper:
 
 	@staticmethod
 	def getDeviceIp():
-		try:
-			import netifaces
+		if helper.NETWORK_CHECK is None:
+			try:
+				import netifaces
+				helper.NETWORK_CHECK = True
+			except ImportError:
+				logging.error('User has not installed python-netifaces, using checkNetwork() instead (depends on internet)')
+				helper.NETWORK_CHECK = False
+			except:
+				logging.exception('netifaces call failed, using checkNetwork() instead (depends on internet)')
+				helper.NETWORK_CHECK = False
+
+		if helper.NETWORK_CHECK:
 			if 'default' in netifaces.gateways() and netifaces.AF_INET in netifaces.gateways()['default']:
 				dev = netifaces.gateways()['default'][netifaces.AF_INET][1]
 				if netifaces.ifaddresses(dev) and netifaces.AF_INET in netifaces.ifaddresses(dev):
 					net = netifaces.ifaddresses(dev)[netifaces.AF_INET]
 					if len(net) > 0 and 'addr' in net[0]:
 						return net[0]['addr']
-		except ImportError:
-			logging.error('User has not installed python-netifaces, using checkNetwork() instead (depends on internet)')
-			return helper._checkNetwork()
-		except:
-			logging.exception('netifaces call failed, using checkNetwork() instead (depends on internet)')
+		else:
 			return helper._checkNetwork()
 
 	@staticmethod
