@@ -15,23 +15,38 @@ span
     font-style: italic;
 }
 
-</style>   
+</style>
 <script type="text/javascript">
     function ssh() {
         if (confirm('Are you sure you want to enable SSH? This is useless to you unless you know how to use bash, git, python, etc.'))
             document.location = '/maintenance/ssh';
     }
+
+    function showLoading() {
+        const q = new URLSearchParams(window.location.search);
+        if(q.has("loading")) {
+            document.write("<a href=\"" + q.get("loading") + "\">" + q.get("loading") + "</a>");
+        } else {
+            document.write("unknown (this cannot be clicked)");
+        }
+    }
 </script>
 </head>
 <body>
-<h1>Photoframe is in fail-safe mode</h1>
+<h1>Photoframe Web UI is in fail-safe mode</h1>
 This means that something has happened which was unexpected. It doesn't mean your frame is broken (it might even still be showing images). But it means that the web interface isn't fully functional at the very least.
+<p>
+The technical reason for the failure was that the web page couldn't access the following REST API:
+<pre style="border: 1px solid black; background-color: lightgray; padding: 5pt;"><script type="text/javascript">showLoading();</script></pre>
+If you want to see more details, especially for providing information for bugfixing, please click the link and share the content in your bug report.
 
 To help resolve this, you have a couple of different options.
 
 <ol>
+<li><a href="/">Try again</a></li>
+Sometimes, depending on the hardware, the initial startup might cause a big load which can make the page fail to load. Try once more before you do the next step. Hitting browser reload (F5, Ctrl-R or Cmd-R will not work since that will just reload this page)
 <li><a href="/maintenance/reboot">Reboot the frame</a></li>
-Yes, you knew this would probably be the first choice. How many times have we not heard to turn it off and on again. Clicking this option will try to reboot the frame. Be patient, depending on hardware, this can take a few minutes.
+Yes, you knew this would probably be among the first options. How many times have we not heard to turn it off and on again. Clicking this option will try to reboot the frame. Be patient, depending on hardware, this can take a few minutes.
 <li><a href="/maintenance/update">Update the frame</a></li>
 Maybe you just were unfortunate enough to end up between two bugfixes and thus your frame isn't working for the moment. While photoframe automatically updates every 24 hours, you can speed this up by requesting an update now. Expect this to take up to a few minutes depending on internet and performance of your device.
 <li><a href="/debug">Create a bug report</a></li>
@@ -41,7 +56,7 @@ This is for the <span class="highlight">advanced</span> user. It will enable the
 </ol>
 Note!<br>
 Many of these links will return a very cryptic response, but as long as it doesn't say any three digit number starting with 4 or 5 (like 404 not found or 500 server error), it typically means it was successful. Reason for this behavior is the simplistic page you're looking at (less moving parts, less likely to fail).
-<h3>This isn't good enough!</h3>
+<h3>Not good enough?</h3>
 Sorry, this is an open source and free project, and while I do try my best to help troubleshooting, I still need you to do your part :) Besides, if you went through the trouble of building and assembling the hardware, I'm sure you have a bit of patience for this as well ;-)
 </body>
 </html>
