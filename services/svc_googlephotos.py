@@ -379,14 +379,17 @@ class GooglePhotos(BaseService):
       return None
     parsedImages = []
     for entry in data:
-      item = BaseService.createImageHolder(self)
-      item.setId(entry['id'])
-      item.setSource(entry['productUrl']).setMimetype(entry['mimeType'])
-      item.setDimensions(entry['mediaMetadata']['width'], entry['mediaMetadata']['height'])
-      item.allowCache(True)
-      item.setContentProvider(self)
-      item.setContentSource(keyword)
-      parsedImages.append(item)
+      try:
+        item = BaseService.createImageHolder(self)
+        item.setId(entry['id'])
+        item.setSource(entry['productUrl']).setMimetype(entry['mimeType'])
+        item.setDimensions(entry['mediaMetadata']['width'], entry['mediaMetadata']['height'])
+        item.allowCache(True)
+        item.setContentProvider(self)
+        item.setContentSource(keyword)
+        parsedImages.append(item)
+      except:
+        logging.exception('Failed to prepare image information')
     return parsedImages
 
   def getContentUrl(self, image, hints):
