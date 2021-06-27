@@ -178,13 +178,15 @@ class BaseService:
 
   def getImagesTotal(self):
     # return the total number of images provided by this service
+    sum = 0
     if self.needKeywords():
       for keyword in self.getKeywords():
         if keyword not in self._STATE["_NUM_IMAGES"] or keyword not in self._STATE['_NEXT_SCAN'] or self._STATE['_NEXT_SCAN'][keyword] < time.time():
           logging.debug('Keywords either not scanned or we need to scan now')
           self._getImagesFor(keyword) # Will make sure to get images
           self._STATE['_NEXT_SCAN'][keyword] = time.time() + self.REFRESH_DELAY
-    return sum([self._STATE["_NUM_IMAGES"][k] for k in self._STATE["_NUM_IMAGES"]])
+        sum = sum + self._STATE["_NUM_IMAGES"][keyword]  
+    return sum
 
   def getImagesSeen(self):
     count = 0
@@ -694,7 +696,7 @@ class BaseService:
           break
         except:
           logging.exception('Issues downloading')
-        time.sleep(tries / 10) # Back off 10, 20, ... depending on tries
+        time.sleep(tries * 10) # Back off 10, 20, ... depending on tries
         tries += 1
         logging.warning('Retrying again, attempt #%d', tries)
 
