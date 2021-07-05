@@ -15,9 +15,11 @@
 #
 import subprocess
 import os
+import platform
 import datetime
 import sys
 import traceback
+from modules.path import path
 
 
 def _stringify(args):
@@ -74,6 +76,39 @@ def logfile(all=False):
 def version():
     title = 'Running version'
     lines = subprocess.check_output('git log HEAD~1..HEAD ; echo "" ; git status', shell=True).decode("utf-8")
+    # TODO - convert this to use a common subprocess_check_output function
+    if lines:
+        lines = lines.splitlines()
+    return (title, lines, None)
+
+def config_version():
+    origin = subprocess_check_output('git config --get remote.origin.url')
+    statlines = subprocess_check_output('git status')
+    for line in statlines:
+        line = line.strip()
+        if line.startswith('On branch'):
+            branch = txt.partition("branch")[2].strip()
+        else:
+            branch = ""
+    commitlines = subprocess_check_output('git log HEAD~1..HEAD')
+    for line in commitlines:
+        line = line.strip()
+        if line.startswith('commit'):
+            commit = txt.partition("commit")[2].strip()
+        else:
+            commit = ""
+
+    config = {
+        "release:" platform.release(),
+        "python_version": platform.python_version(),
+        "origin": origin,
+        "branch": branch,
+        "commit": commit
+     }
+    versionfile = path.CONFIGFOLDER + "/version.json"
+    
+    
+    
     # TODO - convert this to use a common subprocess_check_output function
     if lines:
         lines = lines.splitlines()

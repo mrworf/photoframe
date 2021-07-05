@@ -17,6 +17,7 @@ import os
 import subprocess
 import shutil
 import flask
+import modules.debug as debug
 
 from .baseroute import BaseRoute
 from modules.path import path
@@ -87,8 +88,11 @@ class RouteMaintenance(BaseRoute):
             subprocess.call(['systemctl', 'restart', 'ssh'], stderr=self.void)
             return self.jsonify({'ssh': True})
         elif cmd == 'backup':
-            subprocess.call(['tar', '-czf', '/boot/settings.tar.gz', '/root/photoframe_config'])
-            return 'Backup Successful', 200
+            if debug.config_version():
+                subprocess.call(['tar', '-czf', '/boot/settings.tar.gz', '-C', path.CONFIGFOLDER, '.'])
+                return 'Backup Successful', 200
+            else:
+                return 'Backup Failed', 404
         elif cmd == 'restore':
             if os.path.isfile("/boot/settings.tar.gz"):
                 subprocess.call(['tar', '-xzf', '/boot/settings.tar.gz', '-C', '/'], stderr=self.void)
@@ -97,8 +101,12 @@ class RouteMaintenance(BaseRoute):
             else:
                 return 'No restore file found', 404
         elif cmd == 'dnldcfg':
-            subprocess.call(['tar', '-czf', '/tmp/settings.tar.gz', '/root/photoframe_config'], stderr=self.void)
-            return flask.send_from_directory("/tmp", "settings.tar.gz", as_attachment=True)
+            if debug.config_version():
+                subprocess.call(['tar', '-czf', '/tmp/settings.tar.gz', '-C', path.CONFIGFOLDER, '.'], stderr=self.void)
+                return flask.send_from_directory("/tmp", "settings.tar.gz", as_attachment=True)
+            else:
+                return 'No Backup File Found', 404
+        # The route to upload settings from the browser is in routes/upload.py
         elif cmd == 'restart':
             subprocess.Popen('systemctl restart frame', shell=True)
             return 'Restarting photoframe', 200
