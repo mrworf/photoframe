@@ -21,6 +21,7 @@ import shutil
 import re
 import random
 import time
+import magic
 from . import debug
 
 # A regular expression to determine whether a url is valid or not
@@ -125,16 +126,11 @@ class helper:
             return None
 
         mimetype = ''
-        cmd = ["/usr/bin/file", "--mime", filename]
-        with open(os.devnull, 'wb') as void:
-            try:
-                output = debug.subprocess_check_output(cmd, stderr=void).strip("\n")
-                m = re.match('[^\\:]+\\: *([^;]+)', output)
-                if m:
-                    mimetype = m.group(1)
-            except subprocess.CalledProcessError:
-                logging.debug("unable to determine mimetype of file: %s" % filename)
-                return None
+        try:
+            mimetype = magic.from_file(filename, mime=True)
+        except Exception:
+            logging.debug("unable to determine mimetype of file: %s" % filename)
+            return None
         return mimetype
 
     @staticmethod
