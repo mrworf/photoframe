@@ -73,6 +73,9 @@ class Photoframe:
         if not path().validate():
             sys.exit(255)
 
+        # Little bit of a cheat
+        helper.SERVER_PORT = cmdline.port
+
         self.debugmode = cmdline.debug
 
         self.eventMgr = Events()

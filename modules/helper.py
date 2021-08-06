@@ -35,6 +35,8 @@ VALID_URL_REGEX = re.compile(
 
 
 class helper:
+    SERVER_PORT = 80 # This gets updated if changed via commandline
+
     TOOL_ROTATE = '/usr/bin/jpegtran'
 
     MIMETYPES = {
@@ -74,6 +76,10 @@ class helper:
                 res = line[6:-1]
                 break
         return res
+
+    @staticmethod
+    def getServerPort():
+        return helper.SERVER_PORT
 
     @staticmethod
     def getDeviceIp():
@@ -389,7 +395,7 @@ class helper:
 
     @staticmethod
     def autoRotate(ifile):
-        
+
         # HEIC files do not work properly with blur and border, but do convert to jpg just fine
         mimetype = helper.getMimetype(ifile)
         if mimetype == 'image/heif' or mimetype == 'image/heic':
@@ -398,8 +404,8 @@ class helper:
             except subprocess.CalledProcessError as e:
                 logging.exception('Unable to change image to jpg')
                 logging.error('Error: Could not convert', mimetype, ' to jpg')
-                
-        # resume processing autorotate        
+
+        # resume processing autorotate
         if not os.path.exists('/usr/bin/jpegexiforient'):
             logging.warning(
                 'jpegexiforient is missing, no auto rotate available. '

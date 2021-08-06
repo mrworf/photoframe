@@ -29,6 +29,7 @@ from modules.network import RequestExpiredToken
 class OAuth:
     def __init__(self, setToken, getToken, scope, extras=''):
         self.ip = helper.getDeviceIp()
+        self.port = helper.getServerPort()
         self.scope = scope
         self.oauth = None
         self.cbGetToken = getToken
@@ -127,7 +128,7 @@ class OAuth:
         auth = OAuth2Session(self.oauth['client_id'],
                              scope=self.scope,  # ['https://www.googleapis.com/auth/photos'],
                              redirect_uri=self.ridURI,
-                             state='%s-%s-%s' % (self.rid, self.ip, self.extras))
+                             state='%s-%s:%d-%s' % (self.rid, self.ip, self.port, self.extras))
         authorization_url, state = auth.authorization_url(self.oauth['auth_uri'],
                                                           access_type="offline",
                                                           prompt="consent")
@@ -140,7 +141,7 @@ class OAuth:
             auth = OAuth2Session(self.oauth['client_id'],
                                  scope=self.scope,  # ['https://www.googleapis.com/auth/photos'],
                                  redirect_uri=self.ridURI,
-                                 state='%s-%s-%s' % (self.rid, self.ip, self.extras))
+                                 state='%s-%s:%d-%s' % (self.rid, self.ip, self.port, self.extras))
 
             token = auth.fetch_token(self.oauth['token_uri'],
                                      client_secret=self.oauth['client_secret'],
