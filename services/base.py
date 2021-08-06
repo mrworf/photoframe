@@ -580,11 +580,11 @@ class BaseService:
 
             try:
                 result = self.requestUrl(url, destination=filename)
-            except (RequestResult.RequestExpiredToken, RequestInvalidToken):
+            except (RequestResult.RequestExpiredToken, RequestResult.RequestInvalidToken):
                 logging.exception('Cannot fetch due to token issues')
                 result = RequestResult().setResult(RequestResult.OAUTH_INVALID)
                 self._OAUTH = None
-            except requests.exceptions.RequestException:
+            except RequestNoNetwork:
                 logging.exception('request to download image failed')
                 result = RequestResult().setResult(RequestResult.NO_NETWORK)
 
