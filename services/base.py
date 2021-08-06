@@ -182,6 +182,7 @@ class BaseService:
 
     def getImagesTotal(self):
         # return the total number of images provided by this service
+        logging.debug('getImagesTotal: Enter')
         sum = 0
         if self.needKeywords():
             for keyword in self.getKeywords():
@@ -192,6 +193,7 @@ class BaseService:
                     self._getImagesFor(keyword)  # Will make sure to get images
                     self._STATE['_NEXT_SCAN'][keyword] = time.time() + self.REFRESH_DELAY
                 sum = sum + self._STATE["_NUM_IMAGES"][keyword]
+        logging.debug('getImagesTotal: Exit')
         return sum
 
     def getImagesSeen(self):
@@ -685,7 +687,7 @@ class BaseService:
             return image
         return None
 
-    def requestUrl(self, url, destination=None, params=None, data=None, usePost=False):
+    def requestUrl(self, url, destination=None, params=None, data=None, usePost=False, extraHeaders=None):
         result = RequestResult()
 
         if self._OAUTH is not None:
@@ -704,13 +706,13 @@ class BaseService:
             while tries < 5:
                 try:
                     if usePost:
-                        r = requests.post(url, params=params, json=data, timeout=180)
+                        r = requests.post(url, params=params, json=data, timeout=180, headers=extraHeaders)
                     else:
-                        r = requests.get(url, params=params, timeout=180)
+                        r = requests.get(url, params=params, timeout=180, headers=extraHeaders)
                     break
                 except Exception:
                     logging.exception('Issues downloading')
-                time.sleep(tries / 10)  # Back off 10, 20, ... depending on tries
+                time.sleep(tries * 10)  # Back off 10, 20, ... depending on tries
                 tries += 1
                 logging.warning('Retrying again, attempt #%d', tries)
 

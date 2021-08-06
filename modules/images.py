@@ -54,7 +54,7 @@ class ImageHolder:
         return self
 
     def setId(self, id):
-        self.id = id
+        self.id = str(id) # We assume it's always a string
         return self
 
     def setMimetype(self, mimetype):
