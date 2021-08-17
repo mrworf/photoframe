@@ -16,11 +16,14 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Synopsis:
-# load_config.py sourcefile.tar.gz
+# load_config.py settings.tar.gz
 #
 # Description:
 # This program loads a saved configuration into the system.  It will:
-# Verify config file, stop frame service, backup current config, set and test desired config.
+# Verify config file,
+# stop frame service,
+# backup current config,
+# set desired config.
 # Finally restart frame service.
 #
 #
@@ -29,6 +32,7 @@ import os
 import subprocess
 import magic
 import importlib
+import shutil
 
 from modules.settings import settings
 from modules.helper import helper
@@ -38,43 +42,14 @@ from modules.path import path
 # Make sure we run from our own directory
 os.chdir(os.path.dirname(sys.argv[0]))
 
-
-class Updater:
-    def __init__(self, cmdline):
-        
-        if not path().validate():
-            sys.exit(255)
-
-        self.settingsMgr = settings()
-        self.displayMgr = display(self.emulator)
-        # Validate all settings, prepopulate with defaults if needed
-        self.validateSettings()
-
-        
-
-    def validateSettings(self):
-        if not self.settingsMgr.load():
-            # First run, grab display settings from current mode
-            current = self.displayMgr.current()
-            if current is not None:
-                logging.info('No display settings, using: %s' % repr(current))
-                self.settingsMgr.setUser('tvservice', '%s %s HDMI' % (current['mode'], current['code']))
-                self.settingsMgr.save()
-            else:
-                logging.info('No display attached?')
-        
-        #TODO: Test the imported display settings against the settings supported by the current display
-        #If the current display cannot support the setting, then change resolution to something reasonable.
-
-
 # get input filename from command line
-if len(sys.argv) < 1:
+if len(sys.argv) < 2:
     print('Argument missing')
-    print('Usage:', sys.argv[0], ' backupfile.tar.gz'
+    print('Usage:', sys.argv[0], ' settings.tar.gz')
     sys.exit(1)
-if len(sys.argv) > 1:
+if len(sys.argv) > 2:
     print('Too many arguments')
-    print('Usage:', sys.argv[0], ' backupfile.tar.gz')
+    print('Usage:', sys.argv[0], ' settings.tar.gz')
     sys.exit(1)
 updatefile = sys.argv[1]
 
@@ -93,7 +68,8 @@ subprocess.call(['/usr/bin/systemctl', 'stop', 'frame.service'])
 configdir=path.CONFIGFOLDER
 if os.path.isdir(configdir):
     had_config = True
-    os.rename(configdir, configdir + '.bak')
+    shutil.rmtree(configdir + '.bak', ignore_errors = True)
+    os.rename(configdir, configdir + '.bak')  #Todo what if bak already exists
 else:
     had_config = False
 try:
@@ -105,22 +81,18 @@ except Exception:
 
 #Un-tar the config file
 try:
-    subprocess.call(['/usr/bin/tar', '-xzf', updatefile, '-C', configdir],])
+    subprocess.call(['/usr/bin/tar', '-xzf', updatefile, '-C', configdir])
 except Exception:
     print('tar failed to unpack', updatefile, 'into', configdir)
-    os.rename(configdir + '.bak', configdir)
+    if had_config:
+        print('Previous configuration is in ', configdir + '.bak')
     sys.exit(1)
 
-# test config data for validity
-if not settings.load():
-    print('settings failed to load from', updatefile)
-    os.rename(configdir, configdir)
-    
-    os.rename(configdir + '.bak', configdir)
-    sys.exit(1)
-    
-    
+#Todo test config data for validity
+#Todo test that video mode is supported by current hardware
 
-frame = Updater(cmdline)
+#Restart frame process
+subprocess.call(['/usr/bin/systemctl', 'start', 'frame.service'])
 
+#All done
 sys.exit(0)

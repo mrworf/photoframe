@@ -95,17 +95,16 @@ class RouteMaintenance(BaseRoute):
                 return 'Backup Failed', 404
         elif cmd == 'restore':
             if os.path.isfile("/boot/settings.tar.gz"):
-                subprocess.call(['tar', '-xzf', '/boot/settings.tar.gz', '-C', '/'], stderr=self.void)
-                subprocess.Popen('systemctl restart frame', shell=True)
-                return 'Restore settings complete', 200
+                subprocess.Popen(path.BASEDIR + 'photoframe/load_config.py /boot/settings.tar.gz', shell=True)
+                return 'Restoring settings and restarting photofame', 200
             else:
-                return 'No restore file found', 404
+                return 'File not found: /boot/settings.tar.gz', 404
         elif cmd == 'dnldcfg':
             if debug.config_version():
                 subprocess.call(['tar', '-czf', '/tmp/settings.tar.gz', '-C', path.CONFIGFOLDER, '.'], stderr=self.void)
                 return flask.send_from_directory("/tmp", "settings.tar.gz", as_attachment=True)
             else:
-                return 'No Backup File Found', 404
+                return 'Download failed', 404
         # The route to upload settings from the browser is in routes/upload.py
         elif cmd == 'restart':
             subprocess.Popen('systemctl restart frame', shell=True)
