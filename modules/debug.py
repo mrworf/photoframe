@@ -19,6 +19,7 @@ import platform
 import datetime
 import sys
 import traceback
+import json
 from modules.path import path
 
 
@@ -75,41 +76,38 @@ def logfile(all=False):
 
 def version():
     title = 'Running version'
-    lines = subprocess.check_output('git log HEAD~1..HEAD ; echo "" ; git status', shell=True).decode("utf-8")
-    # TODO - convert this to use a common subprocess_check_output function
+    lines = subprocess_check_output(['git', 'log', 'HEAD~1..HEAD'])
+    lines = lines + subprocess_check_output(['git', 'status'])
     if lines:
         lines = lines.splitlines()
     return (title, lines, None)
 
 def config_version():
-    origin = subprocess_check_output('git config --get remote.origin.url')
-    statlines = subprocess_check_output('git status')
-    for line in statlines:
-        line = line.strip()
+    origin = subprocess_check_output(['git', 'config', '--get', 'remote.origin.url'])
+    if origin:
+        origin = origin.strip()
+    
+    branch = ""
+    branchlines = subprocess_check_output(['git', 'status'])
+    branchlines = branchlines.splitlines()
+    for line in branchlines:
         if line.startswith('On branch'):
-            branch = txt.partition("branch")[2].strip()
-        else:
-            branch = ""
-    commitlines = subprocess_check_output('git log HEAD~1..HEAD')
+            branch = line.partition("branch")[2].strip()
+    
+    commit = ""
+    commitlines = subprocess_check_output(['git', 'log', '-n 1'])
     for line in commitlines:
-        line = line.strip()
         if line.startswith('commit'):
-            commit = txt.partition("commit")[2].strip()
-        else:
-            commit = ""
+            commit = line.partition("commit")[2].strip()
 
     config = {
-        "release:" platform.release(),
+        "release": platform.release(),
         "python_version": platform.python_version(),
         "origin": origin,
         "branch": branch,
         "commit": commit
      }
-    versionfile = path.CONFIGFOLDER + "/version.json"
+    versionfile = open(path.CONFIGFOLDER + "/version.json", 'w+')
+    json.dump(config, versionfile)
     
-    
-    
-    # TODO - convert this to use a common subprocess_check_output function
-    if lines:
-        lines = lines.splitlines()
-    return (title, lines, None)
+    return (True)

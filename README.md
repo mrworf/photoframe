@@ -99,7 +99,7 @@ Install additional dependencies:
 
 `apt install git python3-pip python3-requests-oauthlib python3-flask`
 
-`apt install imagemagick python3-smbus bc ddcutil libjpeg-turbo-progs`
+`apt install imagemagick python3-smbus bc ddcutil libjpeg-turbo-progs libmagic-dev`
 
 `pip3 install requests requests-oauthlib flask flask-httpauth smbus netifaces python-magic`
 
