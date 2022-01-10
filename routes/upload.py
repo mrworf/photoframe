@@ -20,6 +20,7 @@ import subprocess
 
 from werkzeug.utils import secure_filename
 from .baseroute import BaseRoute
+from modules.path import path
 
 
 class RouteUpload(BaseRoute):
@@ -76,7 +77,7 @@ class RouteUpload(BaseRoute):
 
         elif item == 'config':
             try:
-                subprocess.check_output(['tar', '-xzf', filename, '-C', '/'])
+                subprocess.Popen(path.BASEDIR + 'photoframe/load_config.py', filename , shell=True)
                 retval['return'] = {'reboot': False, 'restart': True}
             except Exception:
                 logging.error("Failed to install config from %s", filename)
