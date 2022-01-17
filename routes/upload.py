@@ -76,18 +76,10 @@ class RouteUpload(BaseRoute):
                     retval['return'] = {'reboot': False, 'restart': False}
 
         elif item == 'config':
-            try:
-                subprocess.Popen(path.BASEDIR + 'photoframe/load_config.py', filename , shell=True)
-                retval['return'] = {'reboot': False, 'restart': True}
-            except Exception:
-                logging.error("Failed to install config from %s", filename)
-                retval['return'] = {'reboot': False}
-                retval['status'] = 500
-
-        try:
-            os.remove(filename)
-        except Exception:
-            logging.error("Failed to clean up %s at the end of upload.py", filename)
+            logging.info('loading settings with: ' + path.BASEDIR + 'photoframe/load_config.py' + filename)
+            subprocess.run(path.BASEDIR + 'photoframe/load_config.py' + filename, shell=True)
+            retval['return'] = {'reboot': False, 'restart': True}
+        
         if retval['status'] == 200:
             return self.jsonify(retval['return'])
         self.setAbort(retval['status'])

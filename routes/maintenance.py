@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
+import logging
 import os
 import subprocess
 import shutil
@@ -95,7 +96,9 @@ class RouteMaintenance(BaseRoute):
                 return 'Backup Failed', 404
         elif cmd == 'restore':
             if os.path.isfile("/boot/settings.tar.gz"):
+                logging.info('loading settings with: ' + path.BASEDIR + 'photoframe/load_config.py /boot/settings.tar.gz')
                 subprocess.Popen(path.BASEDIR + 'photoframe/load_config.py /boot/settings.tar.gz', shell=True)
+                subprocess.Popen('systemctl restart frame', shell=True)
                 return 'Restoring settings and restarting photofame', 200
             else:
                 return 'File not found: /boot/settings.tar.gz', 404

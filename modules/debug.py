@@ -76,10 +76,10 @@ def logfile(all=False):
 
 def version():
     title = 'Running version'
-    lines = subprocess_check_output(['git', 'log', 'HEAD~1..HEAD'])
+    lines = "Linux kernel: " + platform.release() + "  Python version: " + platform.python_version() + '\n'
+    lines = lines + subprocess_check_output(['git', 'log', '-n 1'])
     lines = lines + subprocess_check_output(['git', 'status'])
-    if lines:
-        lines = lines.splitlines()
+    lines = lines.splitlines()
     return (title, lines, None)
 
 def config_version():
@@ -88,14 +88,13 @@ def config_version():
         origin = origin.strip()
     
     branch = ""
-    branchlines = subprocess_check_output(['git', 'status'])
-    branchlines = branchlines.splitlines()
+    branchlines = subprocess_check_output(['git', 'status']).splitlines()
     for line in branchlines:
         if line.startswith('On branch'):
             branch = line.partition("branch")[2].strip()
     
     commit = ""
-    commitlines = subprocess_check_output(['git', 'log', '-n 1'])
+    commitlines = subprocess_check_output(['git', 'log', '-n 1']).splitlines()
     for line in commitlines:
         if line.startswith('commit'):
             commit = line.partition("commit")[2].strip()
