@@ -76,8 +76,8 @@ class RouteUpload(BaseRoute):
                     retval['return'] = {'reboot': False, 'restart': False}
 
         elif item == 'config':
-            logging.info('loading settings with: ' + path.BASEDIR + 'photoframe/load_config.py' + filename)
-            subprocess.run(path.BASEDIR + 'photoframe/load_config.py' + filename, shell=True)
+            logging.info('loading settings with: ' + path.BASEDIR + 'photoframe/load_config.py ' + filename)
+            subprocess.run(path.BASEDIR + 'photoframe/load_config.py ' + filename, shell=True)
             retval['return'] = {'reboot': False, 'restart': True}
         
         if retval['status'] == 200:
