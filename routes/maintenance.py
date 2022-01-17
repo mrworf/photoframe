@@ -97,7 +97,7 @@ class RouteMaintenance(BaseRoute):
         elif cmd == 'restore':
             if os.path.isfile("/boot/settings.tar.gz"):
                 logging.info('loading settings with: ' + path.BASEDIR + 'photoframe/load_config.py /boot/settings.tar.gz')
-                subprocess.Popen(path.BASEDIR + 'photoframe/load_config.py /boot/settings.tar.gz', shell=True)
+                subprocess.run(path.BASEDIR + 'photoframe/load_config.py /boot/settings.tar.gz', shell=True)
                 subprocess.Popen('systemctl restart frame', shell=True)
                 return 'Restoring settings and restarting photofame', 200
             else:
