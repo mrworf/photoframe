@@ -21,22 +21,18 @@
 # Description:
 # This program loads a saved configuration into the system.  It will:
 # Verify config file,
-# stop frame service,
+# stop frame process,
 # backup current config,
 # set desired config.
-# Finally restart frame service.
+# Note: restarting the frame service is up to the caller.
 #
 #
 import sys
 import os
 import subprocess
 import magic
-import importlib
 import shutil
 
-from modules.settings import settings
-from modules.helper import helper
-from modules.servicemanager import ServiceManager
 from modules.path import path
 
 # Make sure we run from our own directory
@@ -61,15 +57,16 @@ if magic.from_file(updatefile, mime=True) != 'application/gzip':
     print(updatefile, 'is not a tar.gz archive')
     sys.exit(1)
 
-#Stop existing frame processes
-subprocess.call(['/usr/bin/systemctl', 'stop', 'frame.service'])
+#Stop existing frame thread
+# Do NOT kill the service itself, since it will actually tear down the python script
+subprocess.call(['pkill', '-SIGHUP', '-f', 'frame.py'])
 
 # move existing config if necessary
 configdir=path.CONFIGFOLDER
 if os.path.isdir(configdir):
     had_config = True
     shutil.rmtree(configdir + '.bak', ignore_errors = True)
-    os.rename(configdir, configdir + '.bak')  #Todo what if bak already exists
+    os.rename(configdir, configdir + '.bak')
 else:
     had_config = False
 try:
@@ -85,14 +82,14 @@ try:
 except Exception:
     print('tar failed to unpack', updatefile, 'into', configdir)
     if had_config:
-        print('Previous configuration is in ', configdir + '.bak')
+        print('Restoring Previous configuration')
+        shutil.rmtree(configdir, ignore_errors = True)
+        os.rename(configdir + '.bak', configdir)
     sys.exit(1)
 
 #Todo test config data for validity
 #Todo test that video mode is supported by current hardware
 
-#Restart frame process
-subprocess.call(['/usr/bin/systemctl', 'start', 'frame.service'])
-
 #All done
+print('Successfully loaded new config from ', updatefile)
 sys.exit(0)
