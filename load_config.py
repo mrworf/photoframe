@@ -92,9 +92,9 @@ if not all([os.path.isdir(configdir + '/display-drivers'), os.path.isdir(configd
            os.path.isfile(configdir + '/settings.json'), os.path.isfile(configdir + '/version.json')]):
     print('New config is incomplete')
     if had_config:
-    print('Restoring Previous configuration')
-    shutil.rmtree(configdir, ignore_errors = True)
-    os.rename(configdir + '.bak', configdir)
+        print('Restoring Previous configuration')
+        shutil.rmtree(configdir, ignore_errors = True)
+        os.rename(configdir + '.bak', configdir)
     sys.exit(1)
 
 #All done
