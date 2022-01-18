@@ -87,8 +87,15 @@ except Exception:
         os.rename(configdir + '.bak', configdir)
     sys.exit(1)
 
-#Todo test config data for validity
-#Todo test that video mode is supported by current hardware
+#Test config data for validity
+if not all([os.path.isdir(configdir + '/display-drivers'), os.path.isdir(configdir + '/services'),
+           os.path.isfile(configdir + '/settings.json'), os.path.isfile(configdir + '/version.json')]):
+    print('New config is incomplete')
+    if had_config:
+    print('Restoring Previous configuration')
+    shutil.rmtree(configdir, ignore_errors = True)
+    os.rename(configdir + '.bak', configdir)
+    sys.exit(1)
 
 #All done
 print('Successfully loaded new config from ', updatefile)

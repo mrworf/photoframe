@@ -90,22 +90,35 @@ class RouteMaintenance(BaseRoute):
             return self.jsonify({'ssh': True})
         elif cmd == 'backup':
             if debug.config_version():
-                subprocess.call(['tar', '-czf', '/boot/settings.tar.gz', '-C', path.CONFIGFOLDER, '.'])
-                return 'Backup Successful', 200
+                try:
+                    subprocess.call(['tar', '-czf', '/boot/settings.tar.gz', '-C', path.CONFIGFOLDER, '.'])
+                except:
+                    return 'Backup Failed', 404
+                else:
+                    return 'Backup Successful', 200
             else:
                 return 'Backup Failed', 404
         elif cmd == 'restore':
             if os.path.isfile("/boot/settings.tar.gz"):
-                logging.info('loading settings with: ' + path.BASEDIR + 'photoframe/load_config.py /boot/settings.tar.gz')
-                subprocess.run(path.BASEDIR + 'photoframe/load_config.py /boot/settings.tar.gz', shell=True)
-                subprocess.Popen('systemctl restart frame', shell=True)
-                return 'Restoring settings and restarting photofame', 200
+                try:
+                    subprocess.run(path.BASEDIR + 'photoframe/load_config.py /boot/settings.tar.gz', shell=True)
+                except:
+                    logging.info('FAILED to load new settings with: ' + path.BASEDIR + 'photoframe/load_config.py /boot/settings.tar.gz')
+                    return 'Failed to load new settings', 404
+                else:
+                    logging.info('Loaded new settings with: ' + path.BASEDIR + 'photoframe/load_config.py /boot/settings.tar.gz')
+                    subprocess.Popen('systemctl restart frame', shell=True)
+                    return 'Restoring settings and restarting photofame', 200
             else:
                 return 'File not found: /boot/settings.tar.gz', 404
         elif cmd == 'dnldcfg':
             if debug.config_version():
-                subprocess.call(['tar', '-czf', '/tmp/settings.tar.gz', '-C', path.CONFIGFOLDER, '.'], stderr=self.void)
-                return flask.send_from_directory("/tmp", "settings.tar.gz", as_attachment=True)
+                try:
+                    subprocess.call(['tar', '-czf', '/tmp/settings.tar.gz', '-C', path.CONFIGFOLDER, '.'], stderr=self.void)
+                except:
+                    return 'Download Failed', 404
+                else:
+                    return flask.send_from_directory("/tmp", "settings.tar.gz", as_attachment=True)
             else:
                 return 'Download failed', 404
         # The route to upload settings from the browser is in routes/upload.py
