@@ -53,7 +53,7 @@ if not os.path.isfile(updatefile):
     print('file not found: ', updatefile)
     sys.exit(1)
 try:
-    filetype = subprocess.check_output(['file', '-b', '--mime-type', updatefile]).decode("utf-8")
+    filetype = subprocess.check_output(['file', '-b', '--mime-type', updatefile]).decode("utf-8").strip()
 except Exception:
     print('Error determining Mime-type of ', updatefile)
     sys.exit(1)
@@ -82,7 +82,7 @@ except Exception:
 
 #Un-tar the config file
 try:
-    subprocess.call(['/usr/bin/tar', '-xzf', updatefile, '-C', configdir])
+    subprocess.call(['tar', '-xzf', updatefile, '-C', configdir])
 except Exception:
     print('tar failed to unpack', updatefile, 'into', configdir)
     if had_config:

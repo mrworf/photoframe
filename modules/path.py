@@ -17,6 +17,7 @@ import os
 import logging
 
 class path:
+  BASEDIR = '/root/'
   CONFIGFOLDER  = '/root/photoframe_config'
   CONFIGFILE    = '/root/photoframe_config/settings.json'
   COLORMATCH    = '/root/photoframe_config/colortemp.sh'
@@ -33,6 +34,7 @@ class path:
     path.CONFIG_TXT = newconfig
 
   def reassignBase(self, newbase):
+    path.BASEDIR = path.BASEDIR = newbase
     path.CONFIGFOLDER   = path.CONFIGFOLDER.replace('/root/', newbase)
     path.CONFIGFILE     = path.CONFIGFILE.replace('/root/', newbase)
     path.OPTIONSFILE    = path.OPTIONSFILE.replace('/root/', newbase)
