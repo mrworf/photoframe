@@ -17,6 +17,7 @@ import logging
 import os
 import subprocess
 import shutil
+import modules.debug as debug
 
 from baseroute import BaseRoute
 from modules.path import path
