@@ -16,6 +16,7 @@
 
 import logging
 import os
+import subprocess
 
 from werkzeug.utils import secure_filename
 from baseroute import BaseRoute
@@ -43,6 +44,13 @@ class RouteUpload(BaseRoute):
         logging.error('No filename or invalid filename')
         self.setAbort(405)
         return
+    elif item == 'config':
+        # if user does not select file, browser also
+        # submit an empty part without filename
+        if file.filename == '' or not file.filename.lower().endswith('.tar.gz'):
+            logging.error('No configuration filename or does not end in .tar.gz')
+            self.setAbort(405)
+            return
 
     filename = os.path.join('/tmp/', secure_filename(file.filename))
     file.save(filename)
@@ -63,6 +71,16 @@ class RouteUpload(BaseRoute):
             retval['return'] = {'reboot' : True}
         else:
           retval['return'] = {'reboot' : False}
+
+    elif item == 'config':
+        try:
+            subprocess.run(path.BASEDIR + 'photoframe/load_config.py ' + filename, shell=True)
+        except:
+            logging.info('FAILED to load settings with: ' + path.BASEDIR + 'photoframe/load_config.py ' + filename)
+            retval['status'] = 500
+        else:
+            logging.info('Loading settings with: ' + path.BASEDIR + 'photoframe/load_config.py ' + filename)
+            retval['return'] = {'reboot': False, 'restart': True}
 
     try:
       os.remove(filename)
