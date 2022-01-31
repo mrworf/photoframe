@@ -16,9 +16,12 @@
 import subprocess
 import logging
 import os
+import platform
 import datetime
 import sys
 import traceback
+import json
+from modules.path import path
 
 def _stringify(args):
   result = ''
@@ -95,7 +98,7 @@ def config_version():
     "origin": origin,
     "branch": branch,
     "commit": commit
-   }
+    }
   versionfile = open(path.CONFIGFOLDER + "/version.json", 'w+')
   json.dump(config, versionfile)
 
