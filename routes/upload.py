@@ -20,6 +20,7 @@ import subprocess
 
 from werkzeug.utils import secure_filename
 from baseroute import BaseRoute
+from modules.path import path
 
 class RouteUpload(BaseRoute):
   def setupex(self, settingsmgr, drivermgr):
@@ -74,7 +75,7 @@ class RouteUpload(BaseRoute):
 
     elif item == 'config':
         try:
-            subprocess.run(path.BASEDIR + 'photoframe/load_config.py ' + filename, shell=True)
+            subprocess.call(path.BASEDIR + 'photoframe/load_config.py ' + filename, shell=True)
         except:
             logging.info('FAILED to load settings with: ' + path.BASEDIR + 'photoframe/load_config.py ' + filename)
             retval['status'] = 500

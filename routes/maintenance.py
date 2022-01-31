@@ -99,7 +99,7 @@ class RouteMaintenance(BaseRoute):
     elif cmd == 'restore':
         if os.path.isfile("/boot/settings.tar.gz"):
             try:
-                subprocess.run(path.BASEDIR + 'photoframe/load_config.py /boot/settings.tar.gz', shell=True)
+                subprocess.call(path.BASEDIR + 'photoframe/load_config.py /boot/settings.tar.gz', shell=True)
             except:
                 logging.info('FAILED to load new settings with: ' + path.BASEDIR + 'photoframe/load_config.py /boot/settings.tar.gz')
                 return 'Failed to load new settings', 404
@@ -120,4 +120,7 @@ class RouteMaintenance(BaseRoute):
         else:
             return 'Download failed', 404
     # The route to upload settings from the browser is in routes/upload.py
+    elif cmd == 'restart':
+      subprocess.Popen('systemctl restart frame', shell=True)
+      return 'Restarting photoframe', 200
 
