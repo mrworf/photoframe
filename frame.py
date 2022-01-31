@@ -167,7 +167,7 @@ class Photoframe:
     if newRoot is None: return
     newpath = os.path.join(newRoot, '/')
     logging.info('Altering basedir to %s', newpath)
-    self.settings().reassignBase(newpath)
+    path().reassignBase(newpath)
 
   def enableEmulation(self):
     logging.info('Running in emulation mode, settings are stored in /tmp/photoframe/')

@@ -47,13 +47,15 @@ To use these (and I really recommend that to doing the manual steps), here's how
 5. Place SDcard in your RPi3 which is connected to a monitor/TV
 6. Start the RPi
 7. Wait (takes up to a minute depending on card and the fact that it's expanding to use the entire SDcard ... slower still on non-RPi3)
-8. Follow instructions shown on the display
+8. Follow instructions shown on the display, it will have the address for your frame shown (hosted on port 7777)
 
 The default username/password for the web page is `photoframe` and `password`. This can be changed by editing the file called `http-auth.json` on the `boot` drive
 
 ## tl;dr
 
 Flash image to SDcard, edit `wifi-config.txt` and boot the RPi3 with the SDcard and follow instructions. Username and password is above this paragraph.
+
+The web interface is hosted on port 7777 and the exact IP needed to access it should show up on the display connected to your device. If not, look on your router for any new device. If you're lucky, your router might actually say what kind of device it is, but your mileage will vary on this.
 
 Once inside the web interface, select `GooglePhotos` from dropdown list in bottom-left corner and press `Add photo service`.
 

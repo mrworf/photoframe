@@ -13,12 +13,17 @@
 # You should have received a copy of the GNU General Public License
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
+import logging
 from threading import Thread
-import smbus
+try:
+	import smbus
+	COLORMATCH_DISABLE = False
+except ImportError:
+	logging.warning('smbus module not available, colormatch will not work')
+	COLORMATCH_DISABLE = True
 import time
 import os
 import subprocess
-import logging
 
 class colormatch(Thread):
 	def __init__(self, script, min = None, max = None):
@@ -38,7 +43,8 @@ class colormatch(Thread):
 		else:
 			self.hasScript = False
 
-		self.start()
+		if not COLORMATCH_DISABLE:
+			self.start()
 
 	def setLimits(self, min, max):
 		self.min = min

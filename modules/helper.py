@@ -22,6 +22,11 @@ import re
 import random
 import time
 
+try:
+	import netifaces
+except ImportError:
+	logging.error('User has not installed python-netifaces, using checkNetwork() instead (depends on internet)')
+
 # A regular expression to determine whether a url is valid or not (e.g. "www.example.de/someImg.jpg" is missing "http://")
 VALID_URL_REGEX = re.compile(
 	r'^(?:http|ftp)s?://'  # http:// or https://
@@ -33,6 +38,7 @@ VALID_URL_REGEX = re.compile(
 
 class helper:
 	TOOL_ROTATE = '/usr/bin/jpegtran'
+	NETWORK_CHECK = True
 
 	MIMETYPES = {
 		'image/jpeg' : 'jpg',
@@ -73,19 +79,23 @@ class helper:
 
 	@staticmethod
 	def getDeviceIp():
-		try:
-			import netifaces
-			if 'default' in netifaces.gateways() and netifaces.AF_INET in netifaces.gateways()['default']:
-				dev = netifaces.gateways()['default'][netifaces.AF_INET][1]
-				if netifaces.ifaddresses(dev) and netifaces.AF_INET in netifaces.ifaddresses(dev):
-					net = netifaces.ifaddresses(dev)[netifaces.AF_INET]
-					if len(net) > 0 and 'addr' in net[0]:
-						return net[0]['addr']
-		except ImportError:
-			logging.error('User has not installed python-netifaces, using checkNetwork() instead (depends on internet)')
-			return helper._checkNetwork()
-		except:
-			logging.exception('netifaces call failed, using checkNetwork() instead (depends on internet)')
+		if helper.NETWORK_CHECK:
+			try:
+				if 'default' in netifaces.gateways() and netifaces.AF_INET in netifaces.gateways()['default']:
+					dev = netifaces.gateways()['default'][netifaces.AF_INET][1]
+					if netifaces.ifaddresses(dev) and netifaces.AF_INET in netifaces.ifaddresses(dev):
+						net = netifaces.ifaddresses(dev)[netifaces.AF_INET]
+						if len(net) > 0 and 'addr' in net[0]:
+							return net[0]['addr']
+			except NameError:
+				# We weren't able to import, so switch it up
+				helper.NETWORK_CHECK = False
+				return helper._checkNetwork()
+			except:
+				helper.NETWORK_CHECK = False
+				logging.exception('netifaces call failed, using checkNetwork() instead (depends on internet)')
+				return helper._checkNetwork()
+		else:
 			return helper._checkNetwork()
 
 	@staticmethod
