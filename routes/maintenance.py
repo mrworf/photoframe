@@ -13,9 +13,12 @@
 # You should have received a copy of the GNU General Public License
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
+import logging
 import os
 import subprocess
 import shutil
+import flask
+import modules.debug as debug
 
 from baseroute import BaseRoute
 from modules.path import path
@@ -83,3 +86,41 @@ class RouteMaintenance(BaseRoute):
     elif cmd == 'ssh':
       subprocess.call(['systemctl', 'restart', 'ssh'], stderr=self.void)
       return self.jsonify({'ssh': True})
+    elif cmd == 'backup':
+        if debug.config_version():
+            try:
+                subprocess.call(['tar', '-czf', '/boot/settings.tar.gz', '-C', path.CONFIGFOLDER, '.'])
+            except:
+                return 'Backup Failed', 404
+            else:
+                return 'Backup Successful', 200
+        else:
+            return 'Backup Failed', 404
+    elif cmd == 'restore':
+        if os.path.isfile("/boot/settings.tar.gz"):
+            try:
+                subprocess.call(path.BASEDIR + 'photoframe/load_config.py /boot/settings.tar.gz', shell=True)
+            except:
+                logging.info('FAILED to load new settings with: ' + path.BASEDIR + 'photoframe/load_config.py /boot/settings.tar.gz')
+                return 'Failed to load new settings', 404
+            else:
+                logging.info('Loaded new settings with: ' + path.BASEDIR + 'photoframe/load_config.py /boot/settings.tar.gz')
+                subprocess.Popen('systemctl restart frame', shell=True)
+                return 'Restoring settings and restarting photofame', 200
+        else:
+            return 'File not found: /boot/settings.tar.gz', 404
+    elif cmd == 'dnldcfg':
+        if debug.config_version():
+            try:
+                subprocess.call(['tar', '-czf', '/tmp/settings.tar.gz', '-C', path.CONFIGFOLDER, '.'], stderr=self.void)
+            except:
+                return 'Download Failed', 404
+            else:
+                return flask.send_from_directory("/tmp", "settings.tar.gz", as_attachment=True)
+        else:
+            return 'Download failed', 404
+    # The route to upload settings from the browser is in routes/upload.py
+    elif cmd == 'restart':
+      subprocess.Popen('systemctl restart frame', shell=True)
+      return 'Restarting photoframe', 200
+

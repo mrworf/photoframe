@@ -165,10 +165,17 @@
 		<div style="display: inline-block; width: 100px"></div>
 		<input type="button" id="forgetMemory" title="Show images that have already been displayed" value="Forget Memory">
 		<input type="button" id="clearCache" title="In case you have recently cropped or edited your photos" value="Clear Cache">
-		<input type="button" id="reset" value="Factory Reset">
 		<div style="display: inline-block; width: 100px"></div>
 		<input type="button" id="debug" value="Log report">
-	</div>
+     <br>
+        <input type="button" id="reset" value="Factory Reset">
+        <div style="display: inline-block; width: 50px"></div>
+        <input type="button" id="backup" value="Backup Settings">
+        <input type="button" id="restore" value="Restore Settings">
+        <div style="display: inline-block; width: 50px"></div>
+        <input type="button" id="dnldcfg" value="Download Settings">
+        <input style="position:absolute; top: -100px" type="file" data-url="upload/config" id="config" name="filename"><button id="config-button">Upload Settings</button>
+    </div>
 </div>
 <br>
 {{#if service-defined}}
