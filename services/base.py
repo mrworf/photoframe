@@ -29,7 +29,7 @@ from modules.network import RequestNoNetwork
 from modules.network import RequestInvalidToken
 from modules.network import RequestExpiredToken
 from modules.images import ImageHolder
-
+from modules import debug
 from modules.memory import MemoryManager
 
 # This is the base implementation of a service. It provides all the
@@ -180,19 +180,27 @@ class BaseService:
     def getId(self):
         return self._ID
 
+    CONCURRENCY=0
+
     def getImagesTotal(self):
         # return the total number of images provided by this service
         logging.debug('getImagesTotal: Enter')
+        BaseService.CONCURRENCY += 1
+        if BaseService.CONCURRENCY > 1:
+            logging.error('Multiple threads accessing getImagesTotal!')
+            print(repr(debug.stacktrace()))
+
         sum = 0
         if self.needKeywords():
             for keyword in self.getKeywords():
                 if keyword not in self._STATE["_NUM_IMAGES"] or keyword not in self._STATE['_NEXT_SCAN'] \
                   or self._STATE['_NEXT_SCAN'][keyword] < time.time():
 
-                    logging.debug('Keywords either not scanned or we need to scan now')
+                    logging.debug('Keywords either not scanned or we need to scan now') # ERROR! This will cause this method to do more than it should
                     self._getImagesFor(keyword)  # Will make sure to get images
                     self._STATE['_NEXT_SCAN'][keyword] = time.time() + self.REFRESH_DELAY
                 sum = sum + self._STATE["_NUM_IMAGES"][keyword]
+        BaseService.CONCURRENCY -= 1
         logging.debug('getImagesTotal: Exit')
         return sum
 

@@ -32,7 +32,7 @@ class Pexels(BaseService):
     AUTHKEY = ''
 
     def __init__(self, configDir, id, name):
-        BaseService.__init__(self, configDir, id, name, needConfig=True)
+        BaseService.__init__(self, configDir, id, name, needConfig=False)
 
     def getConfigurationFields(self):
         return {'authkey' : {'type' : 'STR', 'name' : 'API key', 'description' : 'A pexels.com API key in order to access their API endpoints'}}

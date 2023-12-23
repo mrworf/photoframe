@@ -171,7 +171,7 @@ class slideshow:
             lambda: self.display.message('No internet connection\n\nCheck router, wifi-config.txt or cable'),
             lambda: self.settings.getUser('offline-behavior') != 'wait'
         )
-        self.display.setConfigPage('http://%s:%d/' % (helper.getDeviceIp(), server.get_server_port()))
+        self.display.setConfigPage('http://%s:%d/' % (helper.getDeviceIp(), helper.getServerPort()))
 
     def handleErrors(self, result):
         if result is None:
