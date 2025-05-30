@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # This file is part of photoframe (https://github.com/mrworf/photoframe).
 #
 # photoframe is free software: you can redistribute it and/or modify
@@ -40,23 +42,23 @@ class OAuth:
 		self.oauth = oauth
 
 	def hasOAuth(self):
-		return self.oauth != None
+		return self.oauth is not None
 
 	def getSession(self, refresh=False):
 		if not refresh:
 			auth = OAuth2Session(self.oauth['client_id'], token=self.cbGetToken())
 		else:
 			auth = OAuth2Session(self.oauth['client_id'],
-		                         token=self.cbGetToken(),
-		                         auto_refresh_kwargs={'client_id' : self.oauth['client_id'], 'client_secret' : self.oauth['client_secret']},
-		                         auto_refresh_url=self.oauth['token_uri'],
-		                         token_updater=self.cbSetToken)
+			                     token=self.cbGetToken(),
+			                     auto_refresh_kwargs={'client_id': self.oauth['client_id'], 'client_secret': self.oauth['client_secret']},
+			                     auto_refresh_url=self.oauth['token_uri'],
+			                     token_updater=self.cbSetToken)
 		return auth
 
 	def request(self, uri, destination=None, params=None, data=None, usePost=False):
 		ret = RequestResult()
 		result = None
-		stream = destination != None
+		stream = destination is not None
 		tries = 0
 
 		while tries < 5:
@@ -87,11 +89,11 @@ class OAuth:
 			except InvalidGrantError:
 				logging.error('Token is no longer valid, need to re-authenticate')
 				raise RequestInvalidToken
-			except:
-				logging.exception('Issues downloading')
+			except Exception as e:
+				logging.exception(f'Issues downloading: {e}')
 			time.sleep(tries * 10) # Back off 10, 20, ... depending on tries
 			tries += 1
-			logging.warning('Retrying again, attempt #%d', tries)
+			logging.warning(f'Retrying again, attempt #{tries}')
 
 		if tries == 5:
 			logging.error('Failed to download due to network issues')
@@ -105,8 +107,8 @@ class OAuth:
 							handle.write(chunk)
 				ret.setResult(RequestResult.SUCCESS).setHTTPCode(result.status_code)
 				ret.setHeaders(result.headers)
-			except:
-				logging.exception('Failed to download %s' % uri)
+			except Exception as e:
+				logging.exception(f'Failed to download {uri}: {e}')
 				ret.setResult(RequestResult.FAILED_SAVING)
 		else:
 			ret.setResult(RequestResult.SUCCESS).setHTTPCode(result.status_code)
@@ -115,8 +117,16 @@ class OAuth:
 		return ret
 
 	def getRedirectId(self):
-		r = requests.get('%s/?register' % self.ridURI)
-		return r.content
+		try:
+			r = requests.get(f'{self.ridURI}/?register')
+			if r.status_code == 200:
+				return r.content.decode('utf-8')
+			else:
+				logging.error(f'Failed to get redirect ID: HTTP {r.status_code}')
+				return None
+		except requests.exceptions.RequestException as e:
+			logging.error(f'Failed to get redirect ID: {e}')
+			return None
 
 	def initiate(self):
 		self.rid = self.getRedirectId()
@@ -124,7 +134,7 @@ class OAuth:
 		auth = OAuth2Session(self.oauth['client_id'],
 							scope=self.scope, # ['https://www.googleapis.com/auth/photos'],
 							redirect_uri=self.ridURI,
-							state='%s-%s-%s' % (self.rid, self.ip, self.extras))
+							state=f'{self.rid}-{self.ip}-{self.extras}')
 		authorization_url, state = auth.authorization_url(self.oauth['auth_uri'],
 		                                                  access_type="offline",
 		                                                  prompt="consent")
@@ -137,7 +147,7 @@ class OAuth:
 			auth = OAuth2Session(self.oauth['client_id'],
 			                     scope=self.scope, # ['https://www.googleapis.com/auth/photos'],
 			                     redirect_uri=self.ridURI,
-			                     state='%s-%s-%s' % (self.rid, self.ip, self.extras))
+			                     state=f'{self.rid}-{self.ip}-{self.extras}')
 
 			token = auth.fetch_token(self.oauth['token_uri'],
 			                         client_secret=self.oauth['client_secret'],
@@ -145,7 +155,7 @@ class OAuth:
 
 			self.cbSetToken(token)
 			return True
-		except:
-			logging.exception('Failed to complete OAuth')
+		except Exception as e:
+			logging.exception(f'Failed to complete OAuth: {e}')
 		return False
 

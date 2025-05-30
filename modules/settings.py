@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # This file is part of photoframe (https://github.com/mrworf/photoframe).
 #
 # photoframe is free software: you can redistribute it and/or modify
@@ -17,7 +19,8 @@ import os
 import json
 import logging
 import random
-from path import path
+from pathlib import Path
+from modules.path import path
 
 class settings:
   DEPRECATED_USER = ['resolution']
@@ -86,16 +89,16 @@ class settings:
           # Lastly, correct the tvservice field, should be "TEXT NUMBER TEXT"
           # This is a little bit of a cheat
           parts = self.settings['cfg']['tvservice'].split(' ')
-          if len(parts) == 3 and type(self.convertToNative(parts[1])) != int and type(self.convertToNative(parts[2])) == int:
+          if len(parts) == 3 and not isinstance(self.convertToNative(parts[1]), int) and isinstance(self.convertToNative(parts[2]), int):
             logging.debug('Reordering tvservice value due to old bug')
-            self.settings['cfg']['tvservice'] = "%s %s %s" % (parts[0], parts[2], parts[1])
+            self.settings['cfg']['tvservice'] = f"{parts[0]} {parts[2]} {parts[1]}"
             self.save()
-        except:
+        except Exception as e:
           logging.exception('Failed to load settings.json, corrupt file?')
           return False
       # make sure old settings.json files are still compatible and get updated with new keys
-      if "cachefolder" not in self.settings.keys():
-        self.settings["cachefolder"] = path.CACHEFOLDER
+      if "cachefolder" not in self.settings:
+        self.settings["cachefolder"] = str(path.CACHEFOLDER)
       return True
     else:
       return False
@@ -105,11 +108,13 @@ class settings:
       json.dump(self.settings, f)
 
   def convertToNative(self, value):
+    if not isinstance(value, str):
+      return value
     try:
       if '.' in value:
         return float(value)
       return int(value)
-    except:
+    except (ValueError, TypeError):
       return value
 
   def setUser(self, key, value):
@@ -121,7 +126,7 @@ class settings:
 
     if key in self.settings['cfg']:
       return self.settings['cfg'][key]
-    logging.warning('Trying to access non-existent user config key "%s"' % key)
+    logging.warning(f'Trying to access non-existent user config key "{key}"')
     try:
       a = 1 /0
       a += 1
@@ -149,8 +154,8 @@ class settings:
   def getKeyword(self, id=None):
     if id is None:
       rnd = random.SystemRandom().randint(0, len(self.settings['cfg']['keywords'])-1)
-      return rnd # self.settings['cfg']['keywords'][rnd]
-    elif id >= 0 and id < len(self.settings['cfg']['keywords']):
+      return rnd
+    elif 0 <= id < len(self.settings['cfg']['keywords']):
       return self.settings['cfg']['keywords'][id]
     else:
       return None
@@ -171,8 +176,8 @@ class settings:
 
   def get(self, key):
     if key == 'colortemp-script':
-      return path.COLORMATCH
+      return str(path.COLORMATCH)
     if key in self.settings:
       return self.settings[key]
-    logging.warning('Trying to access non-existent config key "%s"' % key)
+    logging.warning(f'Trying to access non-existent config key "{key}"')
     return None

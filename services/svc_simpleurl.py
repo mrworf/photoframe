@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
-from base import BaseService
+from services.base import BaseService
 import logging
 
 from modules.helper import helper
@@ -43,7 +43,7 @@ class SimpleUrl(BaseService):
   def getKeywordSourceUrl(self, index):
     keys = self.getKeywords()
     if index < 0 or index >= len(keys):
-      return 'Out of range, index = %d' % index
+      return f'Out of range, index = {index}'
     return keys[index]
 
   def validateKeywords(self, keywords):
@@ -89,10 +89,7 @@ class SimpleUrl(BaseService):
     return [image]
 
   def getContentUrl(self, image, hints):
-    url = image.url
-    url = url.replace('{width}', str(hints['size']['width']))
-    url = url.replace('{height}', str(hints['size']['height']))
-    return url
+    return image.getSource()
 
   # Treat the entire service as one album
   # That way you can group images by creating multiple Simple Url Services
@@ -106,3 +103,25 @@ class SimpleUrl(BaseService):
 
   def resetToLastAlbum(self):
     self.resetIndices()
+
+  def getStatus(self):
+    if len(self.getKeywords()) == 0:
+      return {
+        'status': 'error',
+        'message': f'{self.SERVICE_NAME} uses broken urls / unsupported images!',
+        'details': [
+          'Please add at least one URL to display',
+          'The URL must point to an image file',
+          'The image must be in a supported format (JPEG, PNG, etc.)'
+        ]
+      }
+    return {
+      'status': 'ok',
+      'message': f'{self.SERVICE_NAME} is ready to display images',
+      'details': [
+        'The service is properly configured',
+        'You can add more URLs as keywords',
+        'Each URL must point to an image file',
+        'The image must be in a supported format (JPEG, PNG, etc.)'
+      ]
+    }

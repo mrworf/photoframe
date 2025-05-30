@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # This file is part of photoframe (https://github.com/mrworf/photoframe).
 #
 # photoframe is free software: you can redistribute it and/or modify
@@ -15,42 +17,47 @@
 #
 import os
 import logging
+from pathlib import Path
 
 class path:
-  CONFIGFOLDER  = '/root/photoframe_config'
-  CONFIGFILE    = '/root/photoframe_config/settings.json'
-  COLORMATCH    = '/root/photoframe_config/colortemp.sh'
-  OPTIONSFILE   = '/root/photoframe_config/options'
-  CACHEFOLDER   = '/root/cache/'
-  HISTORYFOLDER = '/root/history/'
+    # Default paths relative to basedir
+    CONFIGFOLDER  = Path('photoframe_config')
+    CONFIGFILE    = CONFIGFOLDER / 'settings.json'
+    COLORMATCH    = CONFIGFOLDER / 'colortemp.sh'
+    OPTIONSFILE   = CONFIGFOLDER / 'options'
+    CACHEFOLDER   = Path('cache')
+    HISTORYFOLDER = Path('history')
 
-  DRV_BUILTIN   = '/root/photoframe/display-drivers'
-  DRV_EXTERNAL  = '/root/photoframe_config/display-drivers/'
+    DRV_BUILTIN   = Path('display-drivers')
+    DRV_EXTERNAL  = CONFIGFOLDER / 'display-drivers'
 
-  CONFIG_TXT    = '/boot/config.txt'
+    CONFIG_TXT    = Path('boot/config.txt')
 
-  def reassignConfigTxt(self, newconfig):
-    path.CONFIG_TXT = newconfig
+    @classmethod
+    def reassignConfigTxt(cls, newconfig):
+        cls.CONFIG_TXT = Path(newconfig)
 
-  def reassignBase(self, newbase):
-    path.CONFIGFOLDER   = path.CONFIGFOLDER.replace('/root/', newbase)
-    path.CONFIGFILE     = path.CONFIGFILE.replace('/root/', newbase)
-    path.OPTIONSFILE    = path.OPTIONSFILE.replace('/root/', newbase)
-    path.COLORMATCH     = path.COLORMATCH.replace('/root/', newbase)
-    path.DRV_BUILTIN    = path.DRV_BUILTIN.replace('/root/', newbase)
-    path.DRV_EXTERNAL   = path.DRV_EXTERNAL.replace('/root/', newbase)
-    path.CACHEFOLDER    = path.CACHEFOLDER.replace('/root/', newbase)
-    path.HISTORYFOLDER  = path.HISTORYFOLDER.replace('/root/', newbase)
+    @classmethod
+    def reassignBase(cls, newbase):
+        newbase = Path(newbase)
+        cls.CONFIGFOLDER   = newbase / 'photoframe_config'
+        cls.CONFIGFILE     = cls.CONFIGFOLDER / 'settings.json'
+        cls.OPTIONSFILE    = cls.CONFIGFOLDER / 'options'
+        cls.COLORMATCH     = cls.CONFIGFOLDER / 'colortemp.sh'
+        cls.DRV_BUILTIN    = newbase / 'display-drivers'
+        cls.DRV_EXTERNAL   = cls.CONFIGFOLDER / 'display-drivers'
+        cls.CACHEFOLDER    = newbase / 'cache'
+        cls.HISTORYFOLDER  = newbase / 'history'
+        cls.CONFIG_TXT     = newbase / 'boot/config.txt'
 
-  def validate(self):
-    # Supercritical, since we store all photoframe files in a subdirectory, make sure to create it
-    if not os.path.exists(path.CONFIGFOLDER):
-      try:
-        os.mkdir(path.CONFIGFOLDER)
-      except:
-        logging.exception('Unable to create configuration directory, cannot start')
-        return False
-    elif not os.path.isdir(path.CONFIGFOLDER):
-      logging.error('%s isn\'t a folder, cannot start', path.CONFIGFOLDER)
-      return False
-    return True
+    @classmethod
+    def validate(cls):
+        # Supercritical, since we store all photoframe files in a subdirectory, make sure to create it
+        try:
+            cls.CONFIGFOLDER.mkdir(parents=True, exist_ok=True)
+            cls.CACHEFOLDER.mkdir(parents=True, exist_ok=True)
+            cls.HISTORYFOLDER.mkdir(parents=True, exist_ok=True)
+            return True
+        except Exception as e:
+            logging.exception(f'Unable to create configuration directory, cannot start: {e}')
+            return False

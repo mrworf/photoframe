@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # This file is part of photoframe (https://github.com/mrworf/photoframe).
 #
 # photoframe is free software: you can redistribute it and/or modify
@@ -17,6 +19,7 @@
 import logging
 import os
 import shutil
+from pathlib import Path
 
 from modules.path import path as syspath
 
@@ -35,8 +38,8 @@ class ImageHistory:
       for filename in [os.path.join(p, f) for f in files]:
         try:
           os.unlink(filename)
-        except:
-          logging.exception('Failed to delete "%s"' % filename)
+        except Exception as e:
+          logging.exception(f'Failed to delete "{filename}": {e}')
 
   def _find(self, file):
     return next((entry for entry in self._HISTORY if entry.filename == file), None)
@@ -66,7 +69,7 @@ class ImageHistory:
 
   def getByIndex(self, index):
     if index < 0 or index >= len(self._HISTORY):
-      logging.warning('History index requested is out of bounds (%d wanted, have 0-%d)', index, len(self._HISTORY)-1)
+      logging.warning(f'History index requested is out of bounds ({index} wanted, have 0-{len(self._HISTORY)-1})')
       return None
     entry = self._HISTORY[index]
     # We need to make a copy which is safe to delete!

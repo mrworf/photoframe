@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
-from base import BaseService
+from services.base import BaseService
 import random
 import os
 import json
@@ -53,9 +53,9 @@ class PicasaWeb(BaseService):
   def getKeywordSourceUrl(self, index):
     keys = self.getKeywords()
     if index < 0 or index >= len(keys):
-      return 'Out of range, index = %d' % index
+      return f'Out of range, index = {index}'
     keywords = keys[index]
-    return 'https://photos.google.com/search/' + keywords
+    return f'https://photos.google.com/search/{keywords}'
 
   def prepareNextItem(self, destinationFile, supportedMimeTypes, displaySize):
     result = self.fetchImage(destinationFile, supportedMimeTypes, displaySize)
@@ -124,7 +124,8 @@ class PicasaWeb(BaseService):
     return None, None
 
   def getImagesFor(self, keyword):
-    return None
+    if keyword is None:
+      return None
 
     images = None
     filename = os.path.join(self.getStoragePath(), self.hashString(keyword) + '.json')
@@ -132,20 +133,20 @@ class PicasaWeb(BaseService):
       # Request albums
       # Picasa limits all results to the first 1000, so get them
       params = {
-        'kind' : 'photo',
-        'start-index' : 1,
-        'max-results' : 1000,
-        'alt' : 'json',
-        'access' : 'all',
-        'imgmax' : '1600u', # We will replace this with width of framebuffer in pick_image
+        'kind': 'photo',
+        'start-index': 1,
+        'max-results': 1000,
+        'alt': 'json',
+        'access': 'all',
+        'imgmax': '1600u',  # We will replace this with width of framebuffer in pick_image
         # This is where we get cute, we pick from a list of keywords
-        'fields' : 'entry(title,content,gphoto:timestamp,gphoto:videostatus)', # No unnecessary stuff
-        'q' : keyword
+        'fields': 'entry(title,content,gphoto:timestamp,gphoto:videostatus)',  # No unnecessary stuff
+        'q': keyword
       }
       url = 'https://picasaweb.google.com/data/feed/api/user/default'
       data = self.requestUrl(url, params=params)
       if not data.isSuccess():
-        logging.warning('Requesting photo failed with status code %d', data.httpcode)
+        logging.warning(f'Requesting photo failed with status code {data.httpcode}')
       else:
         with open(filename, 'w') as f:
           f.write(data.content)
@@ -156,3 +157,32 @@ class PicasaWeb(BaseService):
         images = json.load(f)
     print(repr(images))
     return images
+
+  def selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize):
+    images = self.getImagesFor(self.getCurrentKeyword())
+    if images is None or len(images) == 0:
+      return None
+
+    total = len(images)
+    if total == 0:
+      return None
+
+    if randomize:
+      offset = random.randint(0, total - 1)
+    else:
+      offset = 0
+
+    for i in range(total):
+      index = (i + offset) % total
+      if images[index]['mimeType'] not in supportedMimeTypes:
+        logging.debug(f"Skipping image '{images[index]['filename']}' due to wrong orientation!")
+        continue
+      return images[index]
+
+  def getContentUrl(self, image, hints):
+    width = hints['size']['width']
+    entry = image.getSource()
+    if entry['content']['type'].startswith('image/'):
+      return entry['content']['type'], entry['content']['src'].replace('/s1600/', f'/s{width}/', 1)
+    logging.warning(f"Unsupported media: {entry['content']['type']} (video = {repr('gphoto$videostatus' in entry)})")
+    return None, None

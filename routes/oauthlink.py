@@ -17,7 +17,7 @@
 import logging
 import json
 
-from baseroute import BaseRoute
+from .baseroute import BaseRoute
 
 class RouteOAuthLink(BaseRoute):
     def setupex(self, servicemgr, slideshow):

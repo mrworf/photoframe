@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # This file is part of photoframe (https://github.com/mrworf/photoframe).
 #
 # photoframe is free software: you can redistribute it and/or modify
@@ -14,7 +16,7 @@
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
 import logging
-import flask
+from flask import request, abort, redirect, jsonify
 
 class BaseRoute:
   SIMPLE = False
@@ -62,18 +64,18 @@ class BaseRoute:
     return self.handle(self.app, **kwargs)    
 
   def handle(self, app, **kwargs):
-    msg = '%s does not have an implementation' % self._URL
+    msg = f'{self._URL} does not have an implementation'
     logging.error(msg)
     return msg, 200
 
   def getRequest(self):
-    return flask.request
+    return request
 
   def setAbort(self, code):
-    return flask.abort(code)
+    return abort(code)
 
   def redirect(self, url):
-    return flask.redirect(url)
+    return redirect(url)
 
   def jsonify(self, data):
-    return flask.json.jsonify(data)
+    return jsonify(data)

@@ -18,7 +18,7 @@ import logging
 import os
 
 from werkzeug.utils import secure_filename
-from baseroute import BaseRoute
+from .baseroute import BaseRoute
 
 class RouteUpload(BaseRoute):
   def setupex(self, settingsmgr, drivermgr):

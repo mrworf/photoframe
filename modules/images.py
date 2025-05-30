@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # This file is part of photoframe (https://github.com/mrworf/photoframe).
 #
 # photoframe is free software: you can redistribute it and/or modify
@@ -85,7 +87,7 @@ class ImageHolder:
   def getCacheId(self):
     if self.id is None:
       return None
-    return hashlib.sha1(self.id).hexdigest()
+    return hashlib.sha1(self.id.encode()).hexdigest()
 
   def copy(self):
     copy = ImageHolder()

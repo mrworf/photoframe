@@ -41,7 +41,7 @@ class remember:
 		if os.path.exists(self.filename):
 			os.unlink(self.filename)
 		else:
-			logging.warning("Asked to delete %s but it doesn't exist", self.filename)
+			logging.warning(f"Asked to delete {self.filename} but it doesn't exist")
 
 	def _hash(self, text):
 		return hashlib.sha1(text).hexdigest()
@@ -57,7 +57,7 @@ class remember:
 		return len(self.memory['seen']) == self.count
 
 	def debug(self):
-		logging.info('[%s] Seen %d, expected to see %d', self.filename, len(self.memory['seen']), self.memory['count'])
+		logging.info(f'[{self.filename}] Seen {len(self.memory["seen"])}, expected to see {self.memory["count"]}')
 
 	def seen(self, id):
 		index = self._hash(id)

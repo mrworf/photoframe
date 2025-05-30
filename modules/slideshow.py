@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # This file is part of photoframe (https://github.com/mrworf/photoframe).
 #
 # photoframe is free software: you can redistribute it and/or modify
@@ -17,6 +19,7 @@ import threading
 import logging
 import os
 import time
+from pathlib import Path
 
 from modules.helper import helper
 from modules.network import RequestNoNetwork
@@ -104,7 +107,7 @@ class slideshow:
 
   def createEvent(self, cmd):
     if cmd not in slideshow.EVENTS:
-      logging.warning("Unknown event '%s' received, will not act upon it" % cmd)
+      logging.warning(f"Unknown event '{cmd}' received, will not act upon it")
       return
     else:
       logging.debug('Event %s added to the queue', cmd)
@@ -157,7 +160,7 @@ class slideshow:
     cd = self.countdown
     while (cd > 0):
       time_process = time.time()
-      self.display.message('Starting in %d' % (cd))
+      self.display.message(f'Starting in {cd}')
       cd -= 1
       time_process = time.time() - time_process
       if time_process < 1.0:
@@ -170,17 +173,17 @@ class slideshow:
       lambda: self.display.message('No internet connection\n\nCheck router, wifi-config.txt or cable'),
       lambda: self.settings.getUser('offline-behavior') != 'wait'
     )
-    self.display.setConfigPage('http://%s:%d/' % (helper.getDeviceIp(), 7777))
+    self.display.setConfigPage(f'http://{helper.getDeviceIp()}:7777/')
 
   def handleErrors(self, result):
     if result is None:
       serviceStates = self.services.getAllServiceStates()
       if len(serviceStates) == 0:
-        msg = 'Photoframe isn\'t ready yet\n\nPlease direct your webbrowser to\n\nhttp://%s:7777/\n\nand add one or more photo providers' % helper.getDeviceIp()
+        msg = f'Photoframe isn\'t ready yet\n\nPlease direct your webbrowser to\n\nhttp://{helper.getDeviceIp()}:7777/\n\nand add one or more photo providers'
       else:
-        msg = 'Please direct your webbrowser to\n\nhttp://%s:7777/\n\nto complete the setup process' % helper.getDeviceIp()
+        msg = f'Please direct your webbrowser to\n\nhttp://{helper.getDeviceIp()}:7777/\n\nto complete the setup process'
         for svcName, state, additionalInfo in serviceStates:
-          msg += "\n\n"+svcName+": "
+          msg += f"\n\n{svcName}: "
           if state == 'OAUTH':
             msg += "Authorization required"
           elif state == 'CONFIG':
@@ -191,15 +194,15 @@ class slideshow:
             msg += "No images could be found"
 
           if additionalInfo is not None:
-            msg += "\n\n"+additionalInfo
+            msg += f"\n\n{additionalInfo}"
 
       self.display.message(msg)
       self.imageCurrent = None
       return True
 
     if result.error is not None:
-      logging.debug('%s failed:\n\n%s' % (self.services.getLastUsedServiceName(), result.error))
-      self.display.message('%s failed:\n\n%s' % (self.services.getLastUsedServiceName(), result.error))
+      logging.debug(f'{self.services.getLastUsedServiceName()} failed:\n\n{result.error}')
+      self.display.message(f'{self.services.getLastUsedServiceName()} failed:\n\n{result.error}')
       self.imageCurrent = None
       return True
     return False
@@ -208,11 +211,12 @@ class slideshow:
     if self.colormatch.hasSensor():
       # For Now: Always process original image (no caching of colormatch-adjusted images)
       # 'colormatched_tmp.jpg' will be deleted after the image is displayed
-      p, f = os.path.split(filenameProcessed)
-      ofile = os.path.join(p, "colormatch_" + f + '.png')
-      if self.colormatch.adjust(filenameProcessed, ofile):
+      p = Path(filenameProcessed).parent
+      f = Path(filenameProcessed).name
+      ofile = p / f"colormatch_{f}.png"
+      if self.colormatch.adjust(filenameProcessed, str(ofile)):
         os.unlink(filenameProcessed)
-        return ofile
+        return str(ofile)
       logging.warning('Unable to adjust image to colormatch, using original')
     return filenameProcessed
 

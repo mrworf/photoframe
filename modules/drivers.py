@@ -31,7 +31,7 @@ class drivers:
 			try:
 				os.mkdir(path.DRV_EXTERNAL)
 			except:
-				logging.exception('Unable to create "%s"', path.DRV_EXTERNAL)
+				logging.exception(f'Unable to create "{path.DRV_EXTERNAL}"')
 
 	def _list_dir(self, path):
 		result = {}
@@ -63,7 +63,7 @@ class drivers:
 		try:
 			shutil.rmtree(folder)
 		except:
-			logging.exception('Failed to delete "%s"', folder)
+			logging.exception(f'Failed to delete "{folder}"')
 
 	def _parse(self, installer):
 		root = os.path.dirname(installer)
@@ -93,14 +93,14 @@ class drivers:
 						src = src.strip()
 						dst = dst.strip()
 						if dst == '' or src == '':
-							logging.error('Install section cannot have an empty source or destination filename (Line %d)', lc)
+							logging.error(f'Install section cannot have an empty source or destination filename (Line {lc})')
 							return None
 						if '..' in src or src.startswith('/'):
-							logging.error('Install section must use files within package (Line %d)', lc)
+							logging.error(f'Install section must use files within package (Line {lc})')
 							return None
 						src = os.path.join(root, src)
 						if not os.path.exists(src):
-							logging.error('INSTALL manifest points to non-existant file (Line %d)', lc)
+							logging.error(f'INSTALL manifest points to non-existant file (Line {lc})')
 							return None
 						config['install'].append({'src':src, 'dst':dst})
 					elif state == 2:
@@ -111,10 +111,10 @@ class drivers:
 						key = key.strip()
 						value = value.strip()
 						if key == '' or value == '':
-							logging.error('Options section cannot have an empty key or value (Line %d)', lc)
+							logging.error(f'Options section cannot have an empty key or value (Line {lc})')
 							return None
 						if key in config['options']:
-							logging.warning('Key "%s" will be overridden since it is defined multiple times (Line %d)', lc)
+							logging.warning(f'Key "{key}" will be overridden since it is defined multiple times (Line {lc})')
 						if value.lower() in ['true', 'yes']:
 							value = True
 						elif value.lower() in ['false', 'no']:
@@ -129,7 +129,7 @@ class drivers:
 			logging.info('All drivers have typically ONE config value, this must be an old INSTALL file, try to compensate')
 			config['config'] = []
 			for k in config['options']:
-				config['config'].append('%s=%s' % (k, config['options'][k]))
+				config['config'].append(f'{k}={config["options"][k]}')
 			config.pop('options', None)
 
 		return config
@@ -167,7 +167,7 @@ class drivers:
 		# First, make sure we erase existing driver
 		dstfolder = os.path.join(path.DRV_EXTERNAL, config['driver'])
 		if os.path.exists(dstfolder):
-			logging.info('"%s" already exists, delete before installing', dstfolder)
+			logging.info(f'"{dstfolder}" already exists, delete before installing')
 			self._deletefolder(dstfolder)
 		os.mkdir(dstfolder)
 
@@ -180,7 +180,7 @@ class drivers:
 			try:
 				shutil.copyfile(os.path.join(folder, extra, src), os.path.join(dstfolder, dst))
 			except:
-				logging.exception('Failed to copy "%s" to "%s"', os.path.join(folder, extra, src), os.path.join(dstfolder, dst))
+				logging.exception(f'Failed to copy "{os.path.join(folder, extra, src)}" to "{os.path.join(dstfolder, dst)}"')
 				# Shitty, but we cannot leave this directory with partial files
 				self._deletefolder(dstfolder)
 				self._deletefolder(folder)
@@ -210,7 +210,7 @@ class drivers:
 		if driver is not None:
 			# Check that this driver exists
 			if driver not in driverlist:
-				logging.error('Tried to active non-existant driver "%s"', driver)
+				logging.error(f'Tried to active non-existant driver "{driver}"')
 				return None
 
 		config = {'name':'', 'install':[], 'config' : [], 'options':{}}
@@ -221,7 +221,7 @@ class drivers:
 					config = json.load(f)
 				root = driverlist[driver]
 			except:
-				logging.exception('Failed to load manifest for %s', driver)
+				logging.exception(f'Failed to load manifest for {driver}')
 				return None
 			# Reformat old
 			if 'version' not in config:
@@ -238,7 +238,7 @@ class drivers:
 			try:
 				shutil.copyfile(os.path.join(root, copy['src']), copy['dst'])
 			except:
-				logging.exception('Failed to copy "%s" to "%s"', copy['src'], copy['dst'])
+				logging.exception(f'Failed to copy "{copy["src"]}" to "{copy["dst"]}"')
 				return None
 
 		# Next, load the config.txt and insert/replace our section

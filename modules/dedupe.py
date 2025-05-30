@@ -37,7 +37,7 @@ class DedupeManager:
 
   def _hamming(self, s1, s2):
       h = 0
-      for i in range(0, len(s1)/2):
+      for i in range(0, len(s1)//2):
           i1 = int(s1[i*2:i*2+2], 16)
           i2 = int(s2[i*2:i*2+2], 16)
           h += self._hamming_distance(i1, i2)

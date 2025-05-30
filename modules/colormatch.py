@@ -78,10 +78,10 @@ class colormatch(Thread):
 		if temperature is None:
 			temperature = self.temperature
 		if self.min is not None and temperature < self.min:
-			logging.debug('Actual color temp measured is %d, but we cap to %dK' % (temperature, self.min))
+			logging.debug(f'Actual color temp measured is {temperature}, but we cap to {self.min}K')
 			temperature = self.min
 		elif self.max is not None and temperature > self.max:
-			logging.debug('Actual color temp measured is %d, but we cap to %dK' % (temperature, self.max))
+			logging.debug(f'Actual color temp measured is {temperature}, but we cap to {self.max}K')
 			temperature = self.max
 		else:
 			logging.debug('Adjusting color temperature to %dK' % temperature)

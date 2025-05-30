@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with photoframe.  If not, see <http://www.gnu.org/licenses/>.
 #
-from base import BaseService
+from services.base import BaseService
 import os
 import json
 import logging
@@ -88,8 +88,8 @@ class GooglePhotos(BaseService):
   def getKeywordSourceUrl(self, index):
     keys = self.getKeywords()
     if index < 0 or index >= len(keys):
-      return 'Out of range, index = %d' % index
-    keywords = keys[index]
+      return f'Out of range, index = {index}'
+    keyword = keys[index]
     extras = self.getExtras()
     if keywords not in extras:
       return 'https://photos.google.com/'
@@ -99,7 +99,7 @@ class GooglePhotos(BaseService):
     # Override so we can tell more, for google it means we simply review what we would show
     keys = self.getKeywords()
     if index < 0 or index >= len(keys):
-      return 'Out of range, index = %d' % index
+      return f'Out of range, index = {index}'
     keyword = keys[index]
 
     # This is not going to be fast...
@@ -129,9 +129,9 @@ class GooglePhotos(BaseService):
     unsupported = []
     for i in types:
       if i in mimes:
-        longer.append('%s has %d items' % (i, types[i]))
+        longer.append(f'{i} has {types[i]} items')
       else:
-        unsupported.append('%s has %d items' % (i, types[i]))
+        unsupported.append(f'{i} has {types[i]} items')
 
     extra = ''
     if len(unsupported) > 0:
@@ -139,9 +139,9 @@ class GooglePhotos(BaseService):
       longer.append('Mime types listed below were also found but are as of yet not supported:')
       longer.extend(unsupported)
     if countu > 0:
-      extra = ' where %d is not yet unsupported' % countu
+      extra = f' where {countu} is not yet unsupported'
     return {
-      'short': '%d items fetched from album, %d images%s, %d videos, %d is unknown. %d has been shown' % (len(data), counti + countu, extra, countv, len(data) - counti - countv, len(memory)),
+      'short': f'{len(data)} items fetched from album, {counti + countu} images{extra}, {countv} videos, {len(data) - counti - countv} is unknown. {len(memory)} has been shown',
       'long' : longer
     }
 
@@ -183,9 +183,9 @@ class GooglePhotos(BaseService):
     if keywords != 'latest':
       albumId = self.translateKeywordToId(keywords)
       if albumId is None:
-        return {'error':'No such album "%s"' % keywords, 'keywords' : keywords}
+        return {'error': f'No such album "{keywords}"', 'keywords': keywords}
 
-    return {'error':None, 'keywords':keywords, 'extras' : albumId}
+    return {'error': None, 'keywords': keywords, 'extras': albumId}
 
   def addKeywords(self, keywords):
     result = BaseService.addKeywords(self, keywords)
@@ -242,57 +242,88 @@ class GooglePhotos(BaseService):
     if keyword == 'latest':
       return None
 
-    logging.debug('Query Google Photos for album named "%s"', keyword)
+    logging.debug(f'Query Google Photos for album named "{keyword}"')
     url = 'https://photoslibrary.googleapis.com/v1/albums'
-    params={'pageSize':50} #50 is api max
+    params = {'pageSize': 50}  # 50 is api max
+    allofit = {}  # Keep track of all responses for debugging
     while True:
+      logging.debug(f'Making request to {url} with params {params}')
       data = self.requestUrl(url, params=params)
       if not data.isSuccess():
+        logging.error(f'Failed to get albums: {data.content}')
         return None
-      data = json.loads(data.content)
-      for i in range(len(data['albums'])):
-        if 'title' in data['albums'][i]:
-          logging.debug('Album: %s' % data['albums'][i]['title'])
-        if 'title' in data['albums'][i] and data['albums'][i]['title'].upper().lower().strip() == keyword:
-          logging.debug('Found album: ' + repr(data['albums'][i]))
-          albumname = data['albums'][i]['title']
-          albumid = data['albums'][i]['id']
-          source = data['albums'][i]['productUrl']
-          break
-      if albumid is None and 'nextPageToken' in data:
-        logging.debug('Another page of albums available')
-        params['pageToken'] = data['nextPageToken']
-        continue
-      break
 
-    if albumid is None:
-      url = 'https://photoslibrary.googleapis.com/v1/sharedAlbums'
-      params = {'pageSize':50}#50 is api max
-      while True:
-        data = self.requestUrl(url, params=params)
-        if not data.isSuccess():
-          return None
-        data = json.loads(data.content)
-        if 'sharedAlbums' not in data:
-          logging.debug('User has no shared albums')
-          break
-        for i in range(len(data['sharedAlbums'])):
-          if 'title' in data['sharedAlbums'][i]:
-            logging.debug('Shared Album: %s' % data['sharedAlbums'][i]['title'])
-          if 'title' in data['sharedAlbums'][i] and data['sharedAlbums'][i]['title'].upper().lower().strip() == keyword:
-            albumname = data['sharedAlbums'][i]['title']
-            albumid = data['sharedAlbums'][i]['id']
-            source = data['sharedAlbums'][i]['productUrl']
+      result = None
+      try:
+        result = json.loads(data.content)
+        logging.debug(f'Response: {result}')
+      except json.JSONDecodeError as e:
+        logging.error(f'Failed to decode response: {e}')
+        return None
+
+      # Add to allofit for debugging
+      # Recursively merge result into allofit
+      def merge_dicts(d1, d2):
+        for k, v in d2.items():
+          if k in d1 and isinstance(d1[k], dict) and isinstance(v, dict):
+            merge_dicts(d1[k], v)
+          elif k in d1 and isinstance(d1[k], list) and isinstance(v, list):
+            d1[k].extend(v)
+          else:
+            d1[k] = v
+      
+      if not allofit:
+        allofit.update(result)
+      else:
+        merge_dicts(allofit, result)
+
+      if not isinstance(result, dict):
+        logging.error(f'Invalid response format: {result}')
+        return None
+
+      if 'albums' not in result:
+        logging.error(f'No albums in response: {result}')
+        return None
+
+      # Check personal albums
+      for album in result['albums']:
+        print(f'Album: {album}')  # Keep print for immediate visibility
+        if 'title' in album and album['title']:
+          if album['title'].upper().lower().strip() == keyword.upper().lower().strip():
+            albumid = album['id']
+            source = album['productUrl']
+            albumname = album['title']
             break
-        if albumid is None and 'nextPageToken' in data:
-          logging.debug('Another page of shared albums available')
-          params['pageToken'] = data['nextPageToken']
-          continue
+
+      # Check shared albums if not found in personal albums
+      if albumid is None and 'sharedAlbums' in result:
+        for album in result['sharedAlbums']:
+          print(f'Shared Album: {album}')  # Keep print for immediate visibility
+          if 'title' in album and album['title']:
+            if album['title'].upper().lower().strip() == keyword.upper().lower().strip():
+              albumid = album['id']
+              source = album['productUrl']
+              albumname = album['title']
+              break
+
+      if albumid is not None or 'nextPageToken' not in result:
         break
+      params['pageToken'] = result['nextPageToken']
+
+    # Save allofit to a file for debugging
+    with open('allofit.json', 'w') as f:
+      json.dump(allofit, f)
 
     if albumid is None:
+      logging.debug(f'No album found with name "{keyword}"')
       return None
-    return {'albumId': albumid, 'sourceUrl' : source, 'albumName' : albumname}
+
+    logging.debug(f'Found album: {albumname} (ID: {albumid})')
+    return {
+      'albumId': albumid,
+      'sourceUrl': source,
+      'albumName': albumname
+    }
 
   def selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize):
     result = BaseService.selectImageFromAlbum(self, destinationDir, supportedMimeTypes, displaySize, randomize)
@@ -314,99 +345,78 @@ class GooglePhotos(BaseService):
   def clearImagesFor(self, keyword):
     filename = os.path.join(self.getStoragePath(), self.hashString(keyword) + '.json')
     if os.path.exists(filename):
-      logging.info('Cleared image information for %s' % keyword)
       os.unlink(filename)
+    logging.info(f'Cleared image information for {keyword}')
 
   def getImagesFor(self, keyword, rawReturn=False):
-    filename = os.path.join(self.getStoragePath(), self.hashString(keyword) + '.json')
+    query = self.getQueryForKeyword(keyword)
+    if query is None:
+      logging.error(f'Unable to create query the keyword "{keyword}"')
+      return [BaseService.createImageHolder(self).setError(f'Unable to get photos using keyword "{keyword}"')]
+
     result = []
-    if not os.path.exists(filename):
-      # First time, translate keyword into albumid
-      params = self.getQueryForKeyword(keyword)
-      if params is None:
-        logging.error('Unable to create query the keyword "%s"', keyword)
-        return [BaseService.createImageHolder(self).setError('Unable to get photos using keyword "%s"' % keyword)]
+    while True:
+      data = self.requestUrl('https://photoslibrary.googleapis.com/v1/mediaItems:search', usePost=True, data=query)
+      if not data.isSuccess():
+        logging.warning(f'Requesting photo failed with status code {data.httpcode}')
+        break
 
-      url = 'https://photoslibrary.googleapis.com/v1/mediaItems:search'
-      maxItems = GooglePhotos.MAX_ITEMS # Should be configurable
-
-      while len(result) < maxItems:
-        data = self.requestUrl(url, data=params, usePost=True)
-        if not data.isSuccess():
-          logging.warning('Requesting photo failed with status code %d', data.httpcode)
-          logging.warning('More details: ' + repr(data.content))
-          break
-        else:
-          data = json.loads(data.content)
-          if 'mediaItems' not in data:
-            break
-          logging.debug('Got %d entries, adding it to existing %d entries', len(data['mediaItems']), len(result))
-          result += data['mediaItems']
-          if 'nextPageToken' not in data:
-            break
-          params['pageToken'] = data['nextPageToken']
-          logging.debug('Fetching another result-set for this keyword')
-
-      if len(result) > 0:
-        with open(filename, 'w') as f:
-          json.dump(result, f)
-      else:
-        logging.error('No result returned for keyword "%s"!', keyword)
-        return []
-
-    # Now try loading
-    if os.path.exists(filename):
+      response = None
       try:
-        with open(filename, 'r') as f:
-          albumdata = json.load(f)
+        response = json.loads(data.content)
+      except json.JSONDecodeError as e:
+        logging.error(f'Failed to decode response: {e}')
+        break
+
+      if 'mediaItems' not in response:
+        break
+
+      logging.debug(f'Got {len(response["mediaItems"])} entries, adding it to existing {len(result)} entries')
+      result.extend(response['mediaItems'])
+
+      if 'nextPageToken' not in response:
+        break
+      query['pageToken'] = response['nextPageToken']
+
+    if len(result) == 0:
+      logging.error(f'No result returned for keyword "{keyword}"!')
+      return []
+
+    filename = os.path.join(self.getStoragePath(), self.hashString(keyword) + '.json')
+    try:
+      with open(filename, 'w') as f:
+        json.dump(result, f)
+    except Exception as e:
+      logging.exception(f'Failed to decode JSON file, maybe it was corrupted? Size is {os.path.getsize(filename)}')
+      logging.error(f'Since file is corrupt, we try to save a copy for later analysis ({filename}.corrupt)')
+      try:
+        os.rename(filename, filename + '.corrupt')
       except:
-        logging.exception('Failed to decode JSON file, maybe it was corrupted? Size is %d', os.path.getsize(filename))
-        logging.error('Since file is corrupt, we try to save a copy for later analysis (%s.corrupt)', filename)
-        try:
-          if os.path.exists(filename + '.corrupt'):
-            os.unlink(filename + '.corrupt')
-          os.rename(filename, filename + '.corrupt')
-        except:
-          logging.exception('Failed to save copy of corrupt file, deleting instead')
-          os.unlink(filename)
-        albumdata = None
+        pass
+
     if rawReturn:
-      return albumdata
-    return self.parseAlbumInfo(albumdata, keyword)
+      return result
+
+    return self.parseAlbumInfo(result, keyword)
 
   def parseAlbumInfo(self, data, keyword):
     # parse GooglePhoto specific keys into a format that the base service can understand
-    if data is None:
-      return None
-    parsedImages = []
+    result = []
     for entry in data:
-      if entry['mimeType'] not in helper.getSupportedTypes():
-        continue
-      try:
-        item = BaseService.createImageHolder(self)
-        item.setId(entry['id'])
-        item.setSource(entry['productUrl']).setMimetype(entry['mimeType'])
-        item.setDimensions(entry['mediaMetadata']['width'], entry['mediaMetadata']['height'])
-        item.allowCache(True)
-        item.setContentProvider(self)
-        item.setContentSource(keyword)
-        parsedImages.append(item)
-      except:
-        logging.exception('Failed due to:')
-        logging.debug('Entry: %s', repr(entry))
-
-    return parsedImages
+      logging.debug(f'Entry: {repr(entry)}')
+      result.append(self.createImageHolder().setId(entry['id']).setMimetype(entry['mimeType']))
+    return result
 
   def getContentUrl(self, image, hints):
     # Tricky, we need to obtain the real URL before doing anything
-    data = self.requestUrl('https://photoslibrary.googleapis.com/v1/mediaItems/%s' % image.id)
-    if data.result != RequestResult.SUCCESS:
-      logging.error('%d,%d: Failed to get URL', data.httpcode, data.result)
+    data = self.requestUrl(f'https://photoslibrary.googleapis.com/v1/mediaItems/{image.id}')
+    if not data.isSuccess():
+      logging.error(f'{data.httpcode}: Failed to get URL')
       return None
-
-    data = json.loads(data.content)
-    if 'baseUrl' not in data:
-      logging.error('Data from Google didn\'t contain baseUrl, see original content:')
-      logging.error(repr(data))
+    result = None
+    try:
+      result = json.loads(data.content)
+      return result['baseUrl']
+    except (json.JSONDecodeError, KeyError) as e:
+      logging.error(f'Failed to get baseUrl: {e}')
       return None
-    return data['baseUrl'] + "=w" + str(hints['size']["width"]) + "-h" + str(hints['size']["height"])

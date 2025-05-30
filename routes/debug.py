@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # This file is part of photoframe (https://github.com/mrworf/photoframe).
 #
 # photoframe is free software: you can redistribute it and/or modify
@@ -15,7 +17,7 @@
 #
 
 import modules.debug as debug
-from baseroute import BaseRoute
+from .baseroute import BaseRoute
 
 class RouteDebug(BaseRoute):
   SIMPLE = True # We have no dependencies to the rest of the system
@@ -37,10 +39,10 @@ class RouteDebug(BaseRoute):
     message = '''<h1>Photoframe Log report</h1><div style="margin: 15pt; padding 10pt">This page is intended to be used when you run into issues which cannot be resolved by the messages displayed on the frame. Please save and attach this information
     when you <a href="https://github.com/mrworf/photoframe/issues/new">create a new issue</a>.<br><br>Thank you for helping making this project better &#128517;</div>'''
     for item in report:
-      message += '<h1>%s</h1><pre style="margin: 15pt; padding: 10pt; border: 1px solid; background-color: #eeeeee">' % item[0]
+      message += f'<h1>{item[0]}</h1><pre style="margin: 15pt; padding: 10pt; border: 1px solid; background-color: #eeeeee">'
       if item[1]:
         for line in item[1]:
-          message += line + '\n'
+          message += f'{line}\n'
       else:
         message += '--- Data unavailable ---'
       message += '''</pre>'''

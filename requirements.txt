@@ -1,0 +1,6 @@
+oauthlib
+requests
+requests_oauthlib
+flask
+flask_httpauth
+

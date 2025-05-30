@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # This file is part of photoframe (https://github.com/mrworf/photoframe).
 #
 # photoframe is free software: you can redistribute it and/or modify
@@ -21,6 +23,7 @@ import shutil
 import re
 import random
 import time
+from pathlib import Path
 
 try:
 	import netifaces
@@ -69,7 +72,7 @@ class helper:
 	@staticmethod
 	def getResolution():
 		res = None
-		output = subprocess.check_output(['/bin/fbset'], stderr=subprocess.DEVNULL)
+		output = subprocess.check_output(['/bin/fbset'], stderr=subprocess.DEVNULL).decode('utf-8')
 		for line in output.split('\n'):
 			line = line.strip()
 			if line.startswith('mode "'):
@@ -91,7 +94,7 @@ class helper:
 				# We weren't able to import, so switch it up
 				helper.NETWORK_CHECK = False
 				return helper._checkNetwork()
-			except:
+			except Exception as e:
 				helper.NETWORK_CHECK = False
 				logging.exception('netifaces call failed, using checkNetwork() instead (depends on internet)')
 				return helper._checkNetwork()
@@ -107,7 +110,7 @@ class helper:
 			ip = s.getsockname()[0]
 
 			s.close()
-		except:
+		except Exception as e:
 			logging.exception('Failed to get IP via old method')
 		return ip
 
@@ -120,10 +123,7 @@ class helper:
 
 	@staticmethod
 	def getSupportedTypes():
-		ret = []
-		for i in helper.MIMETYPES:
-			ret.append(i)
-		return ret
+		return list(helper.MIMETYPES.keys())
 
 	@staticmethod
 	def getMimetype(filename):
@@ -134,12 +134,12 @@ class helper:
 		cmd = ["/usr/bin/file", "--mime", filename]
 		with open(os.devnull, 'wb') as void:
 			try:
-				output = subprocess.check_output(cmd, stderr=void).strip("\n")
-				m = re.match('[^\:]+\: *([^;]+)', output)
+				output = subprocess.check_output(cmd, stderr=void).decode('utf-8').strip("\n")
+				m = re.match(r'[^:]+: *([^;]+)', output)
 				if m:
 					mimetype = m.group(1)
 			except subprocess.CalledProcessError:
-				logging.debug("unable to determine mimetype of file: %s" % filename)
+				logging.debug(f"unable to determine mimetype of file: {filename}")
 				return None
 		return mimetype
 
@@ -147,8 +147,8 @@ class helper:
 	def copyFile(orgFilename, newFilename):
 		try:
 			shutil.copyfile(orgFilename, newFilename)
-		except:
-			logging.exception('Unable copy file from "%s" to "%s"'%(orgFilename, newFilename))
+		except Exception as e:
+			logging.exception(f'Unable copy file from "{orgFilename}" to "{newFilename}"')
 			return False
 		return True
 
@@ -158,7 +158,7 @@ class helper:
 			'convert',
 			orgFilename + '[0]',
 			'-scale',
-			'%sx%s' % (newSize["width"], newSize["height"]),
+			f'{newSize["width"]}x{newSize["height"]}',
 			'+repage',
 			newFilename
         ]
@@ -167,21 +167,21 @@ class helper:
 			subprocess.check_output(cmd, stderr=subprocess.STDOUT)
 		except subprocess.CalledProcessError as e:
 			logging.exception('Unable to reframe the image')
-			logging.error('Output: %s' % repr(e.output))
+			logging.error(f'Output: {repr(e.output)}')
 			return False
 		return True
 
 	@staticmethod
 	def getImageSize(filename):
 		if not os.path.isfile(filename):
-			logging.warning('File %s does not exist, so cannot get dimensions', filename)
+			logging.warning(f'File {filename} does not exist, so cannot get dimensions')
 			return None
 
 		with open(os.devnull, 'wb') as void:
 			try:
-				output = subprocess.check_output(['/usr/bin/identify', filename], stderr=void)
-			except:
-				logging.exception('Failed to run identify to get image dimensions on %s', filename)
+				output = subprocess.check_output(['/usr/bin/identify', filename], stderr=void).decode('utf-8')
+			except Exception as e:
+				logging.exception(f'Failed to run identify to get image dimensions on {filename}')
 				return None
 
 		m = re.search('([1-9][0-9]*)x([1-9][0-9]*)', output)
@@ -199,7 +199,7 @@ class helper:
 	def makeFullframe(filename, displayWidth, displayHeight, zoomOnly=False, autoChoose=False):
 		imageSize = helper.getImageSize(filename)
 		if imageSize is None:
-			logging.warning('Cannot frame %s since we cannot determine image dimensions', filename)
+			logging.warning(f'Cannot frame {filename} since we cannot determine image dimensions')
 			return filename
 
 		width = imageSize["width"]
@@ -214,8 +214,8 @@ class helper:
 		spacing = None
 
 		# Calculate actual size of image based on display
-		oar = (float)(width) / (float)(height)
-		dar = (float)(displayWidth) / (float)(displayHeight)
+		oar = float(width) / float(height)
+		dar = float(displayWidth) / float(displayHeight)
 
 		if not zoomOnly:
 			if oar >= dar:
@@ -225,31 +225,31 @@ class helper:
 				adjWidth = int(float(displayHeight) * oar)
 				adjHeight = displayHeight
 
-			logging.debug('Size of image is %dx%d, screen is %dx%d. New size is %dx%d', width, height, displayWidth, displayHeight, adjWidth, adjHeight)
+			logging.debug(f'Size of image is {width}x{height}, screen is {displayWidth}x{displayHeight}. New size is {adjWidth}x{adjHeight}')
 
 			if width < 100 or height < 100:
-				logging.error('Image size is REALLY small, please check "%s" ... something isn\'t right', filename)
+				logging.error(f'Image size is REALLY small, please check "{filename}" ... something isn\'t right')
 				#a=1/0
 
 			if adjHeight < displayHeight:
-				border = '0x%d' % width_border
-				spacing = '0x%d' % width_spacing
+				border = f'0x{width_border}'
+				spacing = f'0x{width_spacing}'
 				padding = ((displayHeight - adjHeight) / 2 - width_border)
-				resizeString = '%sx%s^'
-				logging.debug('Landscape image, reframing (padding required %dpx)' % padding)
+				resizeString = f'{adjWidth}x{adjHeight}^'
+				logging.debug(f'Landscape image, reframing (padding required {padding}px)')
 			elif adjWidth < displayWidth:
-				border = '%dx0' % width_border
-				spacing = '%dx0' % width_spacing
+				border = f'{width_border}x0'
+				spacing = f'{width_spacing}x0'
 				padding = ((displayWidth - adjWidth) / 2 - width_border)
-				resizeString = '^%sx%s'
-				logging.debug('Portrait image, reframing (padding required %dpx)' % padding)
+				resizeString = f'^{adjWidth}x{adjHeight}'
+				logging.debug(f'Portrait image, reframing (padding required {padding}px)')
 			else:
-				resizeString = '%sx%s'
+				resizeString = f'{adjWidth}x{adjHeight}'
 				logging.debug('Image is fullscreen, no reframing needed')
 				return filename
 
 			if padding < 20 and not autoChoose:
-				logging.debug('That\'s less than 20px so skip reframing (%dx%d => %dx%d)', width, height, adjWidth, adjHeight)
+				logging.debug(f'That\'s less than 20px so skip reframing ({width}x{height} => {adjWidth}x{adjHeight})')
 				return filename
 
 			if padding < 60 and autoChoose:
@@ -259,11 +259,11 @@ class helper:
 			if oar <= dar:
 				adjWidth = displayWidth
 				adjHeight = int(float(displayWidth) / oar)
-				logging.debug('Size of image is %dx%d, screen is %dx%d. New size is %dx%d  --> cropped to %dx%d', width, height, displayWidth, displayHeight, adjWidth, adjHeight, displayWidth, displayHeight)
+				logging.debug(f'Size of image is {width}x{height}, screen is {displayWidth}x{displayHeight}. New size is {adjWidth}x{adjHeight}  --> cropped to {displayWidth}x{displayHeight}')
 			else:
 				adjWidth = int(float(displayHeight) * oar)
 				adjHeight = displayHeight
-				logging.debug('Size of image is %dx%d, screen is %dx%d. New size is %dx%d --> cropped to %dx%d', width, height, displayWidth, displayHeight, adjWidth, adjHeight, displayWidth, displayHeight)
+				logging.debug(f'Size of image is {width}x{height}, screen is {displayWidth}x{displayHeight}. New size is {adjWidth}x{adjHeight} --> cropped to {displayWidth}x{displayHeight}')
 
 		cmd = None
 		try:
@@ -273,11 +273,11 @@ class helper:
 					'convert',
 					filename + '[0]',
 					'-resize',
-					'%sx%s' % (adjWidth, adjHeight),
+					f'{adjWidth}x{adjHeight}',
 					'-gravity',
 					'center',
 					'-crop',
-					'%sx%s+0+0' % (displayWidth, displayHeight),
+					f'{displayWidth}x{displayHeight}+0+0',
 					'+repage',
 					filenameProcessed
 				]
@@ -290,7 +290,7 @@ class helper:
 					'-gravity',
 					'center',
 					'-crop',
-					'%sx%s+0+0' % (displayWidth, displayHeight),
+					f'{displayWidth}x{displayHeight}+0+0',
 					'+repage',
 					'-blur',
 					'0x12',
@@ -307,13 +307,13 @@ class helper:
 					'-border',
 					spacing,
 					'-resize',
-					'%sx%s' % (displayWidth, displayHeight),
+					f'{displayWidth}x{displayHeight}',
 					'-background',
 					'transparent',
 					'-gravity',
 					'center',
 					'-extent',
-					'%sx%s' % (displayWidth, displayHeight),
+					f'{displayWidth}x{displayHeight}',
 					')',
 					'-composite',
 					filenameProcessed
@@ -330,32 +330,53 @@ class helper:
 			subprocess.check_output(cmd, stderr=subprocess.STDOUT)
 		except subprocess.CalledProcessError as e:
 			logging.exception('Unable to reframe the image')
-			logging.error('Output: %s' % repr(e.output))
+			logging.error(f'Output: {repr(e.output)}')
 			return filename
 		os.unlink(filename)
 		return filenameProcessed
 
 	@staticmethod
 	def timezoneList():
-		zones = subprocess.check_output(['/usr/bin/timedatectl', 'list-timezones']).split('\n')
-		return [x for x in zones if x]
+		try:
+			zones = subprocess.check_output(['/usr/bin/timedatectl', 'list-timezones']).decode('utf-8').split('\n')
+			return [x for x in zones if x]
+		except Exception as e:
+			logging.error(f'Failed to get timezone list: {str(e)}')
+			return ['UTC']  # Return UTC as fallback
 
 	@staticmethod
 	def timezoneCurrent():
-		with open('/etc/timezone', 'r') as f:
-			result = f.readlines()
-		return result[0].strip()
+		# Try different methods to get the timezone
+		try:
+			# Method 1: /etc/timezone (Debian/Ubuntu)
+			with open('/etc/timezone', 'r') as f:
+				return f.read().strip()
+		except:
+			try:
+				# Method 2: /etc/localtime symlink (Arch Linux)
+				localtime = os.path.realpath('/etc/localtime')
+				if 'zoneinfo' in localtime:
+					return localtime.split('zoneinfo/')[-1]
+			except:
+				try:
+					# Method 3: timedatectl (systemd)
+					output = subprocess.check_output(['timedatectl'], stderr=subprocess.DEVNULL).decode('utf-8')
+					for line in output.split('\n'):
+						if 'Time zone' in line:
+							return line.split(':')[1].strip()
+				except:
+					pass
+		# Default to UTC if all methods fail
+		return 'UTC'
 
 	@staticmethod
 	def timezoneSet(zone):
-		result = 1
 		try:
-			with open(os.devnull, 'wb') as void:
-				result = subprocess.check_call(['/usr/bin/timedatectl', 'set-timezone', zone], stderr=void)
-		except:
-			logging.exception('Unable to change timezone')
-			pass
-		return result == 0
+			subprocess.check_output(['/usr/bin/timedatectl', 'set-timezone', zone], stderr=subprocess.STDOUT)
+			return True
+		except subprocess.CalledProcessError as e:
+			logging.error(f'Failed to set timezone to {zone}: {e.output.decode("utf-8")}')
+			return False
 
 	@staticmethod
 	def hasNetwork():
@@ -363,17 +384,13 @@ class helper:
 
 	@staticmethod
 	def waitForNetwork(funcNoNetwork, funcExit):
-		shownError = False
-		while True and not funcExit():
-			if not helper.hasNetwork():
-				funcNoNetwork()
-				if not shownError:
-					logging.error('You must have functional internet connection to use this app')
-					shownError = True
-				time.sleep(10)
-			else:
-				logging.info('Network connection reestablished')
-				break
+		while True:
+			if helper.hasNetwork():
+				return
+			funcNoNetwork()
+			if funcExit():
+				return
+			time.sleep(5)
 
 	@staticmethod
 	def autoRotate(ifile):
@@ -402,3 +419,30 @@ class helper:
 				os.unlink(ifile)
 				return ofile
 		return ifile
+
+	@staticmethod
+	def resizeImage(image, displayWidth, displayHeight):
+		"""Resize image to fit display"""
+		cmd = [
+			'convert',
+			image,
+			f'-resize {displayWidth}x{displayHeight}^',
+			'-gravity center',
+			f'-extent {displayWidth}x{displayHeight}',
+			image
+		]
+		subprocess.check_call(cmd)
+
+	@staticmethod
+	def fixImageOrientation(image):
+		"""Fix image orientation based on EXIF data"""
+		try:
+			cmd = ['identify', '-format', '%[orientation]', image]
+			orient = subprocess.check_output(cmd).decode('utf-8').strip()
+			if orient == 'TopLeft':
+				return
+			logging.info(f'Orientation was {orient}, not transforming it')
+			cmd = ['convert', image, '-auto-orient', image]
+			subprocess.check_call(cmd)
+		except Exception as e:
+			logging.error(f'Failed to fix image orientation: {str(e)}')

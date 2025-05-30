@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # This file is part of photoframe (https://github.com/mrworf/photoframe).
 #
@@ -61,7 +61,7 @@ else:
 class Photoframe:
   def __init__(self, cmdline):
     self.void = open(os.devnull, 'wb')
-    random.seed(long(time.clock()))
+    random.seed(int(time.time()))
 
     self.emulator = cmdline.emulate
     if self.emulator:
@@ -123,12 +123,12 @@ class Photoframe:
   def _loadRoute(self, module, klass, *vargs):
     module = importlib.import_module('routes.' + module)
     klass = getattr(module, klass)
-    route = eval('klass()')
+    route = klass()
     route.setupex(*vargs)
     self.webServer.registerHandler(route)
 
   def setupWebserver(self, listen, port):
-    test = WebServer(port=port, listen=listen)
+    test = WebServer(port=port, listen=listen, debug=cmdline.debug)
     self.webServer = test
 
     self._loadRoute('settings', 'RouteSettings', self.powerMgr, self.settingsMgr, self.driverMgr, self.timekeeperMgr, self.displayMgr, self.cacheMgr, self.slideshow)
@@ -148,8 +148,8 @@ class Photoframe:
       # First run, grab display settings from current mode
       current = self.displayMgr.current()
       if current is not None:
-        logging.info('No display settings, using: %s' % repr(current))
-        self.settingsMgr.setUser('tvservice', '%s %s HDMI' % (current['mode'], current['code']))
+        logging.info(f'No display settings, using: {repr(current)}')
+        self.settingsMgr.setUser('tvservice', f"{current['mode']} {current['code']} HDMI")
         self.settingsMgr.save()
       else:
         logging.info('No display attached?')
@@ -165,16 +165,15 @@ class Photoframe:
 
   def changeRoot(self, newRoot):
     if newRoot is None: return
-    newpath = os.path.join(newRoot, '/')
-    logging.info('Altering basedir to %s', newpath)
-    path().reassignBase(newpath)
+    logging.info('Altering basedir to %s', newRoot)
+    path.reassignBase(newRoot)
 
   def enableEmulation(self):
     logging.info('Running in emulation mode, settings are stored in /tmp/photoframe/')
     if not os.path.exists('/tmp/photoframe'):
       os.mkdir('/tmp/photoframe')
-    path().reassignBase('/tmp/photoframe/')
-    path().reassignConfigTxt('extras/config.txt')
+    path.reassignBase('/tmp/photoframe')
+    path.reassignConfigTxt('extras/config.txt')
 
   def start(self):
     signal.signal(signal.SIGHUP, lambda x, y: self.updating(x,y))

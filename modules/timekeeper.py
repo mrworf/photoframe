@@ -20,7 +20,7 @@ import time
 # Start timer for keeping display on/off
 class timekeeper(Thread):
 	def __init__(self):
-		Thread.__init__(self)
+		super().__init__()
 		self.daemon = True
 		self.scheduleOff = False
 		self.ambientOff = False
@@ -38,13 +38,13 @@ class timekeeper(Thread):
 		self.start()
 
 	def registerListener(self, cbPowerState):
-		logging.debug('Adding listener %s' % repr(cbPowerState))
+		logging.debug(f'Adding listener {repr(cbPowerState)}')
 		self.listeners.append(cbPowerState)
 
 	def setConfiguration(self, hourOn, hourOff):
 		self.hourOn = hourOn
 		self.hourOff = hourOff
-		logging.debug('hourOn = %s, hourOff = %s' % (repr(hourOn), repr(hourOff)))
+		logging.debug(f'hourOn = {repr(hourOn)}, hourOff = {repr(hourOff)}')
 
 	def setPowermode(self, mode):
 		if mode == '' or mode == 'none':
@@ -60,7 +60,7 @@ class timekeeper(Thread):
 		elif mode == 'sensor+schedule':
 			self.ignoreSensor = False
 			self.ignoreSchedule = False
-		logging.debug('Powermode changed to ' + repr(mode))
+		logging.debug(f'Powermode changed to {repr(mode)}')
 		self.luxLow = None
 		self.luxHigh = None
 		self.ambientOff = False
@@ -109,7 +109,7 @@ class timekeeper(Thread):
 		if len(self.listeners) == 0:
 			logging.warning('No registered listeners')
 		for listener in self.listeners:
-			logging.debug('Notifying %s of power change to %d' % (repr(listener), hasPower))
+			logging.debug(f'Notifying {repr(listener)} of power change to {hasPower}')
 			listener(hasPower)
 
 	def run(self):
@@ -134,5 +134,5 @@ class timekeeper(Thread):
 					self.scheduleOff = not stateMode
 
 				if self.scheduleOff != previouslyOff:
-					logging.debug('Schedule has triggered change in power, standby is now %s' % repr(self.scheduleOff))
+					logging.debug(f'Schedule has triggered change in power, standby is now {repr(self.scheduleOff)}')
 					self.evaluatePower()

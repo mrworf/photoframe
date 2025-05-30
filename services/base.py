@@ -133,7 +133,7 @@ class BaseService:
 
     if self._NEED_CONFIG and not self.hasConfiguration():
       self._CURRENT_STATE = BaseService.STATE_DO_CONFIG
-    elif self._NEED_OAUTH and (not self.hasOAuthConfig or not self.hasOAuth()):
+    elif self._NEED_OAUTH and (not self.hasOAuthConfig() or not self.hasOAuth()):
       self._CURRENT_STATE = BaseService.STATE_DO_OAUTH
     elif self.needKeywords() and len(self.getKeywords()) == 0:
       self._CURRENT_STATE = BaseService.STATE_NEED_KEYWORDS
@@ -212,7 +212,7 @@ class BaseService:
           }
       )
     if 0 in self._STATE["_NUM_IMAGES"].values():
-      # Find first keyword with zero (unicode issue)
+      # Find first keyword with zero
       removeme = []
       for keyword in self._STATE["_KEYWORDS"]:
         if self._STATE["_NUM_IMAGES"][keyword] == 0:
@@ -220,7 +220,7 @@ class BaseService:
       msgs.append(
           {
               'level': 'WARNING',
-              'message': 'The following keyword(s) do not yield any photos: %s' % ', '.join(map(u'"{0}"'.format, removeme)),
+              'message': f'The following keyword(s) do not yield any photos: {", ".join(f"{k}" for k in removeme)}',
               'link': None
           }
       )
@@ -289,7 +289,7 @@ class BaseService:
     if self._STATE['_OAUTH_CONTEXT'] is not None:
       logging.error('Cannot migrate token, already have one!')
       return
-    logging.debug('Setting token to %s' % repr(token))
+    logging.debug(f'Setting token to {repr(token)}')
     self._STATE['_OAUTH_CONTEXT'] = token
     self.saveState()
 
@@ -372,7 +372,7 @@ class BaseService:
 
   def removeKeywords(self, index):
     if index < 0 or index > (len(self._STATE['_KEYWORDS'])-1):
-      logging.error('removeKeywords: Out of range %d' % index)
+      logging.error(f'removeKeywords: Out of range {index}')
       return False
     kw = self._STATE['_KEYWORDS'].pop(index)
     if kw in self._STATE['_NUM_IMAGES']:
@@ -574,7 +574,7 @@ class BaseService:
         result = RequestResult().setResult(RequestResult.NO_NETWORK)
 
       if not result.isSuccess():
-        return ImageHolder().setError('%d: Unable to download image!' % result.httpcode)
+        return ImageHolder().setError(f'{result.httpcode}: Unable to download image!')
       else:
         image.setFilename(filename)
     if image.filename is not None:
@@ -620,24 +620,24 @@ class BaseService:
     imageCount = len(images)
     index = random.SystemRandom().randint(0, imageCount-1)
 
-    logging.debug('There are %d images total' % imageCount)
+    logging.debug(f'There are {imageCount} images total')
     for i in range(0, imageCount):
       image = images[(index + i) % imageCount]
 
       orgFilename = image.filename if image.filename is not None else image.id
       if self.memory.seen(image.id, keywords):
-        logging.debug("Skipping already displayed image '%s'!" % orgFilename)
+        logging.debug(f"Skipping already displayed image '{orgFilename}'!")
         continue
 
       # No matter what, we need to track that we considered this image
       self.memory.remember(image.id, keywords)
 
       if not self.isCorrectOrientation(image.dimensions, displaySize):
-        logging.debug("Skipping image '%s' due to wrong orientation!" % orgFilename)
+        logging.debug(f"Skipping image '{orgFilename}' due to wrong orientation!")
         continue
       if image.mimetype is not None and image.mimetype not in supportedMimeTypes:
         # Make sure we don't get a video, unsupported for now (gif is usually bad too)
-        logging.debug('Skipping unsupported media: %s' % (image.mimetype))
+        logging.debug(f'Skipping unsupported media: {image.mimetype}')
         continue
 
       self.setIndex((index + i) % imageCount)
@@ -653,18 +653,18 @@ class BaseService:
 
       orgFilename = image.filename if image.filename is not None else image.id
       if self.memory.seen(image.id, keywords):
-        logging.debug("Skipping already displayed image '%s'!" % orgFilename)
+        logging.debug(f"Skipping already displayed image '{orgFilename}'!")
         continue
 
       # No matter what, we need to track that we considered this image
       self.memory.remember(image.id, keywords)
 
       if not self.isCorrectOrientation(image.dimensions, displaySize):
-        logging.debug("Skipping image '%s' due to wrong orientation!" % orgFilename)
+        logging.debug(f"Skipping image '{orgFilename}' due to wrong orientation!")
         continue
       if image.mimetype is not None and image.mimetype not in supportedMimeTypes:
         # Make sure we don't get a video, unsupported for now (gif is usually bad too)
-        logging.debug('Skipping unsupported media: %s' % (image.mimetype))
+        logging.debug(f'Skipping unsupported media: {image.mimetype}')
         continue
 
       self.setIndex(i)
@@ -698,7 +698,7 @@ class BaseService:
           logging.exception('Issues downloading')
         time.sleep(tries * 10) # Back off 10, 20, ... depending on tries
         tries += 1
-        logging.warning('Retrying again, attempt #%d', tries)
+        logging.warning(f'Retrying again, attempt #{tries}')
 
       if tries == 5:
         logging.error('Failed to download due to network issues')
@@ -760,13 +760,10 @@ class BaseService:
     return self._DIR_PRIVATE
 
   def hashString(self, text):
-    if type(text) is not unicode:
-      # make sure it's unicode
-      a = text.decode('ascii', errors='replace')
-    else:
-      a = text
-    a = a.encode('utf-8', errors='replace')
-    return hashlib.sha1(a).hexdigest()
+    # Convert to bytes if not already
+    if isinstance(text, str):
+      text = text.encode('utf-8', errors='replace')
+    return hashlib.sha1(text).hexdigest()
 
   def createImageHolder(self):
     return ImageHolder()

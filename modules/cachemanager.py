@@ -54,7 +54,8 @@ class CacheManager:
     self.createDirs()
     self.garbageCollect()
 
-  def formatBytes(self, size):
+  @staticmethod
+  def formatBytes(size):
     if size > 0.1*GB:
       return "%.1fGB" % (float(size)/GB)
     elif size > 0.1*MB:
@@ -71,7 +72,7 @@ class CacheManager:
     if os.path.isfile(filename):
       try:
         shutil.copy(filename, destination)
-        logging.debug('Cache hit, using %s as %s', cacheId, destination)
+        logging.debug(f'Cache hit, using {cacheId} as {destination}')
         return destination
       except:
         logging.exception('Failed to copy cached image')
@@ -88,7 +89,7 @@ class CacheManager:
       if os.path.exists(cacheFile):
         os.unlink(cacheFile)
       shutil.copy(filename, cacheFile)
-      logging.debug('Cached %s as %s', filename, cacheId)
+      logging.debug(f'Cached {filename} as {cacheId}')
       return filename
     except:
       logging.exception('Failed to ownership of file')
@@ -105,7 +106,7 @@ class CacheManager:
   def empty(self, directory = syspath.CACHEFOLDER):
     freedUpSpace = 0
     if not os.path.isdir(directory):
-      logging.exception('Failed to delete "%s". Directory does not exist!' % directory)
+      logging.exception(f'Failed to delete "{directory}". Directory does not exist!')
       return freedUpSpace
 
     for p, _dirs, files in os.walk(directory):
@@ -114,8 +115,8 @@ class CacheManager:
         try:
           os.unlink(filename)
         except:
-          logging.exception('Failed to delete "%s"' % filename)
-    logging.info("'%s' has been emptied"%directory)
+          logging.exception(f'Failed to delete "{filename}"')
+    logging.info(f"'{directory}' has been emptied")
     return freedUpSpace
 
 
@@ -134,13 +135,13 @@ class CacheManager:
           if stat.st_mtime < now - minAge:
             try:
               os.remove(filename)
-              logging.debug("old file '%s' deleted" % filename)
+              logging.debug(f"old file '{filename}' deleted")
               freedUpSpace += stat.st_size
             except OSError as e:
-              logging.warning("unable to delete file '%s'!" % filename)
+              logging.warning(f"unable to delete file '{filename}'!")
               logging.exception("Output: "+e.strerror)
     except:
-      logging.exception('Failed to clean "%s"', topPath)
+      logging.exception(f'Failed to clean "{topPath}"')
     return freedUpSpace
 
   def getDirSize(self, path):
@@ -192,9 +193,7 @@ class CacheManager:
       freedUpSpace = self.deleteOldFiles(syspath.CACHEFOLDER, MONTH)
     else:
       freedUpSpace = self.deleteOldFiles(syspath.CACHEFOLDER, 6*MONTH)
-    '''
     if freedUpSpace:
-      logging.info("Garbage Collector was able to free up %s of disk space!" % CacheManager.formatBytes(freedUpSpace))
+      logging.info(f"Garbage Collector was able to free up {CacheManager.formatBytes(freedUpSpace)} of disk space!")
     else:
-      logging.debug("Garbage Collector was able to free up %s of disk space!" % CacheManager.formatBytes(freedUpSpace))
-    '''
+      logging.debug(f"Garbage Collector was able to free up {CacheManager.formatBytes(freedUpSpace)} of disk space!")

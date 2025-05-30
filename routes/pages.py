@@ -1,4 +1,3 @@
-
 # This file is part of photoframe (https://github.com/mrworf/photoframe).
 #
 # photoframe is free software: you can redistribute it and/or modify
@@ -17,7 +16,7 @@
 import os
 from flask import send_from_directory
 
-from baseroute import BaseRoute
+from .baseroute import BaseRoute
 
 class RoutePages(BaseRoute):
     SIMPLE = True

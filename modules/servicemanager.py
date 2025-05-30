@@ -73,7 +73,7 @@ class ServiceManager:
           for line in f:
             line = line.strip()
             if line.startswith('class ') and line.endswith('(BaseService):'):
-              m = re.search('class +([^\(]+)\(', line)
+              m = re.search(r'class +([^\(]+)\(', line)
               if m is not None:
                 klass = self._instantiate(item[0:-3], m.group(1))
                 logging.info('Loading service %s from %s', klass.__name__, item)
@@ -96,9 +96,9 @@ class ServiceManager:
   def listServices(self):
     result = []
     # Make sure it retains the ID sort order
-    for key, value in sorted(self._SVC_INDEX.iteritems(), key=lambda (k,v): (v['id'],k)):
+    for key, value in sorted(self._SVC_INDEX.items(), key=lambda k_v: (k_v[1]['id'], k_v[0])):
       result.append(self._SVC_INDEX[key])
-    return result;
+    return result
 
   def _save(self):
     data = []
@@ -132,7 +132,7 @@ class ServiceManager:
         self._SERVICES[svc.getId()] = {'service' : svc, 'id' : svc.getId(), 'name' : svc.getName()}
 
   def _hash(self, text):
-    return hashlib.sha1(text).hexdigest()
+    return hashlib.sha1(text.encode('utf-8')).hexdigest()
 
   def _configChanged(self):
     self.configChanges += 1
@@ -168,7 +168,7 @@ class ServiceManager:
     if id not in self._SERVICES:
       return
 
-    self._HISTORY = filter(lambda h: h != self._SERVICES[id]['service'], self._HISTORY)
+    self._HISTORY = list(filter(lambda h: h != self._SERVICES[id]['service'], self._HISTORY))
     del self._SERVICES[id]
     self._deletefolder(os.path.join(self._BASEDIR, id))
     self._configChanged()
@@ -313,7 +313,7 @@ class ServiceManager:
     return serviceStates
 
   def _migrate(self):
-    if os.path.exists(path.CONFIGFOLDER + '/oauth.json'):
+    if os.path.exists(path.CONFIGFOLDER.joinpath('oauth.json')):
       logging.info('Migrating old setup to new service layout')
       from services.svc_picasaweb import PicasaWeb
 
@@ -321,14 +321,14 @@ class ServiceManager:
       svc = self._SERVICES[id]['service']
 
       # Migrate the oauth configuration
-      with open(path.CONFIGFOLDER + '/oauth.json') as f:
+      with open(path.CONFIGFOLDER.joinpath('oauth.json')) as f:
         data = json.load(f)
       if 'web' in data: # if someone added it via command-line
         data = data['web']
       svc.setOAuthConfig(data)
       svc.migrateOAuthToken(self._SETTINGS.get('oauth_token'))
 
-      os.unlink(path.CONFIGFOLDER + '/oauth.json')
+      os.unlink(path.CONFIGFOLDER.joinpath('oauth.json'))
       self._SETTINGS.set('oauth_token', '')
 
       # Migrate keywords

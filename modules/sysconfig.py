@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # This file is part of photoframe (https://github.com/mrworf/photoframe).
 #
 # photoframe is free software: you can redistribute it and/or modify
@@ -17,8 +19,9 @@ import os
 import json
 import re
 import subprocess
+from pathlib import Path
 
-from path import path
+from modules.path import path
 import logging
 
 class sysconfig:
@@ -30,36 +33,36 @@ class sysconfig:
           clean = line.strip()
           if clean == '':
             continue
-          if clean.startswith('%s=' % key):
+          if clean.startswith(f'{key}='):
             _, value = clean.split('=', 1)
             return value
     return None
 
   @staticmethod
   def _changeConfigFile(key, value):
-    configline = '%s=%s\n' % (key, value)
+    configline = f'{key}={value}\n'
     found = False
     if os.path.exists(path.CONFIG_TXT):
       with open(path.CONFIG_TXT, 'r') as ifile:
-        with open(path.CONFIG_TXT + '.new', 'w') as ofile:
+        with open(f'{path.CONFIG_TXT}.new', 'w') as ofile:
           for line in ifile:
             clean = line.strip()
-            if clean.startswith('%s=' % key):
+            if clean.startswith(f'{key}='):
               found = True
               line = configline
             ofile.write(line)
           if not found:
             ofile.write(configline)
       try:
-        os.rename(path.CONFIG_TXT, path.CONFIG_TXT + '.old')
-        os.rename(path.CONFIG_TXT + '.new', path.CONFIG_TXT)
+        os.rename(path.CONFIG_TXT, f'{path.CONFIG_TXT}.old')
+        os.rename(f'{path.CONFIG_TXT}.new', path.CONFIG_TXT)
         # Keep the first version of the config.txt just-in-case
-        if os.path.exists(path.CONFIG_TXT + '.original'):
-          os.unlink(path.CONFIG_TXT + '.old')
+        if os.path.exists(f'{path.CONFIG_TXT}.original'):
+          os.unlink(f'{path.CONFIG_TXT}.old')
         else:
-          os.rename(path.CONFIG_TXT + '.old', path.CONFIG_TXT + '.original')
+          os.rename(f'{path.CONFIG_TXT}.old', f'{path.CONFIG_TXT}.original')
         return True
-      except:
+      except Exception as e:
         logging.exception('Failed to activate new config.txt, you may need to restore the config.txt')
 
   @staticmethod
@@ -93,7 +96,7 @@ class sysconfig:
 
   @staticmethod
   def setDisplayOrientation(deg):
-    return sysconfig._changeConfigFile('display_rotate', '%d' % int(deg/90))
+    return sysconfig._changeConfigFile('display_rotate', str(int(deg/90)))
 
   @staticmethod
   def _app_opt_load():
@@ -101,7 +104,7 @@ class sysconfig:
       lines = {}
       with open(path.OPTIONSFILE, 'r') as f:
         for line in f:
-          key, value = line.strip().split('=',1)
+          key, value = line.strip().split('=', 1)
           lines[key.strip()] = value.strip()
       return lines
     return None
@@ -110,7 +113,7 @@ class sysconfig:
   def _app_opt_save(lines):
     with open(path.OPTIONSFILE, 'w') as f:
       for key in lines:
-        f.write('%s=%s\n' % (key, lines[key]))
+        f.write(f'{key}={lines[key]}\n')
 
   @staticmethod
   def setOption(key, value):
@@ -140,45 +143,45 @@ class sysconfig:
   @staticmethod
   def getHTTPAuth():
     user = None
-    userfiles = ['/boot/http-auth.json', path.CONFIGFOLDER + '/http-auth.json']
+    userfiles = ['/boot/http-auth.json', f'{path.CONFIGFOLDER}/http-auth.json']
     for userfile in userfiles:
       if os.path.exists(userfile):
-        logging.debug('Found "%s", loading the data' % userfile)
+        logging.debug(f'Found "{userfile}", loading the data')
         try:
-          with open(userfile, 'rb') as f:
+          with open(userfile, 'r') as f:
             user = json.load(f)
             if 'user' not in user or 'password' not in user:
-              logging.warning("\"%s\" doesn't contain a user and password key" % userfile)
+              logging.warning(f'"{userfile}" doesn\'t contain a user and password key')
               user = None
             else:
               break
-        except:
-          logging.exception('Unable to load JSON from "%s"' % userfile)
+        except Exception as e:
+          logging.exception(f'Unable to load JSON from "{userfile}"')
           user = None
     return user
 
   @staticmethod
   def setHostname(name):
     # First, make sure it's legal
-    name = re.sub(' ', '-', name.strip());
-    name = re.sub('[^a-zA-Z0-9\-]', '', name).strip()
-    if name is '' or len(name) > 63:
+    name = re.sub(' ', '-', name.strip())
+    name = re.sub(r'[^a-zA-Z0-9\-]', '', name).strip()
+    if name == '' or len(name) > 63:
       return False
 
     # Next, let's edit the relevant files....
     with open('/etc/hostname', 'w') as f:
-      f.write('%s\n' % name)
+      f.write(f'{name}\n')
 
     lines = []
     with open('/etc/hosts', 'r') as f:
       for line in f:
         line = line.strip()
         if line.startswith('127.0.1.1'):
-          line = '127.0.1.1\t%s' % name
+          line = f'127.0.1.1\t{name}'
         lines.append(line)
     with open('/etc/hosts.new', 'w') as f:
       for line in lines:
-        f.write('%s\n' % line)
+        f.write(f'{line}\n')
 
     try:
       os.rename('/etc/hosts', '/etc/hosts.old')
@@ -197,7 +200,7 @@ class sysconfig:
       except subprocess.CalledProcessError:
         logging.exception('Couldnt restart avahi, not a deal breaker')
       return True
-    except:
+    except Exception as e:
       logging.exception('Failed to activate new hostname, you should probably reboot to restore')
     return False
 
