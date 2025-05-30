@@ -1,3 +1,7 @@
+> 📣 **Announcement (May 30, 2025)**
+> 
+>  The project is NOT dead, I'm working on making it Python 3.x and also working on a path where existing frames will auto-update to python3 (which involves trying to ensure I can install all necessary packages on the old Rasbian debian based image)
+
 # photoframe
 
 A Raspberry Pi (Zero, 1 or 3) software which automatically pulls photos from Google Photos and displays them
