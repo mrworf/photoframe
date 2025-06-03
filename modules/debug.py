@@ -16,9 +16,12 @@
 import subprocess
 import logging
 import os
+import platform
 import datetime
 import sys
 import traceback
+import json
+from modules.path import path
 
 def _stringify(args):
   result = ''
@@ -71,3 +74,32 @@ def version():
   if lines:
     lines = lines.splitlines()
   return (title, lines, None)
+
+def config_version():
+  origin = subprocess_check_output(['git', 'config', '--get', 'remote.origin.url'])
+  if origin:
+    origin = origin.strip()
+
+  branch = ""
+  branchlines = subprocess_check_output(['git', 'status']).splitlines()
+  for line in branchlines:
+    if line.startswith('On branch'):
+      branch = line.partition("branch")[2].strip()
+
+  commit = ""
+  commitlines = subprocess_check_output(['git', 'log', '-n 1']).splitlines()
+  for line in commitlines:
+    if line.startswith('commit'):
+      commit = line.partition("commit")[2].strip()
+
+  config = {
+    "release": platform.release(),
+    "python_version": platform.python_version(),
+    "origin": origin,
+    "branch": branch,
+    "commit": commit
+    }
+  versionfile = open(path.CONFIGFOLDER + "/version.json", 'w+')
+  json.dump(config, versionfile)
+
+  return (True)

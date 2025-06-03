@@ -327,6 +327,55 @@ $("#reboot").click(function() {
   }
 });
 
+$("#backup").click(function() {
+  if (confirm("Backup current settings to /boot/settings.tar.gz ?")) {
+    $.ajax({
+      url:"/maintenance/backup"
+    }).done(function (){
+    });
+  }
+});
+
+$("#restore").click(function() {
+  if (confirm("This will remove the current configuration and restore saved settings from /boot/settings.tar.gz ?")) {
+    $.ajax({
+      url:"/maintenance/restore"
+    }).done(function(){
+      rebootWatch();
+    });
+  }
+});
+
+$("#dnldcfg").click(function() {
+  window.location.assign("/maintenance/dnldcfg")
+});
+
+$('#config').fileupload({
+  add: function (e, data) {
+    data.submit();
+  },
+  done: function (e, data) {
+    console.log(data);
+    if (data.result['restart']) {
+      $.ajax({
+        url:"/maintenance/restart"
+      }).done(function(){
+        rebootWatch();
+      });
+    } else {
+      alert("Failed to install configuration - is the file OK?");
+      location.reload();
+    }
+  },
+  fail: function (e, data) {
+    alert('Failed to upload configuration');
+  },
+});
+
+$("#config-button").click(function() {
+  $('#config').trigger('click');
+});
+
 $("#shutdown").click(function() {
   if (confirm("Are you sure you want to POWER OFF the frame?")) {
     $.ajax({
