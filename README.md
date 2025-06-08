@@ -1,6 +1,8 @@
-> 📣 **Announcement (May 30, 2025)**
+> 📣 **Announcement - Updated (June 7, 2025)**
 > 
->  The project is NOT dead, I'm working on making it Python 3.x and also working on a path where existing frames will auto-update to python3 (which involves trying to ensure I can install all necessary packages on the old Rasbian debian based image)
+>  The project is NOT dead, I'm working on making it Python 3.x and also working on a path where existing frames will auto-update to python3 (which involves trying to ensure I can install all necessary packages on the old Rasbian debian based image).
+> 
+>  However, Google Photos support is dead thanks to the recent changes to their API ([click here for more details](GOOGLE_PHOTOS.md)). Pexels and USB storage are still functional, and plans are in place for additional services in the near future.
 
 # photoframe
 
